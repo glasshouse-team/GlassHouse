@@ -17,7 +17,7 @@ Labels: hours-0-2, must-have, setup
 ## Build notes
 
 - The starter did the code part; what's left is accounts, keys, Vercel and Supabase (docs/SETUP.md). Done when `/api/health` shows every key as set on the Vercel URL and CI's `pnpm build` passes with no env vars.
-- Vercel: keep Fluid compute on (needed for `maxDuration = 300`) and set the Functions region to `fra1`; create the Supabase project in `eu-central-1` (Frankfurt), close to both.
+- Vercel: keep Fluid compute on (needed for `maxDuration = 300`) and set the Functions region to `syd1`, next to the Supabase project in `ap-southeast-2` (Sydney) (D-021).
 - Add env vars to Production and Preview. Changing `DEMO_MODE` needs a redeploy.
 - The repo already exists (TemuriTsutskiridze/GlassHouse); put both GitHub usernames in `.github/CODEOWNERS`.
 
@@ -51,7 +51,7 @@ By hour 2, both developers can clone, run and deploy the app, and Claude Code kn
 
 ### 3. Supabase
 
-1. Create a new project in an EU region and save the URL, anon key and service-role key.
+1. Create a new project in `ap-southeast-2` (Sydney) _(changed by D-021)_ and save the URL, anon key and service-role key.
 2. Create two Storage buckets:
    - `media`, **public read**. World Labs must download input files without cookies or login.
    - `captures`, **private**, for raw and check-in videos.
@@ -113,3 +113,7 @@ Include:
 ## Out of scope
 
 Database tables (GH-5), authentication (we use a role switcher), payments.
+
+## Decision updates
+
+- 2026-10-17 D-021: Supabase stays in `ap-southeast-2` (Sydney) and Vercel Functions run in `syd1` (was: Supabase in `eu-central-1` Frankfurt, Vercel `fra1`). Jira: updated
