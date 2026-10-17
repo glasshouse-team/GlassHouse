@@ -1,7 +1,17 @@
 import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import Link from "next/link";
 import "./globals.css";
 import { Providers } from "./providers";
+
+// Brand font (GH-4, D-022): Inter, bundled in the repo (OFL, app/fonts/OFL.txt), so
+// builds never fetch fonts over the network.
+const inter = localFont({
+  src: "./fonts/InterVariable-latin.woff2",
+  variable: "--font-inter",
+  weight: "100 900",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Glasshouse",
@@ -13,11 +23,11 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-// GH-8 (Beka) replaces this header with the real one: logo, search entry and the
-// "View as Guest / Host" role switcher. Brand font and colors come from GH-4.
+// GH-8 (Beka) replaces this header with the real one: logo (public/logo-mark.svg), search
+// entry and the "View as Guest / Host" role switcher. Brand kit: docs/teardown.md section 4.
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <Providers>
           <header className="border-b border-neutral-200 dark:border-neutral-800">

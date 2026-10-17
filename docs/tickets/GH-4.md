@@ -83,3 +83,7 @@ Commit them as `docs/teardown.md`.
 ## Owns
 
 `docs/teardown.md`, the Tailwind theme tokens and `app/globals.css` brand variables.
+
+## Decision updates
+
+- 2026-10-18 D-022: brand kit picked: Inter bundled with `next/font/local`, `--brand` #1f6f5c, `--brand-accent` #2f6fde, logo mark `public/logo-mark.svg` (was: system fonts and placeholder colors, D-008). Jira: no change needed (the ticket already asks for "1 font (e.g. Inter)")
