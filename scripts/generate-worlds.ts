@@ -7,6 +7,7 @@
  *   pnpm worlds status <operation_id>
  *   pnpm worlds wait <operation_id>
  *   pnpm worlds get <world_id>
+ *   pnpm worlds inspect <world_id> [--json]   (asset sizes, collider format, floor vs ground_plane_offset)
  *
  * Generation takes about 5 minutes and costs credits. Local files are uploaded straight to
  * World Labs (media assets), so no public URL is needed. URLs must open in an incognito
@@ -17,6 +18,8 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { isDemoMode, settings } from "@/lib/env";
+import { ceilingHeight, colliderToThree, robustExtent } from "@/lib/geometry/collider";
+import { glbSummary, parseGlb } from "@/lib/geometry/glb";
 import {
   generateWorld,
   getOperation,
@@ -24,6 +27,7 @@ import {
   MarbleError,
   pickSplatUrls,
   waitForWorld,
+  worldAssets,
   worldScale,
   type GenerateWorldRequest,
   type MarbleModel,
@@ -96,6 +100,121 @@ function printWorld(world: MarbleWorld) {
   );
 }
 
+const MB = 1024 * 1024;
+/** Supabase Free plan file limit (D-020): a bigger splat cannot go into our storage. */
+const STORAGE_FILE_LIMIT = 50 * MB;
+
+/** Bytes of a remote file: HEAD, or a 1-byte ranged GET for URLs signed for GET only. */
+async function remoteSize(url: string): Promise<number | null> {
+  const head = await fetch(url, { method: "HEAD" }).catch(() => null);
+  const length = Number(head?.ok ? head.headers.get("content-length") : NaN);
+  if (length > 0) return length;
+  const ranged = await fetch(url, { headers: { Range: "bytes=0-0" } }).catch(() => null);
+  await ranged?.body?.cancel();
+  const total = Number(ranged?.headers.get("content-range")?.split("/")[1]);
+  return total > 0 ? total : null;
+}
+
+/**
+ * What GH-3 records per world (D-009): asset sizes, the collider's format and extensions, and
+ * the floor measured from the collider (marbleToThree + floorHeight) against ground_plane_offset.
+ * World Labs' SPZ docs ground the splat with `metric.y -= ground_plane_offset` in the OpenCV frame,
+ * so after our flip the collider floor should sit at y = -ground_plane_offset.
+ */
+async function inspect(worldId: string, asJson: boolean) {
+  const world = await getWorld(worldId);
+  const meta = world.assets?.splats?.semantics_metadata;
+  const { metricScaleFactor } = worldScale(world);
+  const groundPlaneOffset = meta?.ground_plane_offset ?? null;
+  const assets = await Promise.all(
+    worldAssets(world).map(async (a) => ({ ...a, bytes: await remoteSize(a.url) })),
+  );
+
+  let collider = null;
+  const colliderUrl = world.assets?.mesh?.collider_mesh_url;
+  if (colliderUrl) {
+    const res = await fetch(colliderUrl);
+    if (!res.ok) throw new Error(`Collider download failed (HTTP ${res.status})`);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    const summary = glbSummary(parseGlb(bytes));
+    let floor = null;
+    if (!summary.compression) {
+      const { positions, index, floorY } = colliderToThree(bytes, metricScaleFactor);
+      const { min, max } = robustExtent(positions);
+      floor = {
+        floorY,
+        floorYFromOffset: groundPlaneOffset == null ? null : -groundPlaneOffset,
+        gap: groundPlaneOffset == null ? null : floorY + groundPlaneOffset,
+        ceiling: ceilingHeight(positions, index),
+        sizeX: max[0] - min[0],
+        sizeZ: max[2] - min[2],
+      };
+    }
+    collider = { bytes: bytes.length, ...summary, floor };
+  }
+
+  const report = {
+    world_id: world.world_id,
+    display_name: world.display_name,
+    model: world.model,
+    marble_url: world.world_marble_url,
+    metric_scale_factor: meta?.metric_scale_factor ?? null,
+    ground_plane_offset: groundPlaneOffset,
+    assets: assets.map(({ label, bytes, url }) => ({ label, bytes, url })),
+    collider,
+  };
+  if (asJson) {
+    console.log(JSON.stringify(report, null, 2));
+    return;
+  }
+
+  const mb = (bytes: number | null) => (bytes == null ? "?" : `${(bytes / MB).toFixed(1)} MB`);
+  const m = (n: number) => `${n.toFixed(3)} m`;
+  console.log(`${world.display_name}  (world ${world.world_id}, ${world.model ?? "model ?"})`);
+  console.log(world.world_marble_url);
+  console.log(
+    `metric_scale_factor ${report.metric_scale_factor ?? "missing (using 1)"}   ground_plane_offset ${groundPlaneOffset ?? "missing"}`,
+  );
+  console.log("\nAssets");
+  for (const a of assets) {
+    const over = a.kind === "splat" && (a.bytes ?? 0) > STORAGE_FILE_LIMIT;
+    console.log(
+      `  ${a.label.padEnd(16)} ${mb(a.bytes).padStart(9)}${over ? "  over 50 MB: too big for Supabase Free (D-020)" : ""}`,
+    );
+  }
+  if (!collider) {
+    console.log("\nNo collider mesh.");
+    return;
+  }
+  const fmt = (v: number[] | null) => (v ? `[${v.map((n) => n.toFixed(2)).join(", ")}]` : "?");
+  console.log(
+    `\nCollider: GLB ${mb(collider.bytes)}, ${collider.triangles.toLocaleString()} triangles, ${collider.vertices.toLocaleString()} vertices`,
+  );
+  console.log(`  generator: ${collider.generator ?? "?"}`);
+  console.log(`  extensionsUsed: ${collider.extensionsUsed.join(", ") || "none"}`);
+  console.log(
+    `  node transforms: ${collider.nodeTransforms.length ? JSON.stringify(collider.nodeTransforms) : "none"}`,
+  );
+  console.log(
+    `  POSITION min ${fmt(collider.positionMin)} max ${fmt(collider.positionMax)} (raw units)`,
+  );
+  const f = collider.floor;
+  if (!f) {
+    console.log(`  ${collider.compression}: floor not measured (needs a decoder in Node)`);
+    return;
+  }
+  console.log(`  floor, measured (marbleToThree + floorHeight): ${m(f.floorY)}`);
+  if (f.gap != null && f.floorYFromOffset != null) {
+    const verdict = Math.abs(f.gap) < 0.1 ? "agree" : "DISAGREE: check D-016";
+    console.log(
+      `  floor from -ground_plane_offset:               ${m(f.floorYFromOffset)}   gap ${(f.gap * 100).toFixed(1)} cm: ${verdict}`,
+    );
+  }
+  console.log(
+    `  ceiling ${f.ceiling.toFixed(2)} m above the floor; ${f.sizeX.toFixed(1)} m (x) by ${f.sizeZ.toFixed(1)} m (z), 1st-99th percentile of vertices`,
+  );
+}
+
 async function wait(operationId: string) {
   const started = Date.now();
   const { world, operation } = await waitForWorld(operationId, {
@@ -122,6 +241,7 @@ async function main() {
       model: { type: "string" },
       wait: { type: "boolean", default: false },
       force: { type: "boolean", default: false },
+      json: { type: "boolean", default: false },
     },
   });
   const [command, id] = positionals;
@@ -132,6 +252,7 @@ async function main() {
   }
   if (command === "wait" && id) return wait(id);
   if (command === "get" && id) return printWorld(await getWorld(id));
+  if (command === "inspect" && id) return inspect(id, values.json);
   if (command === "upload" && id) {
     const kind = /\.(mp4|mov|webm)$/i.test(id) ? "video" : "image";
     await sourceFor(id, kind);
@@ -197,6 +318,7 @@ async function main() {
   console.log("       pnpm worlds upload <file>");
   console.log("       pnpm worlds status|wait <operation_id>");
   console.log("       pnpm worlds get <world_id>");
+  console.log("       pnpm worlds inspect <world_id> [--json]");
   process.exitCode = 1;
 }
 

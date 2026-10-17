@@ -264,6 +264,27 @@ export function pickSplatUrls(world: MarbleWorld): { web: string | null; hq: str
   return { web: urls[webLabel], hq: urls[labels[labels.length - 1]] };
 }
 
+export type WorldAssetKind =
+  "splat" | "collider" | "hq_mesh" | "full_res_mesh" | "pano" | "thumbnail";
+
+/** Every downloadable asset of a world, splats smallest first (GH-3 inspect, GH-10 copies). */
+export function worldAssets(
+  world: MarbleWorld,
+): Array<{ kind: WorldAssetKind; label: string; url: string }> {
+  const a = world.assets;
+  const splats = Object.entries(a?.splats?.spz_urls ?? {})
+    .sort(([x], [y]) => splatSizeRank(x) - splatSizeRank(y))
+    .map(([label, url]) => ({ kind: "splat" as const, label: `splat ${label}`, url }));
+  const others: Array<{ kind: WorldAssetKind; label: string; url?: string | null }> = [
+    { kind: "collider", label: "collider mesh", url: a?.mesh?.collider_mesh_url },
+    { kind: "hq_mesh", label: "HQ mesh", url: a?.mesh?.hq_mesh_url },
+    { kind: "full_res_mesh", label: "full-res mesh", url: a?.mesh?.full_res_mesh_url },
+    { kind: "pano", label: "pano", url: a?.imagery?.pano_url },
+    { kind: "thumbnail", label: "thumbnail", url: a?.thumbnail_url },
+  ];
+  return [...splats, ...others.flatMap(({ url, ...rest }) => (url ? [{ ...rest, url }] : []))];
+}
+
 /** Scale metadata with safe defaults (1 = scale unknown, left in model units). */
 export function worldScale(world: MarbleWorld): {
   metricScaleFactor: number;

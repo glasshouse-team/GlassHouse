@@ -3,6 +3,7 @@ import {
   pickSplatUrls,
   splatSizeRank,
   uploadMediaAsset,
+  worldAssets,
   worldScale,
   type MarbleWorld,
 } from "./marble";
@@ -40,6 +41,26 @@ describe("pickSplatUrls", () => {
 
   it("handles missing splats", () => {
     expect(pickSplatUrls(world(null))).toEqual({ web: null, hq: null });
+  });
+});
+
+describe("worldAssets", () => {
+  it("lists splats smallest first, then the meshes and images that exist", () => {
+    const w = world({ full_res: "s3", "100k": "s1", "500k": "s2" });
+    w.assets = {
+      ...w.assets,
+      mesh: { collider_mesh_url: "c", hq_mesh_url: null },
+      imagery: { pano_url: "p" },
+      thumbnail_url: "t",
+    };
+    expect(worldAssets(w)).toEqual([
+      { kind: "splat", label: "splat 100k", url: "s1" },
+      { kind: "splat", label: "splat 500k", url: "s2" },
+      { kind: "splat", label: "splat full_res", url: "s3" },
+      { kind: "collider", label: "collider mesh", url: "c" },
+      { kind: "pano", label: "pano", url: "p" },
+      { kind: "thumbnail", label: "thumbnail", url: "t" },
+    ]);
   });
 });
 
