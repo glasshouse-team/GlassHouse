@@ -2,6 +2,7 @@
  * CONTRACT FILE (GH-5 / GH-12, owner: Beka).
  * Every agent tool call and every human action writes one line to the activity feed.
  */
+import type { Json } from "./database.types";
 import { EventInputSchema, type EventInput } from "./schemas/core";
 import { hasSupabaseEnv, supabaseAdmin } from "./supabase";
 
@@ -31,7 +32,8 @@ export async function logEvent(input: EventInput): Promise<void> {
   try {
     const { error } = await supabaseAdmin()
       .from("events")
-      .insert({ ...event, summary, payload: event.payload ?? {} });
+      // The payload is stored as jsonb; supabase-js serializes it with JSON.stringify.
+      .insert({ ...event, summary, payload: (event.payload ?? {}) as Json });
     if (error) console.warn("[logEvent] insert failed:", error.message);
   } catch (error) {
     console.warn("[logEvent] insert failed:", error);
