@@ -8,6 +8,11 @@ import ffmpegStatic from "ffmpeg-static";
 
 /** World Labs documents a 20 MB limit for inputs passed by URL. */
 export const URL_INPUT_LIMIT_BYTES = 20 * 1024 * 1024;
+/**
+ * World Labs' video limit (docs.worldlabs.ai, Marble prompt guidelines: "Max duration: 30
+ * seconds"). The API accepts longer videos, then fails after about 47 minutes (GH-3).
+ */
+export const VIDEO_MAX_SECONDS = 30;
 /** Aim a little under the limit to leave room for container overhead. */
 export const TARGET_VIDEO_BYTES = 19 * 1024 * 1024;
 

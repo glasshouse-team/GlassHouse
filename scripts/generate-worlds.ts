@@ -18,6 +18,7 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { isDemoMode, settings } from "@/lib/env";
+import { probeVideo, VIDEO_MAX_SECONDS } from "@/lib/media";
 import {
   generateWorld,
   getOperation,
@@ -46,10 +47,22 @@ const CONTENT_TYPES: Record<string, string> = {
 
 /** A URL stays a URL; a local file is uploaded to World Labs and referenced as a media asset. */
 async function sourceFor(input: string, kind: "image" | "video"): Promise<SourceRef> {
-  if (/^https?:\/\//.test(input)) return { source: "uri", uri: input };
+  if (/^https?:\/\//.test(input)) {
+    if (kind === "video")
+      console.warn(`Note: World Labs takes videos up to ${VIDEO_MAX_SECONDS} s.`);
+    return { source: "uri", uri: input };
+  }
   const ext = path.extname(input).slice(1).toLowerCase();
   const contentType = CONTENT_TYPES[ext];
   if (!contentType) throw new Error(`Unknown file type: ${input}`);
+  if (kind === "video") {
+    const { durationSec } = await probeVideo(input);
+    if (durationSec > VIDEO_MAX_SECONDS) {
+      throw new Error(
+        `${input} is ${durationSec.toFixed(1)} s; World Labs takes videos up to ${VIDEO_MAX_SECONDS} s. Longer videos are accepted, then fail after about 47 minutes. Trim it or split it per room.`,
+      );
+    }
+  }
   const { size } = await stat(input);
   if (kind === "video" && size > 20 * 1024 * 1024) {
     console.warn(
