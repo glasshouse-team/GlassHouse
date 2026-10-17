@@ -1,6 +1,6 @@
 # Database
 
-Supabase Postgres. Schema: `supabase/migrations/0001_core.sql` (draft for GH-5; tested on Postgres 18: 22 tables, constraints, RLS, cascades). Conventions: money in integer cents, `date` for stay dates, uuid ids, `timestamptz` timestamps, jsonb for agent outputs (validated with Zod).
+Supabase Postgres. Schema: `supabase/migrations/0001_core.sql` (applied in GH-5: 22 tables, constraints, RLS, cascades; generated types in `lib/database.types.ts`, rerun `pnpm db:types` after every migration). Conventions: money in integer cents, `date` for stay dates, uuid ids, `timestamptz` timestamps, jsonb for agent outputs (validated with Zod).
 
 ## Tables
 

@@ -98,16 +98,15 @@ Checked against `supabase/migrations/0001_core.sql`: every entity the screens ne
 | Pricing                      | `listings.base_price_cents`, `weekend_price_cents`, `cleaning_fee_cents`, `currency`; the service fee lives in `computeQuote` (D-010)                                              | Covered                                   |
 | Availability                 | `availability` (date, is_blocked, price_override_cents)                                                                                                                            | Covered                                   |
 | Reservations                 | `reservations` (dates, guests, price lines, terms, status, deal_id)                                                                                                                | Covered                                   |
-| Reviews with six sub-ratings | `reviews` (rating, sub_ratings jsonb: cleanliness, accuracy, check_in, communication, location, value, body)                                                                       | Covered; no Zod schema for it yet (below) |
+| Reviews with six sub-ratings | `reviews` (rating, sub_ratings jsonb: cleanliness, accuracy, check_in, communication, location, value, body)                                                                       | Covered; `ReviewSchema` in core.ts (GH-5) |
 | Message threads              | `conversations` + `messages` (Q&A with sources); `deals` + `deal_messages` (negotiation)                                                                                           | Covered                                   |
 | Glasshouse only              | `listing_facts`, `host_policies`, `captures`, `worlds`, `anchors`, `gaps`, `floor_plans`, `review_claims`, `deal_secrets`, `checkins`, `trip_briefs`, `events`                     | Covered                                   |
 
-For GH-5 to decide (none blocks the demo):
+Settled in GH-5 (additive contract changes, docs/CONTRACTS.md):
 
-1. Add the amenity vocabulary from section 5 as a Zod enum in `lib/schemas/core.ts`, so the seed, the search filters and the agents use the same words. `listings.amenities` stays jsonb.
-2. Add a `ReviewSchema` with the six sub-ratings as integers 1-5.
-3. Both are additions to a contract file: tell Temuri when they land.
-4. Not covered, recommended to skip: the host card's bio, languages and years hosting (`profiles` has only name and avatar; the card shows those); cancellation policy, minimum nights and extra-guest fees (the demo is a 4-night stay and the price does not depend on guests); wishlists, payments, payouts and taxes.
+1. Done: the amenity vocabulary from section 5 is the `Amenity` enum in `lib/schemas/core.ts`. `listings.amenities` stays jsonb and `ListingSchema` still says `string[]`, so validate with `Amenity.array()` where the words matter.
+2. Done: `ReviewSchema` with the six sub-ratings as integers 1-5. It has no `id` or `created_at`; type rows read back with `Tables<"reviews">`.
+3. Not covered, recommended to skip: the host card's bio, languages and years hosting (`profiles` has only name and avatar; the card shows those); cancellation policy, minimum nights and extra-guest fees (the demo is a 4-night stay and the price does not depend on guests); wishlists, payments, payouts and taxes.
 
 ## 4. Brand kit
 
