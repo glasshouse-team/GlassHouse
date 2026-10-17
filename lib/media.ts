@@ -53,7 +53,19 @@ const TONEMAP_TO_SDR = [
   "format=yuv420p",
 ].join(",");
 
-/** H.264, short side 720, 30 fps, no audio, SDR BT.709, sized for the URL limit. */
+/**
+ * How much faster a walkthrough plays after prepare: 1 up to VIDEO_MAX_SECONDS, otherwise it is
+ * sped up to 29 s (same frames, fewer of them). GH-3: a 93 s walkthrough sped up 3.2x gave a
+ * multi-room world in 6 minutes.
+ */
+export function videoSpeedup(durationSec: number): number {
+  return durationSec > VIDEO_MAX_SECONDS ? durationSec / (VIDEO_MAX_SECONDS - 1) : 1;
+}
+
+/**
+ * H.264, short side 720, 30 fps, no audio, SDR BT.709, at most 29 s (longer walkthroughs are
+ * sped up for World Labs' 30 s limit), sized for the URL limit.
+ */
 export function prepareVideoArgs({
   input,
   output,
@@ -70,8 +82,14 @@ export function prepareVideoArgs({
   /** True for HLG or PQ input (probeVideo): tone-maps to SDR BT.709. */
   hdr?: boolean;
 }): string[] {
-  const kbps = targetVideoKbps(durationSec);
-  const filters = [`fps=${fps}`, scaleShortSide(shortSide), ...(hdr ? [TONEMAP_TO_SDR] : [])];
+  const speedup = videoSpeedup(durationSec);
+  const kbps = targetVideoKbps(durationSec / speedup);
+  const filters = [
+    ...(speedup > 1 ? [`setpts=PTS/${speedup.toFixed(4)}`] : []),
+    `fps=${fps}`,
+    scaleShortSide(shortSide),
+    ...(hdr ? [TONEMAP_TO_SDR] : []),
+  ];
   return [
     "-y",
     "-hide_banner",

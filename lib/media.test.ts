@@ -13,6 +13,7 @@ import {
   probeVideo,
   runFfmpeg,
   targetVideoKbps,
+  videoSpeedup,
 } from "./media";
 
 describe("targetVideoKbps", () => {
@@ -31,7 +32,7 @@ describe("targetVideoKbps", () => {
 
 describe("prepareVideoArgs", () => {
   it("builds a no-audio H.264 command that scales the short side to 720", () => {
-    const args = prepareVideoArgs({ input: "in.mov", output: "out.mp4", durationSec: 80 });
+    const args = prepareVideoArgs({ input: "in.mov", output: "out.mp4", durationSec: 25 });
     expect(args).toContain("-an");
     expect(args).toContain("libx264");
     expect(args[args.indexOf("-vf") + 1]).toBe(
@@ -41,11 +42,19 @@ describe("prepareVideoArgs", () => {
     expect(args.at(-1)).toBe("out.mp4");
   });
 
+  it("speeds a walkthrough over 30 s up to 29 s for World Labs", () => {
+    expect(videoSpeedup(30)).toBe(1);
+    expect(videoSpeedup(92.8)).toBeCloseTo(3.2, 2);
+    const args = prepareVideoArgs({ input: "in.mov", output: "out.mp4", durationSec: 92.8 });
+    expect(args[args.indexOf("-vf") + 1]).toMatch(/^setpts=PTS\/3\.2000,fps=30,scale=/);
+    expect(args[args.indexOf("-b:v") + 1]).toBe(`${targetVideoKbps(29)}k`);
+  });
+
   it("tone-maps HDR to SDR BT.709 and tags the output", () => {
     const args = prepareVideoArgs({
       input: "in.mov",
       output: "out.mp4",
-      durationSec: 80,
+      durationSec: 25,
       hdr: true,
     });
     const vf = args[args.indexOf("-vf") + 1];
