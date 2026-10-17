@@ -57,9 +57,25 @@ describe("ReviewSchema", () => {
         .success,
     ).toBe(false);
   });
+
+  it("accepts whole-star ratings from 1 to 5 only, and a non-empty body", () => {
+    for (const rating of [0, 6, 4.5])
+      expect(ReviewSchema.safeParse({ ...review, rating }).success, String(rating)).toBe(false);
+    expect(ReviewSchema.safeParse({ ...review, body: "" }).success).toBe(false);
+  });
+
+  it("accepts a review with no guest account or author name", () => {
+    expect(ReviewSchema.safeParse({ ...review, guest_id: null, author_name: null }).success).toBe(
+      true,
+    );
+  });
 });
 
 describe("Amenity", () => {
+  it("is the 26-word vocabulary from docs/teardown.md", () => {
+    expect(Amenity.options).toHaveLength(26);
+  });
+
   it("leaves out the words the demo relies on being absent", () => {
     expect(Amenity.safeParse("hair_dryer").success).toBe(false);
     expect(Amenity.safeParse("sofa_bed").success).toBe(false);

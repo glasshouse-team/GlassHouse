@@ -8,6 +8,8 @@ The starter already contains drafts of everything below.
 
 22 tables, RLS on all, public read on non-secret tables, Realtime on events, deal_messages, deals, worlds, gaps, messages. Details: [DATABASE.md](DATABASE.md). New columns or tables go in `000N_<name>.sql`; never edit an applied migration.
 
+Applied in GH-5. Generated types: `lib/database.types.ts` (rerun `pnpm db:types` after every migration and commit it). `supabaseAdmin()` and `supabaseBrowser()` in `lib/supabase.ts` return `Db` (`SupabaseClient<Database>`), so queries are typed by table; use `Tables<"reviews">` and friends for rows read back.
+
 ## 2. Types: `lib/schemas/`
 
 | File          | Owner  | Defines                                                                                                                                                                                                                                              |
@@ -145,8 +147,9 @@ The only Marble-to-three transform; the viewer, floor plan and gap check all use
 
 ## Change log
 
-| Date       | Change                                                                                                                                                  | Agreed by        |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| 2026-10-17 | Starter drafts created                                                                                                                                  | (review in GH-5) |
-| 2026-10-17 | Sections 9-14 added after the ticket review (askHome, uploads, demo ids, viewer, tour add-ons, coordinates); createAgent gains stopWhen, output, effort | (review in GH-5) |
-| 2026-10-18 | `core.ts` adds `Amenity` (the 26-word vocabulary from docs/teardown.md) and `ReviewSchema` with the six sub-ratings (additive)                          | (review in GH-5) |
+| Date       | Change                                                                                                                                                  | Agreed by               |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| 2026-10-17 | Starter drafts created                                                                                                                                  | (review in GH-5)        |
+| 2026-10-17 | Sections 9-14 added after the ticket review (askHome, uploads, demo ids, viewer, tour add-ons, coordinates); createAgent gains stopWhen, output, effort | (review in GH-5)        |
+| 2026-10-18 | `core.ts` adds `Amenity` (the 26-word vocabulary from docs/teardown.md) and `ReviewSchema` with the six sub-ratings (additive)                          | (review in GH-5)        |
+| 2026-10-18 | Frozen at `a6ba574` (PR #3): migration applied, `lib/database.types.ts` generated, clients typed as `Db` (new export, type-level only)                  | Beka; Temuri to confirm |
