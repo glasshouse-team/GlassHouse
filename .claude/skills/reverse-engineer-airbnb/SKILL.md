@@ -27,7 +27,7 @@ What Airbnb does **not** do, and Glasshouse does: agents acting for both sides, 
 2. **Extract per screen:** components (top to bottom), the data fields each shows, and the actions (buttons, links). Keep it to bullet lists.
 3. **Fill the screen inventory** below with the final tier for each screen.
 4. **Map the five journeys** (below): every screen and click, and mark each step an agent now does with "(agent)".
-5. **Brand kit:** name, two colors (primary, accent), one font (for example Inter, through `next/font`, which downloads it at build time and serves it from our own domain; never a runtime `<link>` to Google Fonts), a simple logo mark. Put the colors in the `app/globals.css` tokens (`--brand`, `--brand-accent`, used by Tailwind 4's `@theme inline`; there is no tailwind.config.ts). Keep the accent clearly different from `--honesty` (amber), which means "AI-filled" in the 3D.
+5. **Brand kit** (picked in GH-4, D-022; see docs/teardown.md section 4): name, two colors (primary, accent), one font, a simple logo mark. The font is Inter, bundled in `app/fonts/` and loaded with `next/font/local`, so builds need no network (never a runtime `<link>` to Google Fonts). Put the colors in the `app/globals.css` tokens (`--brand`, `--brand-accent`, used by Tailwind 4's `@theme inline`; there is no tailwind.config.ts). Keep the accent clearly different from `--honesty` (amber), which means "AI-filled" in the 3D.
 6. **Seed-data spec** (below) for GH-7.
 7. Commit `docs/teardown.md`.
 
