@@ -212,18 +212,42 @@ export async function getWorld(worldId: string): Promise<MarbleWorld> {
   return "world" in body ? body.world : body;
 }
 
-/** Polls an operation every `intervalMs` until it finishes. Returns the full world. */
+/** A dropped connection ("fetch failed"), a 5xx or a 429 on one poll; the generation goes on. */
+function isTransientError(error: unknown): boolean {
+  if (error instanceof MarbleError) return error.status >= 500 || error.status === 429;
+  return error instanceof TypeError;
+}
+
+/**
+ * Polls an operation every `intervalMs` until it finishes. Returns the full world. Up to
+ * `maxPollErrors` transient poll errors in a row are retried; a failed generation is not.
+ */
 export async function waitForWorld(
   operationId: string,
   {
     intervalMs = 15_000,
     timeoutMs = 20 * 60_000,
+    maxPollErrors = 5,
     onProgress,
-  }: { intervalMs?: number; timeoutMs?: number; onProgress?: (op: MarbleOperation) => void } = {},
+  }: {
+    intervalMs?: number;
+    timeoutMs?: number;
+    maxPollErrors?: number;
+    onProgress?: (op: MarbleOperation) => void;
+  } = {},
 ): Promise<{ world: MarbleWorld; operation: MarbleOperation }> {
   const deadline = Date.now() + timeoutMs;
+  let pollErrors = 0;
   for (;;) {
-    const op = await getOperation(operationId);
+    let op: MarbleOperation;
+    try {
+      op = await getOperation(operationId);
+      pollErrors = 0;
+    } catch (error) {
+      if (!isTransientError(error) || ++pollErrors > maxPollErrors) throw error;
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+      continue;
+    }
     onProgress?.(op);
     if (op.done) {
       if (op.error)
