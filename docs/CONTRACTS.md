@@ -147,9 +147,9 @@ The only Marble-to-three transform; the viewer, floor plan and gap check all use
 
 ## Change log
 
-| Date       | Change                                                                                                                                                  | Agreed by               |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| 2026-10-17 | Starter drafts created                                                                                                                                  | (review in GH-5)        |
-| 2026-10-17 | Sections 9-14 added after the ticket review (askHome, uploads, demo ids, viewer, tour add-ons, coordinates); createAgent gains stopWhen, output, effort | (review in GH-5)        |
-| 2026-10-18 | `core.ts` adds `Amenity` (the 26-word vocabulary from docs/teardown.md) and `ReviewSchema` with the six sub-ratings (additive)                          | (review in GH-5)        |
-| 2026-10-18 | Frozen at `a6ba574` (PR #3): migration applied, `lib/database.types.ts` generated, clients typed as `Db` (new export, type-level only)                  | Beka; Temuri to confirm |
+| Date       | Change                                                                                                                                                  | Agreed by    |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| 2026-10-17 | Starter drafts created                                                                                                                                  | Beka, Temuri |
+| 2026-10-17 | Sections 9-14 added after the ticket review (askHome, uploads, demo ids, viewer, tour add-ons, coordinates); createAgent gains stopWhen, output, effort | Beka, Temuri |
+| 2026-10-18 | `core.ts` adds `Amenity` (the 26-word vocabulary from docs/teardown.md) and `ReviewSchema` with the six sub-ratings (additive)                          | Beka, Temuri |
+| 2026-10-18 | Frozen at `a6ba574` (PR #3): migration applied, `lib/database.types.ts` generated, clients typed as `Db` (new export, type-level only)                  | Beka, Temuri |
