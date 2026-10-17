@@ -1,11 +1,20 @@
 /**
- * Seed ~12 listings (2 hero homes), reviews, house rules, host policies and Q&A fixtures.
- * Idempotent: upsert by listings.slug. Demo numbers come from seed/fixtures.ts.
- * Built in GH-7 (owner: Beka). See docs/tickets/GH-7.md.
+ * `pnpm seed`: seeds ~12 listings (2 hero homes), reviews, house rules, host policies,
+ * availability and photos. Idempotent; run it as often as you like. Logic: seed/seed.ts.
  */
-console.error(
-  "scripts/seed.ts is not implemented yet. It is built in GH-7 (Beka); see docs/tickets/GH-7.md.",
-);
-process.exit(1);
+import { seed } from "../seed/seed";
 
-export {};
+async function main() {
+  const summary = await seed();
+  console.table(summary);
+  const missing = summary.filter((row) => row.photos === 0).map((row) => row.slug);
+  if (missing.length > 0) {
+    console.log(`No photos yet for: ${missing.join(", ")} (see seed/PHOTOS.md).`);
+  }
+  console.log("Seed done.");
+}
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : error);
+  process.exit(1);
+});
