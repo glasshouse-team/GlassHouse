@@ -10,11 +10,11 @@ The starter already contains drafts of everything below.
 
 ## 2. Types: `lib/schemas/`
 
-| File          | Owner  | Defines                                                                                                                                                                                         |
-| ------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `core.ts`     | Beka   | `Cents`, `IsoDate`, `EventInputSchema`, `ListingSchema`, `HostPolicySchema`, `TripBriefSchema`, `QuoteSchema`, `DealSchema`, `DealMessageSchema` (types include `rejected`), `OfferTermsSchema` |
-| `world.ts`    | Temuri | `Vec3Schema`, `WorldSchema`, `AnchorSchema`, `GapSchema`, `FloorPlanSchema`, `CaptureSchema` (meters, floor at y = 0)                                                                           |
-| `verifier.ts` | Temuri | `XrayResultSchema`, `GapCheckResultSchema`, `RoomLabelsSchema`, `KNOWN_FACT_KEYS`                                                                                                               |
+| File          | Owner  | Defines                                                                                                                                                                                                                                              |
+| ------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `core.ts`     | Beka   | `Cents`, `IsoDate`, `EventInputSchema`, `ListingSchema`, `HostPolicySchema`, `TripBriefSchema`, `QuoteSchema`, `DealSchema`, `DealMessageSchema` (types include `rejected`), `OfferTermsSchema`, `Amenity`, `ReviewSubRatingsSchema`, `ReviewSchema` |
+| `world.ts`    | Temuri | `Vec3Schema`, `WorldSchema`, `AnchorSchema`, `GapSchema`, `FloorPlanSchema`, `CaptureSchema` (meters, floor at y = 0)                                                                                                                                |
+| `verifier.ts` | Temuri | `XrayResultSchema`, `GapCheckResultSchema`, `RoomLabelsSchema`, `KNOWN_FACT_KEYS`                                                                                                                                                                    |
 
 ## 3. Activity feed: `lib/events.ts` (Beka)
 
@@ -149,3 +149,4 @@ The only Marble-to-three transform; the viewer, floor plan and gap check all use
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
 | 2026-10-17 | Starter drafts created                                                                                                                                  | (review in GH-5) |
 | 2026-10-17 | Sections 9-14 added after the ticket review (askHome, uploads, demo ids, viewer, tour add-ons, coordinates); createAgent gains stopWhen, output, effort | (review in GH-5) |
+| 2026-10-18 | `core.ts` adds `Amenity` (the 26-word vocabulary from docs/teardown.md) and `ReviewSchema` with the six sub-ratings (additive)                          | (review in GH-5) |
