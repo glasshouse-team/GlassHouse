@@ -5,7 +5,7 @@
  *   pnpm worlds generate --images <file-or-url,...> [--azimuths 0,90,180,270] [--reconstruct] [--wait]
  *   pnpm worlds upload <file>             (prints a media_asset_id)
  *   pnpm worlds status <operation_id>
- *   pnpm worlds wait <operation_id>
+ *   pnpm worlds wait <operation_id> [--timeout <minutes>]   (default 60; also for generate --wait)
  *   pnpm worlds get <world_id>
  *   pnpm worlds inspect <world_id> [--json]   (asset sizes, collider format, floor vs ground_plane_offset)
  *
@@ -18,8 +18,6 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { isDemoMode, settings } from "@/lib/env";
-import { ceilingHeight, colliderToThree, robustExtent } from "@/lib/geometry/collider";
-import { glbSummary, parseGlb } from "@/lib/geometry/glb";
 import {
   generateWorld,
   getOperation,
@@ -122,6 +120,12 @@ async function remoteSize(url: string): Promise<number | null> {
  * so after our flip the collider floor should sit at y = -ground_plane_offset.
  */
 async function inspect(worldId: string, asJson: boolean) {
+  // Scripts run as CommonJS under tsx, and three's CommonJS build prints a deprecation warning
+  // when loaded. Only inspect needs three, so it loads the geometry here, with the warning off.
+  process.noDeprecation = true;
+  const { ceilingHeight, colliderToThree, robustExtent } = await import("@/lib/geometry/collider");
+  const { glbSummary, parseGlb } = await import("@/lib/geometry/glb");
+
   const world = await getWorld(worldId);
   const meta = world.assets?.splats?.semantics_metadata;
   const { metricScaleFactor } = worldScale(world);
@@ -215,17 +219,35 @@ async function inspect(worldId: string, asJson: boolean) {
   );
 }
 
-async function wait(operationId: string) {
+/** marble-1.1-plus on a 90-110 s walkthrough takes over 20 minutes; operations expire after 3 h. */
+const DEFAULT_TIMEOUT_MINUTES = 60;
+
+async function wait(operationId: string, timeoutMinutes: number) {
   const started = Date.now();
-  const { world, operation } = await waitForWorld(operationId, {
-    onProgress: (op) => {
-      const secs = Math.round((Date.now() - started) / 1000);
-      process.stdout.write(`\r${op.done ? "done" : "generating"}... ${secs}s   `);
-    },
-  });
-  process.stdout.write("\n");
-  if (operation.cost) console.log(`Cost: ${operation.cost.total_credits} credits`);
-  printWorld(world);
+  let shownWorldId = false;
+  try {
+    const { world, operation } = await waitForWorld(operationId, {
+      timeoutMs: timeoutMinutes * 60_000,
+      onProgress: (op) => {
+        const worldId = op.metadata?.world_id;
+        if (!shownWorldId && typeof worldId === "string") {
+          process.stdout.write(`world_id: ${worldId}\n`);
+          shownWorldId = true;
+        }
+        const secs = Math.round((Date.now() - started) / 1000);
+        process.stdout.write(`\r${op.done ? "done" : "generating"}... ${secs}s   `);
+      },
+    });
+    process.stdout.write("\n");
+    if (operation.cost) console.log(`Cost: ${operation.cost.total_credits} credits`);
+    printWorld(world);
+  } catch (error) {
+    process.stdout.write("\n");
+    if (error instanceof MarbleError && error.status === 408) {
+      console.error(`Resume with: pnpm worlds wait ${operationId} [--timeout <minutes>]`);
+    }
+    throw error;
+  }
 }
 
 async function main() {
@@ -242,15 +264,17 @@ async function main() {
       wait: { type: "boolean", default: false },
       force: { type: "boolean", default: false },
       json: { type: "boolean", default: false },
+      timeout: { type: "string" },
     },
   });
   const [command, id] = positionals;
+  const timeoutMinutes = Number(values.timeout ?? DEFAULT_TIMEOUT_MINUTES);
 
   if (command === "status" && id) {
     console.log(JSON.stringify(await getOperation(id), null, 2));
     return;
   }
-  if (command === "wait" && id) return wait(id);
+  if (command === "wait" && id) return wait(id, timeoutMinutes);
   if (command === "get" && id) return printWorld(await getWorld(id));
   if (command === "inspect" && id) return inspect(id, values.json);
   if (command === "upload" && id) {
@@ -309,7 +333,7 @@ async function main() {
     }
     const op = await generateWorld(request);
     console.log(`Started. operation_id: ${op.operation_id}  (model ${model})`);
-    if (values.wait) return wait(op.operation_id);
+    if (values.wait) return wait(op.operation_id, timeoutMinutes);
     console.log(`Check later with: pnpm worlds wait ${op.operation_id}`);
     return;
   }
@@ -323,8 +347,9 @@ async function main() {
 }
 
 main().catch((error) => {
-  if (error instanceof MarbleError)
-    console.error(`${error.message}\n${JSON.stringify(error.body, null, 2)}`);
-  else console.error(error instanceof Error ? error.message : error);
+  console.error(error instanceof Error ? error.message : error);
+  if (error instanceof MarbleError && error.body !== undefined) {
+    console.error(JSON.stringify(error.body, null, 2));
+  }
   process.exit(1);
 });
