@@ -6,6 +6,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { logEvent } from "@/lib/events";
+import { XrayResultSchema } from "@/lib/schemas/verifier";
 import { BUCKETS, publicMediaUrl, supabaseAdmin } from "@/lib/supabase";
 import { SEED_LISTINGS, type SeedListing } from "./data/listings";
 import { DEMO_PROFILES, HERO_LISTINGS, SEED_COMPLETED_ACTION } from "./fixtures";
@@ -18,6 +19,8 @@ import {
   photoRows,
   policyRow,
   reviewRows,
+  withWasherFact,
+  type SeedPhoto,
 } from "./rows";
 
 /** Local photos for non-hero listings: `seed/photos/<slug>/NN-room.jpg` (git-ignored). */
@@ -73,20 +76,23 @@ async function syncPhotos(id: string) {
     (files ?? []).map((f) => f.name),
     (name) => publicMediaUrl(`${photoFolder(id)}/${name}`),
   );
+  let saved: SeedPhoto[] = [];
   if (rows.length > 0) {
-    const { error: upsertError } = await db
+    const { data, error: upsertError } = await db
       .from("listing_photos")
-      .upsert(rows, { onConflict: "listing_id,sort" });
+      .upsert(rows, { onConflict: "listing_id,sort" })
+      .select("id, room_label");
     check(upsertError, `listing_photos of ${id}`);
+    saved = data ?? [];
   }
-  // Drop rows for photos that are gone, so the listing shows exactly the Storage folder.
-  const stale = db.from("listing_photos").delete().eq("listing_id", id);
+  // Drop uploaded photos that are gone from Storage (capture frames from GH-22 stay).
+  const stale = db.from("listing_photos").delete().eq("listing_id", id).eq("source", "upload");
   const { error: deleteError } =
     rows.length > 0
       ? await stale.not("sort", "in", `(${rows.map((r) => r.sort).join(",")})`)
       : await stale;
   check(deleteError, `stale listing_photos of ${id}`);
-  return rows;
+  return saved;
 }
 
 async function upsertPolicy(listing: SeedListing): Promise<void> {
@@ -111,22 +117,32 @@ async function upsertReviews(listing: SeedListing): Promise<number> {
 }
 
 /**
- * Writes hero-1's starting X-ray row (the `washer` fact) unless a real X-ray (GH-9) has
- * replaced it: rows the seed wrote itself (model "seed") are refreshed with the latest photos.
+ * Makes sure hero-1 has the `washer` fact "Ask this home" cites. The seed's own row (model
+ * "seed") is rewritten with the latest photos; a real X-ray row (GH-9) is kept and only gets
+ * the washer fact appended when the X-ray did not find one.
  */
-async function seedHeroFacts(photos: { room_label: string | null; sort: number }[]) {
+async function seedHeroFacts(photos: SeedPhoto[]) {
   const db = supabaseAdmin();
   const { data, error } = await db
     .from("listing_facts")
-    .select("model")
+    .select("model, facts")
     .eq("listing_id", HERO_LISTINGS.hero1.id)
     .maybeSingle();
   check(error, "read hero-1 facts");
-  if (data && data.model !== "seed") return;
-  const { error: upsertError } = await db
+  if (!data || data.model === "seed") {
+    const { error: upsertError } = await db
+      .from("listing_facts")
+      .upsert(heroFactsRow(photos), { onConflict: "listing_id" });
+    check(upsertError, "hero-1 facts");
+    return;
+  }
+  const facts = XrayResultSchema.shape.facts.safeParse(data.facts);
+  if (!facts.success || facts.data.some((f) => f.key === "washer")) return;
+  const { error: updateError } = await db
     .from("listing_facts")
-    .upsert(heroFactsRow(photos), { onConflict: "listing_id" });
-  check(upsertError, "hero-1 facts");
+    .update({ facts: withWasherFact(facts.data, photos) })
+    .eq("listing_id", HERO_LISTINGS.hero1.id);
+  check(updateError, "hero-1 washer fact");
 }
 
 function heroOne(): SeedListing {

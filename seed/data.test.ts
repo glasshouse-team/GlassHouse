@@ -13,12 +13,14 @@ import {
 import {
   addDays,
   availabilityRows,
+  averageRating,
   heroFactsRow,
   listingId,
   listingRow,
   photoRows,
   policyRow,
   reviewRows,
+  withWasherFact,
 } from "./rows";
 
 const bySlug = (slug: string) => {
@@ -97,8 +99,24 @@ describe("hero-1 (the demo home)", () => {
     }
   });
 
-  it("carries at least five review claims that can be pinned in 3D (GH-24)", () => {
-    expect(SEED_REVIEWS[hero1.slug].length).toBeGreaterThanOrEqual(5);
+  it("carries the five review claims GH-24 pins in 3D", () => {
+    const text = SEED_REVIEWS[hero1.slug].map((r) => r.body.toLowerCase()).join("\n");
+    for (const claim of [
+      "shower pressure in the bathroom is weak",
+      "small bedroom gets cold at night",
+      "sofa in the living room is too short",
+      "woke up to mount kazbek from the bedroom window",
+      "desk by the living-room window",
+    ])
+      expect(text, claim).toContain(claim);
+  });
+
+  it("keeps the fixed hero ids and Giorgi as the host of both heroes", () => {
+    for (const hero of Object.values(HERO_LISTINGS)) {
+      const row = listingRow(bySlug(hero.slug));
+      expect(row.id).toBe(hero.id);
+      expect(row.host_id).toBe(hero.hostId);
+    }
   });
 });
 
@@ -139,6 +157,20 @@ describe("reviews", () => {
     const row = listingRow(hero1);
     expect(row.review_count).toBe(SEED_REVIEWS[hero1.slug].length);
     expect(row.rating).toBe(4.8);
+    expect(averageRating([5, 4, 4])).toBe(4.3);
+    expect(averageRating([])).toBeNull();
+  });
+
+  it("backs up both lies with an accuracy-2 review", () => {
+    const find = (slug: string, phrase: string) =>
+      SEED_REVIEWS[slug].find((r) => r.body.toLowerCase().includes(phrase));
+    expect(find(LIE_LISTING_SLUGS.seaView, "couldn't see the sea")?.sub[1]).toBe(2);
+    expect(find(LIE_LISTING_SLUGS.sleepsSix, "only four single beds")?.sub[1]).toBe(2);
+  });
+
+  it("has the old-town flat's placeable noisy-street complaint", () => {
+    const bodies = SEED_REVIEWS["tbilisi-old-town-balcony-flat"].map((r) => r.body.toLowerCase());
+    expect(bodies.some((b) => b.includes("bedroom window faces a noisy street"))).toBe(true);
   });
 });
 
@@ -159,6 +191,20 @@ describe("availability rows", () => {
     const late = availabilityRows(chalet, "2027-01-01");
     expect(late.find((r) => r.date === "2026-11-11")?.is_blocked).toBe(true);
   });
+
+  it("blocks exactly the chalet's and the studio's dates across all listings", () => {
+    const blocked = SEED_LISTINGS.flatMap((l) =>
+      availabilityRows(l, "2026-10-18")
+        .filter((r) => r.is_blocked)
+        .map((r) => `${l.slug} ${r.date}`),
+    );
+    expect(blocked.sort()).toEqual([
+      "batumi-old-town-studio 2026-11-20",
+      "batumi-old-town-studio 2026-11-21",
+      "batumi-old-town-studio 2026-11-22",
+      "kazbegi-alpine-chalet 2026-11-11",
+    ]);
+  });
 });
 
 describe("photo rows", () => {
@@ -174,11 +220,33 @@ describe("photo rows", () => {
     ]);
   });
 
-  it("points hero-1's washer fact at a laundry photo when there is one", () => {
-    const facts = heroFactsRow([
-      { room_label: "kitchen", sort: 3 },
-      { room_label: "laundry", sort: 7 },
-    ]).facts;
-    expect(facts[0]).toMatchObject({ key: "washer", value: true, evidence: ["photo_07"] });
+  it("refuses two photos with the same number", () => {
+    expect(() => photoRows("id", ["03-kitchen.jpg", "03-kitchen-2.jpg"], (n) => n)).toThrow(
+      /share the number 03/,
+    );
+  });
+});
+
+describe("hero-1's washer fact", () => {
+  const photos = [
+    { id: "p-kitchen", room_label: "kitchen" },
+    { id: "p-laundry", room_label: "laundry" },
+    { id: "p-machine", room_label: "washing machine" },
+  ];
+
+  it("cites the listing_photos ids of laundry and washing-machine photos", () => {
+    expect(heroFactsRow(photos).facts[0]).toMatchObject({
+      key: "washer",
+      value: true,
+      evidence: ["p-laundry", "p-machine"],
+    });
+    expect(heroFactsRow(photos).model).toBe("seed");
+  });
+
+  it("is appended to a real X-ray result only when the X-ray found none", () => {
+    const desk = { key: "has_desk", value: true, evidence: ["p-x"], confidence: 0.8 };
+    expect(withWasherFact([desk], photos).map((f) => f.key)).toEqual(["has_desk", "washer"]);
+    const found = { key: "washer", value: true, evidence: ["p-y"], confidence: 0.95 };
+    expect(withWasherFact([found], photos)).toEqual([found]);
   });
 });

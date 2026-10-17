@@ -135,7 +135,7 @@ export const SEED_REVIEWS: Record<string, SeedReview[]> = {
       month: "2026-06",
     },
     {
-      author: "Nino K.",
+      author: "Natela",
       rating: 5,
       sub: [5, 4, 5, 5, 5, 5],
       body: "The kids loved the garden and the crib was clean and sturdy.",
@@ -211,7 +211,7 @@ export const SEED_REVIEWS: Record<string, SeedReview[]> = {
       month: "2026-09",
     },
     {
-      author: "Giorgi B.",
+      author: "Gela",
       rating: 4,
       sub: [4, 4, 5, 5, 5, 5],
       body: "Simple and clean, great value. The wifi only works in the common room.",

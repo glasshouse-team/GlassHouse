@@ -3,11 +3,13 @@
  * seed/seed.ts writes them.
  */
 import { HostPolicySchema, ListingSchema, ReviewSchema } from "@/lib/schemas/core";
-import { XrayResultSchema } from "@/lib/schemas/verifier";
+import { XrayResultSchema, type XrayResult } from "@/lib/schemas/verifier";
 import { DEMO_PROFILES, HERO_LISTINGS } from "./fixtures";
 import type { SeedListing } from "./data/listings";
 import { SEED_REVIEWS } from "./data/reviews";
 import { seedId } from "./ids";
+
+type Fact = XrayResult["facts"][number];
 
 /** Hero homes keep their fixed ids from fixtures.ts; the others derive theirs from the slug. */
 export function listingId(slug: string): string {
@@ -112,40 +114,56 @@ export function isPhotoName(name: string): boolean {
   return PHOTO_NAME.test(name);
 }
 
-/** `listing_photos` rows from Storage file names like "03-living-room.jpg". */
+/**
+ * `listing_photos` rows from Storage file names like "03-living-room.jpg". Throws when two
+ * files share a number: `(listing_id, sort)` is unique, so the upsert would fail midway.
+ */
 export function photoRows(
   listingIdValue: string,
   names: string[],
   urlOf: (name: string) => string,
 ) {
-  return names
-    .filter(isPhotoName)
-    .sort()
-    .map((name) => {
-      const [, sort, room] = PHOTO_NAME.exec(name)!;
-      return {
-        listing_id: listingIdValue,
-        url: urlOf(name),
-        room_label: room.replace(/-/g, " "),
-        sort: Number(sort),
-        source: "upload" as const,
-      };
-    });
+  const photos = names.filter(isPhotoName).sort();
+  const byNumber = new Map<string, string>();
+  for (const name of photos) {
+    const number = name.slice(0, 2);
+    const twin = byNumber.get(number);
+    if (twin)
+      throw new Error(`Photos ${twin} and ${name} share the number ${number}; give each its own.`);
+    byNumber.set(number, name);
+  }
+  return photos.map((name) => {
+    const [, sort, room] = PHOTO_NAME.exec(name)!;
+    return {
+      listing_id: listingIdValue,
+      url: urlOf(name),
+      room_label: room.replace(/-/g, " "),
+      sort: Number(sort),
+      source: "upload" as const,
+    };
+  });
 }
 
+/** A photo row as read back from `listing_photos`. */
+export type SeedPhoto = { id: string; room_label: string | null };
+
 /**
- * A starting X-ray row for hero-1 with the `washer` fact that "Ask this home" cites
- * (HERO_QA_FIXTURES). Written only when no X-ray row exists, so a real GH-9 run wins.
+ * hero-1's `washer` fact, which "Ask this home" cites as `fact:washer` (HERO_QA_FIXTURES).
+ * Evidence is the `listing_photos.id` of a laundry or washing-machine photo, as GH-9 stores it.
  */
-export function heroFactsRow(photos: { room_label: string | null; sort: number }[]) {
-  const evidence = photos
-    .filter((p) => /washer|laundry/i.test(p.room_label ?? ""))
-    .map((p) => `photo_${String(p.sort).padStart(2, "0")}`);
-  const result = {
-    facts: [{ key: "washer", value: true, evidence, confidence: 0.9 }],
-    contradictions: [],
-    missing_photos: [],
-  };
+export function washerFact(photos: SeedPhoto[]): Fact {
+  const evidence = photos.filter((p) => /wash|laundry/i.test(p.room_label ?? "")).map((p) => p.id);
+  return { key: "washer", value: true, evidence, confidence: 0.9 };
+}
+
+/** The facts with the washer fact appended, unless they already have one. */
+export function withWasherFact(facts: Fact[], photos: SeedPhoto[]): Fact[] {
+  return facts.some((f) => f.key === "washer") ? facts : [...facts, washerFact(photos)];
+}
+
+/** A starting X-ray row for hero-1, written by the seed (model "seed") until GH-9 runs. */
+export function heroFactsRow(photos: SeedPhoto[]) {
+  const result = { facts: [washerFact(photos)], contradictions: [], missing_photos: [] };
   XrayResultSchema.parse(result);
   return { listing_id: HERO_LISTINGS.hero1.id, ...result, model: "seed" };
 }

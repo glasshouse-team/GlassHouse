@@ -1,10 +1,13 @@
 # Seed photos (GH-7)
 
-`pnpm seed` uploads whatever is in `seed/photos/<slug>/` to `media/listings/{id}/photos/` and mirrors that Storage folder into `listing_photos`. The folder is git-ignored: photos never go in the repo. Re-run `pnpm seed` after adding or removing photos.
+`pnpm seed` uploads whatever is in `seed/photos/<slug>/` to `media/listings/{id}/photos/` and mirrors that Storage folder into `listing_photos`. The folder is git-ignored: photos never go in the repo. Re-run `pnpm seed` after adding photos.
+
+To remove or rename a photo, delete it from the Storage folder (Supabase dashboard, Storage, `media`), then re-run `pnpm seed`. Deleting only the local file changes nothing, because the listing mirrors Storage.
 
 ## Rules
 
 - **Names:** `NN-room.jpg` (or `.png`, `.webp`): two digits for the order, then the room in lower case with dashes, e.g. `01-living-room.jpg`. The room becomes the photo's label; other files are ignored.
+- **Each NN once per listing:** two angles of one room are `03-kitchen.jpg` and `04-kitchen-2.jpg`, never two `03-`. The seed stops with an error naming both files.
 - **Licence:** your own photos, or free-licence stock (Unsplash or Pexels licence). Never Airbnb photos. Record every stock photo in the credits table below.
 - **Size:** under 2 MB each (resize to about 1600 px wide).
 - **Truthful except the two lies:** the X-ray (GH-9) compares photos with the listing, so every photo must agree with the listing's amenities and text. Only the two lie listings may contradict it, exactly as described below.
@@ -13,7 +16,8 @@
 
 Real photos of the filmed homes, uploaded straight to `media/listings/{id}/photos/` with the same names (hero-1 id `00000000-0000-4000-8000-0000000000b1`, hero-2 id `00000000-0000-4000-8000-0000000000b2`), or dropped into `seed/photos/hero-1/` and `seed/photos/hero-2/`.
 
-- hero-1 needs: the living room with the fireplace and the desk by the window, both bedrooms (the view of the mountain from one window), the kitchen, the bathroom, and one photo that clearly shows the washing machine named `NN-laundry.jpg` (the `washer` fact points at it). No hair dryer in any photo.
+- hero-1 needs: the living room with the fireplace and the desk by the window, both bedrooms (the view of the mountain from one window), the kitchen, the bathroom, and one photo that clearly shows the washing machine named `NN-laundry.jpg` or `NN-washing-machine.jpg` (the `washer` fact points at it). No hair dryer in any photo.
+- The hero rows in `seed/data/listings.ts` are placeholders. When Temuri's real title, description, amenities and manual arrive, replace them there: every `pnpm seed` rewrites the hero rows, and placeholder text that disagrees with the real photos would make the X-ray report contradictions on the hero homes.
 
 ## Shot list for the other ten (about 50 photos)
 
