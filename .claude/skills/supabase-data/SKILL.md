@@ -61,4 +61,4 @@ Tables in the publication: events, deal_messages, deals, worlds, gaps, messages.
 
 ## Setup (GH-2)
 
-Project in an EU region; keys from Project Settings > API: URL, publishable (anon) key, secret (service role) key, into `.env.local` and Vercel. New Supabase projects show "publishable" and "secret" keys; the legacy anon and service_role keys work the same way. Steps: docs/SETUP.md.
+Project in `ap-southeast-2` (Sydney), with Vercel Functions in `syd1` next to it (D-021); keys from Project Settings > API: URL, publishable (anon) key, secret (service role) key, into `.env.local` and Vercel. New Supabase projects show "publishable" and "secret" keys; the legacy anon and service_role keys work the same way. Steps: docs/SETUP.md.

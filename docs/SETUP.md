@@ -28,16 +28,16 @@ Add Beka as a collaborator, protect `main` (require a pull request, block force 
 
 ## 3. Accounts and keys (hour 0-1)
 
-| Item                 | Who            | What to do                                                    | Cost (est.) |
-| -------------------- | -------------- | ------------------------------------------------------------- | ----------- |
-| GitHub repo          | Temuri or Beka | Step 1 above                                                  | Free        |
-| Anthropic            | Beka           | console.anthropic.com: API key, prepaid credits, spending cap | $20-40      |
-| World Labs           | Temuri         | platform.worldlabs.ai: API key, buy API credits, cap          | $30-60      |
-| Supabase             | Beka           | New project in an EU region; keys from Project Settings > API | Free        |
-| Vercel               | Beka           | Import the GitHub repo; add all env vars; first deploy        | Free        |
-| ngrok                | Beka           | Account + auth token (`ngrok config add-authtoken ...`)       | Free        |
-| Scenario (backup 3D) | Temuri         | Only if the go/no-go test needs HY World                      | $10-30      |
-| ElevenLabs           | Beka           | Only for Georgian narration (GH-25)                           | Free tier   |
+| Item                 | Who            | What to do                                                                              | Cost (est.) |
+| -------------------- | -------------- | --------------------------------------------------------------------------------------- | ----------- |
+| GitHub repo          | Temuri or Beka | Step 1 above                                                                            | Free        |
+| Anthropic            | Beka           | console.anthropic.com: API key, prepaid credits, spending cap                           | $20-40      |
+| World Labs           | Temuri         | platform.worldlabs.ai: API key, buy API credits, cap                                    | $30-60      |
+| Supabase             | Beka           | Project in `ap-southeast-2`, Sydney (D-021); keys from Project Settings > API           | Free        |
+| Vercel               | Beka           | Import the GitHub repo; Functions region `syd1` (D-021); add all env vars; first deploy | Free        |
+| ngrok                | Beka           | Account + auth token (`ngrok config add-authtoken ...`)                                 | Free        |
+| Scenario (backup 3D) | Temuri         | Only if the go/no-go test needs HY World                                                | $10-30      |
+| ElevenLabs           | Beka           | Only for Georgian narration (GH-25)                                                     | Free tier   |
 
 Put keys in `.env.local` (copy `.env.example`) and in Vercel. Share them privately (password manager or direct message), never in git, Jira or chat with Claude. Check with `pnpm dev` and http://localhost:3000/api/health.
 

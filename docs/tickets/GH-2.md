@@ -113,3 +113,7 @@ Include:
 ## Out of scope
 
 Database tables (GH-5), authentication (we use a role switcher), payments.
+
+## Decision updates
+
+- 2026-10-17 D-021: Supabase stays in `ap-southeast-2` (Sydney) and Vercel Functions run in `syd1` (was: Supabase in `eu-central-1` Frankfurt, Vercel `fra1`). Jira: pending
