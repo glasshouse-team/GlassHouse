@@ -19,9 +19,12 @@ export function marbleToThree(metricScaleFactor: number, floorY = 0): Matrix4 {
 
 /**
  * Floor height of a mesh already flipped and scaled (marbleToThree(s, 0)): the lowest large
- * horizontal surface. Horizontal triangles are binned by height (5 cm) and weighted by area;
- * the floor is the lowest bin with at least 30% of the biggest bin's area, so table tops and
- * the ceiling do not win.
+ * horizontal surface below the capture camera at the origin. Horizontal triangles are binned by
+ * height (5 cm) and weighted by area; a layer is a bin whose area summed with its two neighbours
+ * is a local maximum, so a floor that is a few cm uneven counts once. The floor is the lowest
+ * layer at least 30 cm under the origin with 30% of the biggest such layer's area: the ceiling
+ * (often the biggest flat surface) is never compared, and bed and table tops do not win (GH-3).
+ * Without any layer under the origin, all layers count.
  */
 export function floorHeight(
   positions: ArrayLike<number>,
@@ -53,9 +56,18 @@ export function floorHeight(
   }
   if (bins.size === 0) return 0;
 
-  const biggest = Math.max(...bins.values());
-  const lowest = Math.min(
-    ...[...bins].filter(([, area]) => area >= 0.3 * biggest).map(([bin]) => bin),
+  const area = (bin: number) => bins.get(bin) ?? 0;
+  const layerArea = (bin: number) => area(bin - 1) + area(bin) + area(bin + 1);
+  const nearby = new Set([...bins.keys()].flatMap((bin) => [bin - 1, bin, bin + 1]));
+  const layers = [...nearby].filter(
+    (bin) => layerArea(bin) >= layerArea(bin - 1) && layerArea(bin) > layerArea(bin + 1),
   );
-  return lowest * binSize;
+  const belowCamera = layers.filter((bin) => bin * binSize <= -0.3);
+  const candidates = belowCamera.length > 0 ? belowCamera : layers;
+  const biggest = Math.max(...candidates.map(layerArea));
+  const floor = Math.min(...candidates.filter((bin) => layerArea(bin) >= 0.3 * biggest));
+  // Area-weighted height of the floor layer's three bins.
+  const weighted =
+    (floor - 1) * area(floor - 1) + floor * area(floor) + (floor + 1) * area(floor + 1);
+  return (weighted / layerArea(floor)) * binSize;
 }

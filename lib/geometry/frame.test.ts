@@ -31,4 +31,18 @@ describe("floorHeight", () => {
     const wall = [0, 0, 0, 0, 3, 0, 4, 3, 0, 0, 0, 0, 4, 3, 0, 4, 0, 0];
     expect(floorHeight([...wall, ...quad(0, 4, 0, 4, -1.5)])).toBeCloseTo(-1.5, 1);
   });
+
+  it("finds a small, uneven floor under a big ceiling and a bed (GH-3 bedroom world)", () => {
+    const bedroom = [
+      ...quad(-2, 2, -2, 2, 1.3), // ceiling, 16 m2: the biggest flat surface
+      ...quad(-1, 1, -1, 1, -0.85), // bed top, 4 m2
+      ...quad(1, 2, -2, 0, -1.37), // floor beside the bed, 2 m2, 6 cm uneven (bins 5 cm apart)
+      ...quad(-2, -1, -2, 0, -1.43),
+    ];
+    expect(floorHeight(bedroom)).toBeCloseTo(-1.4, 1);
+  });
+
+  it("uses every layer when nothing is under the origin", () => {
+    expect(floorHeight(quad(0, 4, 0, 4, 0.5))).toBeCloseTo(0.5, 2);
+  });
 });
