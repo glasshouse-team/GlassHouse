@@ -1,0 +1,39 @@
+{
+  "$comment": "Ticket -> owner, dependencies and Claude Code skills. Used by the start-ticket skill and the session-context hook. GH-17..GH-27 are expected keys: they are not in Jira yet and may get different numbers when created; update this file if they do.",
+  "jira": {
+    "site": "hacktoberfest.atlassian.net",
+    "cloudId": "16cfd994-27ba-4946-96b2-20eda0de551f",
+    "project": "GH",
+    "board": "https://hacktoberfest.atlassian.net/jira/software/projects/GH/boards/2",
+    "epic": "GH-1"
+  },
+  "tickets": {
+    "GH-1": { "title": "Glasshouse: AI-native Airbnb rebuild (Epic)", "owner": "Temuri", "tier": "epic", "hours": "0-24", "depends": [], "skills": ["start-ticket"], "inJira": true },
+    "GH-2": { "title": "Set up repo, Supabase, Vercel, API keys and CLAUDE.md", "owner": "Beka", "tier": "must", "hours": "0-2", "depends": [], "skills": ["supabase-data"], "inJira": true },
+    "GH-3": { "title": "World Labs account + whole-house 3D go/no-go test", "owner": "Temuri", "tier": "must", "hours": "0-2", "depends": [], "skills": ["marble-world-pipeline", "mobile-capture"], "inJira": true },
+    "GH-4": { "title": "Reverse-engineer Airbnb: journeys, screen inventory, brand kit, seed spec", "owner": "Beka", "tier": "must", "hours": "1-2", "depends": ["GH-2"], "skills": ["reverse-engineer-airbnb"], "inJira": true },
+    "GH-5": { "title": "Shared contracts: DB schema, Zod types, logEvent, page slots, tour API, agent core", "owner": "Beka", "tier": "must", "hours": "2-4", "depends": ["GH-2", "GH-4"], "skills": ["shared-contracts", "supabase-data"], "inJira": true },
+    "GH-6": { "title": "Film 2 hero homes and start their 3D generations", "owner": "Temuri", "tier": "must", "hours": "1-3", "depends": ["GH-3"], "skills": ["mobile-capture", "marble-world-pipeline"], "inJira": true },
+    "GH-7": { "title": "Seed data: ~12 listings, reviews, house rules, host policies, demo fixtures", "owner": "Beka", "tier": "must", "hours": "3-5", "depends": ["GH-4", "GH-5"], "skills": ["supabase-data"], "inJira": true },
+    "GH-8": { "title": "Core pages: search, listing page with slots, booking box + computeQuote, host dashboard, role switcher", "owner": "Beka", "tier": "must", "hours": "4-8", "depends": ["GH-4", "GH-5", "GH-7"], "skills": ["ui-pages", "reverse-engineer-airbnb"], "inJira": true },
+    "GH-9": { "title": "F1 Listing X-ray (Verifier): facts, contradictions and missing photos", "owner": "Temuri", "tier": "must", "hours": "3-5", "depends": ["GH-5", "GH-7"], "skills": ["verifier-vision"], "inJira": true },
+    "GH-10": { "title": "F3a 3D pipeline: generate, poll, store assets, versions, publish, demo mode", "owner": "Temuri", "tier": "must", "hours": "5-8", "depends": ["GH-3", "GH-5", "GH-6"], "skills": ["marble-world-pipeline"], "inJira": true },
+    "GH-11": { "title": "F3b 3D tour viewer: walking, collisions, Jump to room, anchor mode, useTour() API", "owner": "Temuri", "tier": "must", "hours": "7-11", "depends": ["GH-5", "GH-10"], "skills": ["splat-tour-viewer"], "inJira": true },
+    "GH-12": { "title": "F4 Activity feed: live log of every agent and human action", "owner": "Beka", "tier": "must", "hours": "5-6", "depends": ["GH-5"], "skills": ["realtime-activity-feed"], "inJira": true },
+    "GH-13": { "title": "Agent foundation: AI SDK setup, createAgent, private context builders, money validators", "owner": "Beka", "tier": "must", "hours": "5-7", "depends": ["GH-5", "GH-12"], "skills": ["agent-builder", "negotiation-engine"], "inJira": true },
+    "GH-14": { "title": "F2 Trip brief search: guest agent ranks and explains a shortlist", "owner": "Beka", "tier": "must", "hours": "7-9", "depends": ["GH-8", "GH-9", "GH-13"], "skills": ["agent-builder", "ui-pages"], "inJira": true },
+    "GH-15": { "title": "F5 Negotiation and deal room: agents negotiate within code-enforced rules; host approves", "owner": "Beka", "tier": "must", "hours": "9-13", "depends": ["GH-7", "GH-8", "GH-12", "GH-13"], "skills": ["negotiation-engine", "agent-builder", "ui-pages"], "inJira": true },
+    "GH-16": { "title": "F5b Host agent Q&A: Ask this home with sourced answers", "owner": "Temuri", "tier": "must", "hours": "11-13", "depends": ["GH-7", "GH-9", "GH-13"], "skills": ["agent-builder"], "inJira": true },
+    "GH-17": { "title": "MVP checkpoint (hour 13): end-to-end demo run, backup video, cut decisions", "owner": "Temuri", "tier": "milestone", "hours": "13", "depends": ["GH-8", "GH-9", "GH-10", "GH-11", "GH-12", "GH-14", "GH-15", "GH-16"], "skills": ["demo-readiness"], "inJira": false },
+    "GH-18": { "title": "F7 Floor plan v1 from the 3D mesh (v2 stretch)", "owner": "Temuri", "tier": "should", "hours": "13-16", "depends": ["GH-10", "GH-11"], "skills": ["floor-plan-geometry", "verifier-vision"], "inJira": false },
+    "GH-19": { "title": "F6 Gap check v1: blank spots, host notes, pins, fill-in version", "owner": "Temuri", "tier": "should", "hours": "15-18", "depends": ["GH-10", "GH-11", "GH-18"], "skills": ["verifier-vision", "splat-tour-viewer"], "inJira": false },
+    "GH-20": { "title": "F8 Ask the space: guest agent answers and flies the 3D camera", "owner": "Beka", "tier": "should", "hours": "13-15", "depends": ["GH-9", "GH-11", "GH-13"], "skills": ["agent-builder", "splat-tour-viewer"], "inJira": false },
+    "GH-21": { "title": "F9 Honesty overlay + coverage score", "owner": "Beka", "tier": "should", "hours": "15-17", "depends": ["GH-11", "GH-19"], "skills": ["splat-tour-viewer", "ui-pages"], "inJira": false },
+    "GH-22": { "title": "F10 Guided walkthrough capture in the phone browser (stretch)", "owner": "Temuri", "tier": "stretch", "hours": "after 18", "depends": ["GH-10"], "skills": ["mobile-capture"], "inJira": false },
+    "GH-23": { "title": "F11 Check-in verification (stretch)", "owner": "Beka", "tier": "stretch", "hours": "after 18", "depends": ["GH-9", "GH-10"], "skills": ["verifier-vision", "mobile-capture", "ui-pages"], "inJira": false },
+    "GH-24": { "title": "F12 Spatial reviews pinned in 3D (nice-to-have)", "owner": "Temuri", "tier": "nice", "hours": "spare", "depends": ["GH-7", "GH-11", "GH-19"], "skills": ["verifier-vision", "splat-tour-viewer"], "inJira": false },
+    "GH-25": { "title": "F13 Host narration to listing draft (nice-to-have)", "owner": "Beka", "tier": "nice", "hours": "spare", "depends": ["GH-9", "GH-13"], "skills": ["agent-builder", "mobile-capture"], "inJira": false },
+    "GH-26": { "title": "Demo mode, reset script and QA checklist", "owner": "Beka", "tier": "demo", "hours": "18-20", "depends": ["GH-17"], "skills": ["demo-readiness", "supabase-data"], "inJira": false },
+    "GH-27": { "title": "Pitch, demo script, slides and rehearsals", "owner": "Temuri", "tier": "demo", "hours": "18-24", "depends": ["GH-17"], "skills": ["demo-readiness"], "inJira": false }
+  }
+}

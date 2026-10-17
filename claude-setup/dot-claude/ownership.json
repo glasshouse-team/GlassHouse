@@ -1,0 +1,108 @@
+{
+  "$comment": "Who owns which paths. Used by .claude/hooks/ownership-guard.mjs; the human version is docs/OWNERSHIP.md (keep both in sync). Order: askAlways, then shared, then rules (first match wins). Glob: * = within a folder, ** = any depth.",
+  "developers": {
+    "temuri": { "name": "Temuri Tsutskiridze", "role": "Dev A: 3D, capture, floor plan, Verifier" },
+    "beka": { "name": "Beka Maisuradze", "role": "Dev B: app shell, agents, negotiation, data" }
+  },
+  "onForeignEdit": "ask",
+  "askAlways": [
+    {
+      "pattern": "supabase/migrations/0001_core.sql",
+      "reason": "Contract file (GH-5). Before it is applied to Supabase, Beka may edit it. After it is applied, never edit it: add supabase/migrations/0002_<name>.sql instead."
+    },
+    {
+      "pattern": "package.json",
+      "reason": "Shared dependency and script list. Tell the other developer and commit it on its own (docs/WORKFLOW.md)."
+    },
+    {
+      "pattern": "pnpm-lock.yaml",
+      "reason": "Lockfile. Change it only through pnpm add/remove, never by hand."
+    },
+    {
+      "pattern": "pnpm-workspace.yaml",
+      "reason": "Controls which packages may run install scripts. Tell the other developer."
+    },
+    { "pattern": "next.config.ts", "reason": "App-wide Next.js config. Tell the other developer." },
+    {
+      "pattern": "tsconfig.json",
+      "reason": "App-wide TypeScript config. Tell the other developer."
+    },
+    {
+      "pattern": "CLAUDE.md",
+      "reason": "Team-wide instructions for Claude Code. Tell the other developer."
+    },
+    {
+      "pattern": ".claude/ownership.json",
+      "reason": "Changes who owns what. Both developers must agree."
+    },
+    {
+      "pattern": ".claude/settings.json",
+      "reason": "Team-wide Claude Code settings and hooks. Tell the other developer."
+    },
+    {
+      "pattern": ".claude/hooks/**",
+      "reason": "Team-wide Claude Code hooks. Tell the other developer."
+    },
+    { "pattern": ".mcp.json", "reason": "Team-wide MCP servers. Tell the other developer." },
+    {
+      "pattern": ".github/workflows/**",
+      "reason": "CI for both developers. Tell the other developer."
+    }
+  ],
+  "shared": [
+    "docs/**",
+    "README.md",
+    ".claude/skills/**",
+    ".claude/rules/**",
+    ".claude/agents/**",
+    ".claude/ticket-map.json",
+    ".claude/settings.local.example.json",
+    "supabase/migrations/**",
+    "public/**",
+    ".env.example"
+  ],
+  "rules": [
+    { "pattern": "app/(guest)/tour/**", "owner": "temuri", "ticket": "GH-11" },
+    { "pattern": "app/host/capture/**", "owner": "temuri", "ticket": "GH-22" },
+    { "pattern": "app/tools/rig/**", "owner": "temuri", "ticket": "GH-19" },
+    { "pattern": "app/api/worlds/**", "owner": "temuri", "ticket": "GH-10" },
+    { "pattern": "app/api/xray/**", "owner": "temuri", "ticket": "GH-9" },
+    { "pattern": "app/api/captures/**", "owner": "temuri", "ticket": "GH-10" },
+    { "pattern": "app/api/qa/**", "owner": "temuri", "ticket": "GH-16" },
+    { "pattern": "components/tour/**", "owner": "temuri", "ticket": "GH-11" },
+    { "pattern": "components/floorplan/**", "owner": "temuri", "ticket": "GH-18" },
+    { "pattern": "components/capture/**", "owner": "temuri", "ticket": "GH-22" },
+    { "pattern": "components/xray/**", "owner": "temuri", "ticket": "GH-9" },
+    { "pattern": "components/ask-home/**", "owner": "temuri", "ticket": "GH-16" },
+    { "pattern": "components/gaps/**", "owner": "temuri", "ticket": "GH-19" },
+    { "pattern": "lib/marble*", "owner": "temuri", "ticket": "GH-10" },
+    { "pattern": "lib/media*", "owner": "temuri", "ticket": "GH-10" },
+    { "pattern": "lib/geometry/**", "owner": "temuri", "ticket": "GH-18" },
+    { "pattern": "lib/schemas/world.ts", "owner": "temuri", "ticket": "GH-5" },
+    { "pattern": "lib/schemas/verifier.ts", "owner": "temuri", "ticket": "GH-5" },
+    { "pattern": "agents/verifier*", "owner": "temuri", "ticket": "GH-9" },
+    { "pattern": "agents/prompts/verifier-*", "owner": "temuri", "ticket": "GH-9" },
+    { "pattern": "agents/prompts/host-qa.md", "owner": "temuri", "ticket": "GH-16" },
+    { "pattern": "tools/verifier/**", "owner": "temuri", "ticket": "GH-9" },
+    { "pattern": "tools/host-qa/**", "owner": "temuri", "ticket": "GH-16" },
+    { "pattern": "scripts/generate-worlds.ts", "owner": "temuri", "ticket": "GH-10" },
+    { "pattern": "scripts/prepare-video.ts", "owner": "temuri", "ticket": "GH-3" },
+    { "pattern": "scripts/run-xray.ts", "owner": "temuri", "ticket": "GH-9" },
+    { "pattern": "scripts/run-gaps.ts", "owner": "temuri", "ticket": "GH-19" },
+    { "pattern": "scripts/build-floorplans.ts", "owner": "temuri", "ticket": "GH-18" },
+    { "pattern": "scripts/split-reviews.ts", "owner": "temuri", "ticket": "GH-24" },
+
+    { "pattern": "app/**", "owner": "beka", "ticket": "GH-8" },
+    { "pattern": "components/**", "owner": "beka", "ticket": "GH-8" },
+    { "pattern": "lib/**", "owner": "beka", "ticket": "GH-5" },
+    { "pattern": "agents/**", "owner": "beka", "ticket": "GH-13" },
+    { "pattern": "tools/**", "owner": "beka", "ticket": "GH-13" },
+    { "pattern": "scripts/**", "owner": "beka", "ticket": "GH-7" },
+    { "pattern": "seed/**", "owner": "beka", "ticket": "GH-7" },
+    { "pattern": ".github/**", "owner": "beka", "ticket": "GH-2" },
+    { "pattern": "vitest.config.mts", "owner": "beka", "ticket": "GH-2" },
+    { "pattern": "eslint.config.mjs", "owner": "beka", "ticket": "GH-2" },
+    { "pattern": "components.json", "owner": "beka", "ticket": "GH-8" },
+    { "pattern": ".prettierrc.json", "owner": "beka", "ticket": "GH-2" }
+  ]
+}

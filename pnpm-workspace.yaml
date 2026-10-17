@@ -1,0 +1,9 @@
+# pnpm 10 only runs install scripts for packages listed here.
+# ffmpeg-static and supabase download their binaries in a postinstall script.
+onlyBuiltDependencies:
+  - esbuild
+  - ffmpeg-static
+  - supabase
+ignoredBuiltDependencies:
+  - sharp
+  - unrs-resolver

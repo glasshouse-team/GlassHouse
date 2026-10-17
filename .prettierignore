@@ -1,0 +1,7 @@
+node_modules
+.next
+pnpm-lock.yaml
+lib/database.types.ts
+supabase/.temp
+docs/tickets
+.claude/ticket-map.json

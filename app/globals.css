@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+/*
+ * Brand tokens. GH-4 (reverse-engineer Airbnb) picks the final name, two colors and one font;
+ * change them here. No Airbnb colors, fonts or logo.
+ */
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --brand: #2f6f5e;
+  --brand-accent: #e8a33d;
+  /* Approximate (AI-filled) areas in the 3D and on the floor plan (GH-18, GH-21). */
+  --honesty: #f5a524;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand: var(--brand);
+  --color-brand-accent: var(--brand-accent);
+  --color-honesty: var(--honesty);
+  /* System fonts: no network fetch at build time (works on venue Wi-Fi). */
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}

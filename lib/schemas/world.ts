@@ -1,0 +1,149 @@
+/**
+ * CONTRACT FILE (GH-5, owner: Temuri). Shared types for 3D worlds, anchors, gaps,
+ * floor plans and captures. Units are meters after applying Marble's metric scale;
+ * the floor is at y = 0. See docs/CONTRACTS.md.
+ */
+import { z } from "zod";
+
+export const Vec3Schema = z.object({ x: z.number(), y: z.number(), z: z.number() });
+export type Vec3 = z.infer<typeof Vec3Schema>;
+
+// ---------- Worlds (one row per generated version of a whole house) ----------
+
+export const WorldStatus = z.enum([
+  "queued",
+  "generating",
+  "ready",
+  "failed",
+  "published",
+  "archived",
+]);
+export type WorldStatus = z.infer<typeof WorldStatus>;
+
+export const WorldInputKind = z.enum(["video", "multi-image", "image", "text"]);
+
+export const WorldSchema = z.object({
+  id: z.uuid(),
+  listing_id: z.uuid(),
+  version: z.number().int().positive(),
+  status: WorldStatus,
+  model: z.string().nullable(),
+  input_kind: WorldInputKind.nullable(),
+  input_capture_ids: z.array(z.uuid()),
+  marble_world_id: z.string().nullable(),
+  operation_id: z.string().nullable(),
+  /** Splat sized for the web and phones. Served from OUR storage, never from World Labs. */
+  spz_url: z.string().nullable(),
+  spz_hq_url: z.string().nullable(),
+  collider_mesh_url: z.string().nullable(),
+  hq_mesh_url: z.string().nullable(),
+  pano_url: z.string().nullable(),
+  thumbnail_url: z.string().nullable(),
+  caption: z.string().nullable(),
+  /** Multiply raw splat/mesh coordinates by this to get meters. */
+  metric_scale_factor: z.number().nullable(),
+  /** After scaling, subtract this from y to put the floor at 0. */
+  ground_plane_offset: z.number().nullable(),
+  /** Share of gap-check views backed by real footage, 0..1 (GH-19). */
+  coverage_score: z.number().min(0).max(1).nullable(),
+  cost_credits: z.number().int().nullable(),
+  error: z.string().nullable(),
+});
+export type World = z.infer<typeof WorldSchema>;
+
+// ---------- Anchors (named points the camera can fly to) ----------
+
+export const AnchorKind = z.enum(["room", "object", "viewpoint"]);
+
+export const AnchorSchema = z.object({
+  id: z.uuid(),
+  world_id: z.uuid(),
+  /** "Kitchen", "desk", "bed", "balcony". */
+  name: z.string(),
+  kind: AnchorKind,
+  room: z.string().nullable(),
+  position: Vec3Schema,
+  look_at: Vec3Schema.nullable(),
+  source: z.enum(["auto", "manual"]),
+});
+export type Anchor = z.infer<typeof AnchorSchema>;
+
+// ---------- Gaps (blank or AI-invented areas found by the Verifier) ----------
+
+export const GapIssue = z.enum(["blank", "smeared", "stretched", "invented", "dark"]);
+export type GapIssue = z.infer<typeof GapIssue>;
+
+export const GapStatus = z.enum(["open", "requested", "filled", "dismissed"]);
+
+export const GapSchema = z.object({
+  id: z.uuid(),
+  world_id: z.uuid(),
+  room: z.string().nullable(),
+  issue: GapIssue,
+  /** Plain instruction for the host: "The corner left of the fridge is blank." */
+  description: z.string(),
+  severity: z.number().int().min(1).max(3),
+  position: Vec3Schema.nullable(),
+  view_dir: Vec3Schema.nullable(),
+  radius_m: z.number().positive(),
+  screenshot_url: z.string().nullable(),
+  status: GapStatus,
+  filled_by_capture: z.uuid().nullable(),
+});
+export type Gap = z.infer<typeof GapSchema>;
+
+// ---------- Floor plans (GH-18) ----------
+
+/** 2D point on the floor plane in meters: [x, z]. */
+export const Point2Schema = z.tuple([z.number(), z.number()]);
+
+export const FloorPlanSchema = z.object({
+  id: z.uuid(),
+  world_id: z.uuid(),
+  svg_url: z.string().nullable(),
+  rooms: z.array(
+    z.object({
+      name: z.string(),
+      /** Label position (v1) or polygon centroid (v2). */
+      label: Point2Schema,
+      polygon: z.array(Point2Schema).nullable(),
+      area_m2: z.number().nullable(),
+    }),
+  ),
+  /** Wall segments [x1, z1, x2, z2] in meters. */
+  walls: z.array(z.tuple([z.number(), z.number(), z.number(), z.number()])),
+  doors: z.array(z.object({ at: Point2Schema, width_m: z.number() })),
+  total_area_m2: z.number().nullable(),
+  /** "marble-metric" or "host-calibrated". */
+  scale_source: z.string().nullable(),
+  version: z.enum(["v1", "v2"]),
+  status: z.enum(["building", "ready", "failed"]),
+});
+export type FloorPlan = z.infer<typeof FloorPlanSchema>;
+
+// ---------- Captures (walkthroughs, fill-ins, check-ins) ----------
+
+export const CaptureKind = z.enum(["walkthrough", "fill_in", "checkin"]);
+export const RoomMarkerSchema = z.object({ room: z.string(), t: z.number().nonnegative() });
+export const HeadingSampleSchema = z.object({
+  t: z.number().nonnegative(),
+  heading: z.number().min(0).max(360),
+});
+
+export const CaptureSchema = z.object({
+  id: z.uuid(),
+  listing_id: z.uuid(),
+  kind: CaptureKind,
+  raw_url: z.string().nullable(),
+  prepared_url: z.string().nullable(),
+  duration_s: z.number().nullable(),
+  size_bytes: z.number().int().nullable(),
+  /** "Next room" taps: seconds from the start of the video. */
+  room_markers: z.array(RoomMarkerSchema),
+  heading_track: z.array(HeadingSampleSchema),
+  quality_flags: z.array(z.string()),
+  transcript: z.string().nullable(),
+  gap_id: z.uuid().nullable(),
+  status: z.enum(["uploading", "uploaded", "prepared", "failed"]),
+});
+export type Capture = z.infer<typeof CaptureSchema>;

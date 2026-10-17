@@ -1,0 +1,5 @@
+{
+  "env": {
+    "GLASSHOUSE_DEV": "temuri"
+  }
+}
