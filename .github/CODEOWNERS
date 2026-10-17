@@ -1,26 +1,35 @@
 # Requests a review from the folder owner on every PR.
-# Replace @TEMURI_GITHUB and @BEKA_GITHUB with your GitHub usernames, then remove the leading "# " on the lines below.
+# Temuri = @TemuriTsutskiridze, Beka = @beqa200.
 # Mirrors docs/OWNERSHIP.md. Later lines win over earlier ones.
 
-# *                          @BEKA_GITHUB
-# /app/(guest)/tour/         @TEMURI_GITHUB
-# /app/host/capture/         @TEMURI_GITHUB
-# /app/tools/rig/            @TEMURI_GITHUB
-# /app/api/worlds/           @TEMURI_GITHUB
-# /app/api/xray/             @TEMURI_GITHUB
-# /app/api/captures/         @TEMURI_GITHUB
-# /app/api/qa/               @TEMURI_GITHUB
-# /components/tour/          @TEMURI_GITHUB
-# /components/floorplan/     @TEMURI_GITHUB
-# /components/capture/       @TEMURI_GITHUB
-# /components/xray/          @TEMURI_GITHUB
-# /components/ask-home/      @TEMURI_GITHUB
-# /components/gaps/          @TEMURI_GITHUB
-# /lib/marble.ts             @TEMURI_GITHUB
-# /lib/media.ts              @TEMURI_GITHUB
-# /lib/geometry/             @TEMURI_GITHUB
-# /lib/schemas/world.ts      @TEMURI_GITHUB
-# /lib/schemas/verifier.ts   @TEMURI_GITHUB
-# /tools/verifier/           @TEMURI_GITHUB
-# /tools/host-qa/            @TEMURI_GITHUB
-# /supabase/migrations/      @BEKA_GITHUB @TEMURI_GITHUB
+*                          @beqa200
+/app/(guest)/tour/         @TemuriTsutskiridze
+/app/host/capture/         @TemuriTsutskiridze
+/app/tools/rig/            @TemuriTsutskiridze
+/app/api/worlds/           @TemuriTsutskiridze
+/app/api/xray/             @TemuriTsutskiridze
+/app/api/captures/         @TemuriTsutskiridze
+/app/api/qa/               @TemuriTsutskiridze
+/components/tour/          @TemuriTsutskiridze
+/components/floorplan/     @TemuriTsutskiridze
+/components/capture/       @TemuriTsutskiridze
+/components/xray/          @TemuriTsutskiridze
+/components/ask-home/      @TemuriTsutskiridze
+/components/gaps/          @TemuriTsutskiridze
+/lib/marble.ts             @TemuriTsutskiridze
+/lib/media.ts              @TemuriTsutskiridze
+/lib/geometry/             @TemuriTsutskiridze
+/lib/schemas/world.ts      @TemuriTsutskiridze
+/lib/schemas/verifier.ts   @TemuriTsutskiridze
+/agents/verifier*          @TemuriTsutskiridze
+/agents/prompts/verifier-* @TemuriTsutskiridze
+/agents/prompts/host-qa.md @TemuriTsutskiridze
+/tools/verifier/           @TemuriTsutskiridze
+/tools/host-qa/            @TemuriTsutskiridze
+/scripts/generate-worlds.ts   @TemuriTsutskiridze
+/scripts/prepare-video.ts     @TemuriTsutskiridze
+/scripts/run-xray.ts          @TemuriTsutskiridze
+/scripts/run-gaps.ts          @TemuriTsutskiridze
+/scripts/build-floorplans.ts  @TemuriTsutskiridze
+/scripts/split-reviews.ts     @TemuriTsutskiridze
+/supabase/migrations/      @beqa200 @TemuriTsutskiridze
