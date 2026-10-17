@@ -27,28 +27,53 @@ export function targetVideoKbps(durationSec: number, targetBytes = TARGET_VIDEO_
   return Math.max(600, Math.min(kbps, 4000));
 }
 
-/** H.264, 720p, 30 fps, no audio, sized for the URL limit. */
+/**
+ * Scales the short side to `shortSide`, keeping the aspect ratio: portrait 720x1280, landscape
+ * 1280x720. ffmpeg applies the phone's rotation first, so iw/ih are the upright size.
+ */
+function scaleShortSide(shortSide: number): string {
+  return `scale=w='if(gt(iw,ih),-2,${shortSide})':h='if(gt(iw,ih),${shortSide},-2)'`;
+}
+
+/**
+ * HDR (iPhone HLG, or PQ) to SDR BT.709: linearize, convert BT.2020 primaries, Hable tone curve,
+ * back to 8-bit BT.709. Only for HDR input: on SDR it would darken the picture.
+ */
+const TONEMAP_TO_SDR = [
+  "zscale=t=linear:npl=100",
+  "format=gbrpf32le",
+  "zscale=p=bt709",
+  "tonemap=tonemap=hable:desat=0",
+  "zscale=t=bt709:m=bt709:r=tv",
+  "format=yuv420p",
+].join(",");
+
+/** H.264, short side 720, 30 fps, no audio, SDR BT.709, sized for the URL limit. */
 export function prepareVideoArgs({
   input,
   output,
   durationSec,
-  height = 720,
+  shortSide = 720,
   fps = 30,
+  hdr = false,
 }: {
   input: string;
   output: string;
   durationSec: number;
-  height?: number;
+  shortSide?: number;
   fps?: number;
+  /** True for HLG or PQ input (probeVideo): tone-maps to SDR BT.709. */
+  hdr?: boolean;
 }): string[] {
   const kbps = targetVideoKbps(durationSec);
+  const filters = [`fps=${fps}`, scaleShortSide(shortSide), ...(hdr ? [TONEMAP_TO_SDR] : [])];
   return [
     "-y",
     "-hide_banner",
     "-i",
     input,
     "-vf",
-    `scale=-2:${height},fps=${fps}`,
+    filters.join(","),
     "-an",
     "-c:v",
     "libx264",
@@ -62,6 +87,7 @@ export function prepareVideoArgs({
     `${kbps * 2}k`,
     "-pix_fmt",
     "yuv420p",
+    ...(hdr ? ["-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709"] : []),
     "-movflags",
     "+faststart",
     output,
@@ -115,6 +141,17 @@ export function parseDurationSec(ffmpegLog: string): number | null {
   return Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]);
 }
 
+/**
+ * HDR transfer of the first video stream in ffmpeg's log, e.g.
+ * "Video: hevc (Main 10) ..., yuv420p10le(tv, bt2020nc/bt2020/arib-std-b67)" is iPhone HLG.
+ */
+export function parseHdrTransfer(ffmpegLog: string): "hlg" | "pq" | null {
+  const video = ffmpegLog.split("\n").find((line) => /Stream #.*: Video:/.test(line));
+  if (video?.includes("arib-std-b67")) return "hlg";
+  if (video?.includes("smpte2084")) return "pq";
+  return null;
+}
+
 function spawnFfmpeg(args: string[]): Promise<{ code: number | null; stderr: string }> {
   return new Promise((resolve, reject) => {
     const child = spawn(ffmpegPath(), args, { stdio: ["ignore", "ignore", "pipe"] });
@@ -132,10 +169,17 @@ export async function runFfmpeg(args: string[]): Promise<void> {
     throw new Error(`ffmpeg exited with ${code}:\n${stderr.split("\n").slice(-15).join("\n")}`);
 }
 
-/** Duration in seconds, read from ffmpeg's input probe (ffmpeg-static ships no ffprobe). */
-export async function probeDurationSec(input: string): Promise<number> {
+/** Duration and HDR transfer, read from ffmpeg's input probe (ffmpeg-static ships no ffprobe). */
+export async function probeVideo(
+  input: string,
+): Promise<{ durationSec: number; hdr: "hlg" | "pq" | null }> {
   const { stderr } = await spawnFfmpeg(["-hide_banner", "-i", input]);
-  const duration = parseDurationSec(stderr);
-  if (duration == null) throw new Error(`Could not read the duration of ${input}`);
-  return duration;
+  const durationSec = parseDurationSec(stderr);
+  if (durationSec == null) throw new Error(`Could not read the duration of ${input}`);
+  return { durationSec, hdr: parseHdrTransfer(stderr) };
+}
+
+/** Duration in seconds (see probeVideo). */
+export async function probeDurationSec(input: string): Promise<number> {
+  return (await probeVideo(input)).durationSec;
 }
