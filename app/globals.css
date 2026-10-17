@@ -10,7 +10,7 @@
   --brand: #1f6f5c;
   /* Glass blue: agent activity and highlights (4.7:1 on white). Keep it clearly different from --honesty. */
   --brand-accent: #2f6fde;
-  /* Approximate (AI-filled) areas in the 3D and on the floor plan (GH-18, GH-21). Nothing else is amber. */
+  /* Approximate (AI-filled) areas in the 3D and on the floor plan (GH-18, GH-21). Don't reuse this token. */
   --honesty: #f5a524;
 }
 

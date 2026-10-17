@@ -25,7 +25,7 @@ Next.js is 16.4 and differs from older versions. Before using a routing or rende
 
 - shadcn/ui is configured (`components.json`). Add what you need: `pnpm dlx shadcn@latest add button card dialog sheet calendar tabs badge input textarea separator skeleton`. Components land in `components/ui/`.
 - Icons: lucide-react. Toasts: `import { toast } from "sonner"`.
-- Brand tokens are in app/globals.css (`bg-brand`, `text-brand`, `bg-honesty`). GH-4 sets the final colors and font. No Airbnb branding.
+- Brand tokens are in app/globals.css (`bg-brand`, `text-brand`, `bg-brand-accent`, `bg-honesty`). The brand kit (colors, the bundled Inter font, the logo mark, our own UI labels) is in docs/teardown.md section 4 (D-022). No Airbnb branding or interface copy.
 
 ## Slots (do not edit Temuri's components)
 
