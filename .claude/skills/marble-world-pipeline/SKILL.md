@@ -1,7 +1,7 @@
 ---
 name: marble-world-pipeline
 description: Generate whole-house 3D worlds with the World Labs Marble API, then store and version them - input preparation with ffmpeg, generate and poll, download assets into our storage, metric scale, publish, demo mode, fallbacks. Use for GH-3 (go/no-go test), GH-6 (hero homes) and GH-10 (pipeline).
-when_to_use: "World Labs", "Marble", "generate the 3D", "go/no-go test", "world version", "publish world", "splat", "spz", "collider mesh", "metric scale", "prepare the video", "the 3D looks wrong", "HY World".
+when_to_use: The user mentions "World Labs", "Marble", "generate the 3D", "go/no-go test", "world version", "publish world", "splat", "spz", "collider mesh", "metric scale", "prepare the video", "the 3D looks wrong", "HY World".
 ---
 
 # World Labs Marble pipeline

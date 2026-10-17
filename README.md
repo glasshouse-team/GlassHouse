@@ -44,6 +44,8 @@ This repo is set up so Claude Code picks the right instructions for each ticket 
 2. Connect Jira (once): run `claude`, then `/mcp`, choose `atlassian`, log in. The server is in `.mcp.json`.
 3. Start a ticket: `/start-ticket GH-11`. It reads the ticket (Jira, or `docs/tickets/` offline), checks you own it, creates the branch and loads the skills for it. Finish with `/finish-ticket`.
 
+`pnpm test` also checks this setup (tests/claude-config.test.ts): every skill's frontmatter parses, the ticket map, the start-ticket table and the hooks agree, and every ticket has its file in docs/tickets.
+
 What is in `.claude/`:
 
 | Part                                | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                                 |

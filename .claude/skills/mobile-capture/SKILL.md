@@ -1,7 +1,7 @@
 ---
 name: mobile-capture
 description: Capture homes on video - the filming checklist for hero homes and the go/no-go test, plus the in-browser phone recorder (getUserMedia, MediaRecorder, iOS compass permission, coverage ring, brightness warnings, resumable upload, ffmpeg preparation). Use for GH-3 and GH-6 filming, GH-22 guided capture, the GH-23 check-in recorder and GH-25 narration audio.
-when_to_use: "film the home", "walkthrough video", "how to record", "capture page", "camera in the browser", "MediaRecorder", "compass", "DeviceOrientation", "iPhone camera does not open", "upload video", "fill-in clip", "check-in video", "narration".
+when_to_use: The user mentions "film the home", "walkthrough video", "how to record", "capture page", "camera in the browser", "MediaRecorder", "compass", "DeviceOrientation", "iPhone camera does not open", "upload video", "fill-in clip", "check-in video", "narration".
 ---
 
 # Mobile capture

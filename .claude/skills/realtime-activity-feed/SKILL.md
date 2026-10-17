@@ -1,7 +1,7 @@
 ---
 name: realtime-activity-feed
 description: Build and use the live activity feed that shows every agent and human action - logEvent and withEvent conventions, summary style, Supabase Realtime subscription, the ActivityFeed component and the full-screen projector view. Use for GH-12, and whenever a feature needs to log what it did.
-when_to_use: "activity feed", "log this action", "logEvent", "withEvent", "who did what", "events table", "realtime updates", "feed is not updating", "projector view", "/feed".
+when_to_use: The user mentions "activity feed", "log this action", "logEvent", "withEvent", "who did what", "events table", "realtime updates", "feed is not updating", "projector view", "/feed".
 ---
 
 # Activity feed (GH-12)

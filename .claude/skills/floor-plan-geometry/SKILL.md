@@ -1,7 +1,7 @@
 ---
 name: floor-plan-geometry
 description: Build the floor plan from the 3D collider mesh - horizontal slicing, wall grid, straightening, room labels from a top-down render, SVG output and the in-tour minimap. Use for GH-18 (v1 walls and labels, v2 room polygons and areas).
-when_to_use: "floor plan", "slice the mesh", "walls", "room polygons", "room areas", "top-down view", "minimap", "you are here dot", "calibrate scale", "plan looks wrong".
+when_to_use: The user mentions "floor plan", "slice the mesh", "walls", "room polygons", "room areas", "top-down view", "minimap", "you are here dot", "calibrate scale", "plan looks wrong".
 ---
 
 # Floor plan from the 3D (GH-18)

@@ -28,7 +28,7 @@ Yes if it changes behavior, an interface or contract (docs/CONTRACTS.md), the da
 ## 3. Update the repo (no confirmation needed; they are shared docs)
 
 1. **docs/DECISIONS.md:** add a row with the next number (highest D-number + 1). Decision = the new behavior, with "(was: ...)" for the old one. Last column `Jira`: `GH-15, GH-8: pending`. A reversal is a new row ("Replaces D-007"), never an edit of the old one.
-2. **Docs, skills and rules that state the old behavior:** docs/CONTRACTS.md, ARCHITECTURE.md, AGENT-DESIGN.md, DATABASE.md, DEMO.md, PLAN.md, `.claude/skills/*/SKILL.md`, `.claude/rules/*.md`, CLAUDE.md (team-wide: the hook will ask). Search for the old wording and fix every place, or future sessions will follow the old rule.
+2. **Docs, skills and rules that state the old behavior:** docs/CONTRACTS.md, ARCHITECTURE.md, AGENT-DESIGN.md, DATABASE.md, DEMO.md, PLAN.md, `.claude/skills/*/SKILL.md`, `.claude/rules/*.md`, CLAUDE.md (team-wide: the hook will ask). Search for the old wording and fix every place, or future sessions will follow the old rule. After editing skills or rules, run `pnpm test tests/claude-config.test.ts`: a skill whose frontmatter stops parsing is no longer picked automatically.
 3. **Offline ticket copies** `docs/tickets/GH-<n>.md`: do not rewrite the snapshot. Add (or extend) a section at the end:
    ```
    ## Decision updates

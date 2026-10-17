@@ -1,7 +1,7 @@
 ---
 name: demo-readiness
 description: Get Glasshouse demo-ready - the hour-13 MVP checkpoint, demo mode, reset script, pre-flight page, QA checklist, backup video, cut order, pitch slides, the 3-minute script and judge Q&A. Use for GH-17, GH-26 and GH-27, and whenever someone asks "are we ready to demo?".
-when_to_use: "MVP checkpoint", "demo mode", "reset the demo", "pre-flight", "QA checklist", "backup video", "what do we cut", "pitch", "slides", "demo script", "rehearse", "judge questions", "are we ready".
+when_to_use: The user mentions "MVP checkpoint", "demo mode", "reset the demo", "pre-flight", "QA checklist", "backup video", "what do we cut", "pitch", "slides", "demo script", "rehearse", "judge questions", "are we ready".
 ---
 
 # Demo readiness

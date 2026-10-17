@@ -1,7 +1,7 @@
 ---
 name: verifier-vision
 description: Build the neutral Verifier's vision checks with Claude - listing X-ray (facts and contradictions from photos), 3D gap check, room naming on the top-down plan, check-in comparison and review-claim splitting. Covers image prep, structured output, evidence rules and evaluation. Use for GH-9, GH-18 room labels, GH-19, GH-23 and GH-24.
-when_to_use: "X-ray", "verifier", "check the photos", "contradictions", "sea view lie", "gap check", "find blank spots", "AI-filled areas", "name the rooms", "check-in report", "compare arrival video", "split reviews into claims", "vision prompt", "the model invents facts".
+when_to_use: The user mentions "X-ray", "verifier", "check the photos", "contradictions", "sea view lie", "gap check", "find blank spots", "AI-filled areas", "name the rooms", "check-in report", "compare arrival video", "split reviews into claims", "vision prompt", "the model invents facts".
 ---
 
 # Verifier vision

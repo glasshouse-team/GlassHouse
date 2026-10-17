@@ -1,7 +1,7 @@
 ---
 name: supabase-data
 description: Work with Glasshouse's Supabase - Postgres migrations, row level security, storage buckets, Realtime, type generation, idempotent seed and demo reset scripts. Use for GH-2 (setup), GH-5 (schema), GH-7 (seed data) and GH-26 (reset), and for any query, upload or subscription.
-when_to_use: "set up Supabase", "migration", "add a table", "seed the database", "upload to storage", "public URL", "realtime subscription", "RLS", "reset the demo", "db types", "service role".
+when_to_use: The user mentions "set up Supabase", "migration", "add a table", "seed the database", "upload to storage", "public URL", "realtime subscription", "RLS", "reset the demo", "db types", "service role".
 ---
 
 # Supabase data

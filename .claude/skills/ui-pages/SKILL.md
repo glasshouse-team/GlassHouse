@@ -1,7 +1,7 @@
 ---
 name: ui-pages
 description: Build Glasshouse pages and UI with Next.js 16 App Router, React 19, Tailwind 4 and shadcn/ui - search, listing page with slots, booking box, deal room, host dashboard, trip page, role switcher. Use for GH-8 and the UI parts of GH-14, GH-15, GH-21 and GH-23.
-when_to_use: "build the listing page", "search page", "booking box", "host dashboard", "deal room UI", "role switcher", "make it responsive", "add a shadcn component", "page layout", any change under app/ that is not an API route.
+when_to_use: The user mentions "build the listing page", "search page", "booking box", "host dashboard", "deal room UI", "role switcher", "make it responsive", "add a shadcn component", "page layout", any change under app/ that is not an API route.
 ---
 
 # Pages and UI

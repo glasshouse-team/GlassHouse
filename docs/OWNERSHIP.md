@@ -16,7 +16,7 @@ Each folder has one owner, so the two developers never edit the same files. **Ru
 | Database         | May add new migration files                                                                                          | Owns `0001_core.sql` (contract)                                                                                                                           |
 | Repo config      |                                                                                                                      | `.github/`, `vitest.config.mts`, `eslint.config.mjs`, `components.json`                                                                                   |
 
-**Shared (either developer):** `docs/`, `README.md`, `.claude/skills/`, `.claude/rules/`, `.claude/agents/`, `.claude/ticket-map.json`, new files in `supabase/migrations/`, `public/`, `.env.example`.
+**Shared (either developer):** `docs/`, `README.md`, `.claude/skills/`, `.claude/rules/`, `.claude/agents/`, `.claude/ticket-map.json`, new files in `supabase/migrations/`, `public/`, `tests/`, `.env.example`.
 
 **Team-wide (tell the other developer; the hook always asks):** `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `next.config.ts`, `tsconfig.json`, `CLAUDE.md`, `.claude/ownership.json`, `.claude/settings.json`, `.claude/hooks/`, `.mcp.json`, `.github/workflows/`, and `supabase/migrations/0001_core.sql` once it is applied.
 

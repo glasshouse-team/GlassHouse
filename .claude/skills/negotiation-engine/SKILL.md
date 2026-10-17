@@ -1,7 +1,7 @@
 ---
 name: negotiation-engine
 description: Build the guest-host negotiation - deal state machine, money validators, turn loop with one money action per turn, deal room with Realtime, host approvals and reservation creation - around the "Can I pay $50 less?" demo. Use for GH-15, and for the validators in GH-13.
-when_to_use: "negotiation", "deal room", "make_offer", "counter offer", "accept offer", "can I pay less", "host approval", "auto-accept", "floor price", "round limit", "reservation from a deal", "the agent gave away the house".
+when_to_use: The user mentions "negotiation", "deal room", "make_offer", "counter offer", "accept offer", "can I pay less", "host approval", "auto-accept", "floor price", "round limit", "reservation from a deal", "the agent gave away the house".
 ---
 
 # Negotiation engine (GH-15)

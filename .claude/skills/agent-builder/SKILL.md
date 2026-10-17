@@ -1,7 +1,7 @@
 ---
 name: agent-builder
 description: Build Glasshouse's guest and host agents with AI SDK v7 - createAgent, Zod tools, private context, prompts, structured output, streaming to the UI, prompt-injection safety and mock-model tests. Use for GH-13 (foundation), GH-14 (trip brief search), GH-16 (host Q&A), GH-20 (Ask the space) and GH-25 (listing draft).
-when_to_use: "build an agent", "add a tool", "guest agent", "host agent", "trip brief", "rank listings", "Ask this home", "answer questions with sources", "forward to host", "Ask the space", "fly_to tool", "stream agent steps", "structured output", "prompt injection", "test the agent".
+when_to_use: The user mentions "build an agent", "add a tool", "guest agent", "host agent", "trip brief", "rank listings", "Ask this home", "answer questions with sources", "forward to host", "Ask the space", "fly_to tool", "stream agent steps", "structured output", "prompt injection", "test the agent".
 ---
 
 # Agent builder

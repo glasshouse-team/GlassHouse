@@ -1,7 +1,7 @@
 ---
 name: reverse-engineer-airbnb
 description: Reverse-engineer Airbnb's screens, user journeys, data model and UI patterns, and turn them into Glasshouse's screen inventory, brand kit and seed-data spec (docs/teardown.md). Use for GH-4, and as the UI pattern reference for GH-8 pages.
-when_to_use: "reverse engineer Airbnb", "teardown", "what screens do we need", "map the user journeys", "screen inventory", "brand kit", "seed data spec", "make it look like Airbnb", building the listing page, search results, booking box or host dashboard layout.
+when_to_use: The user mentions "reverse engineer Airbnb", "teardown", "what screens do we need", "map the user journeys", "screen inventory", "brand kit", "seed data spec", "make it look like Airbnb", building the listing page, search results, booking box or host dashboard layout.
 ---
 
 # Reverse-engineer Airbnb (GH-4)

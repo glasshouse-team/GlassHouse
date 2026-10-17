@@ -59,6 +59,7 @@
     ".claude/settings.local.example.json",
     "supabase/migrations/**",
     "public/**",
+    "tests/**",
     ".env.example"
   ],
   "rules": [

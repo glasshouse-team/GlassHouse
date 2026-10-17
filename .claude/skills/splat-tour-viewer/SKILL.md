@@ -1,7 +1,7 @@
 ---
 name: splat-tour-viewer
 description: Build the walkable whole-house 3D tour - React Three Fiber + Spark Gaussian splats, metric scale, three-mesh-bvh collisions, desktop and phone controls, Jump to room, anchor mode, camera fly-to, the useTour() API, pins and the honesty overlay. Use for GH-11, GH-19 pins, GH-20 and GH-21 (tour-ext add-ons) and GH-24 review pins.
-when_to_use: "3D viewer", "tour page", "walk through the house", "splat", "Spark", "collisions", "walk through walls", "jump to room", "fly the camera", "anchor mode", "minimap", "useTour", "pins in 3D", "honesty overlay", "tint AI-filled areas", "3D on phone is slow".
+when_to_use: The user mentions "3D viewer", "tour page", "walk through the house", "splat", "Spark", "collisions", "walk through walls", "jump to room", "fly the camera", "anchor mode", "minimap", "useTour", "pins in 3D", "honesty overlay", "tint AI-filled areas", "3D on phone is slow".
 ---
 
 # Splat tour viewer
