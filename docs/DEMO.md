@@ -28,7 +28,7 @@ Demo brief: _"4 friends, Kazbegi or Tbilisi, early November, about $60 each per 
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Isn't the 3D just hallucinated?    | Partly, and we show exactly where: the gap check finds blank spots, the overlay marks them, the coverage score counts them, and hosts are asked to film them. |
 | Can the agent give the house away? | No. Floors and limits are enforced in code, and anything below the host's auto-accept level needs a person's tap.                                             |
-| How long and how much per 3D home? | About 5 minutes and about $1.20-1.28 per standard world; each version is generated once and saved.                                                            |
+| How long and how much per 3D home? | About 6-8 minutes and 1,600 World Labs credits per world (GH-3); each version is generated once and saved.                                                    |
 | How accurate is the floor plan?    | Approximate: the scale comes from the 3D model's metric estimate, and the host can calibrate with one known width.                                            |
 | Why not just Airbnb's AI?          | Airbnb's AI ranks and summarizes. Ours acts for both sides, negotiates within rules, and verifies the home at check-in.                                       |
 | Privacy?                           | Owners consent, personal items are removed before filming, check-in videos stay in a private bucket.                                                          |

@@ -9,9 +9,10 @@
  *   pnpm worlds get <world_id>
  *   pnpm worlds inspect <world_id> [--json]   (asset sizes, collider format, floor vs ground_plane_offset)
  *
- * Generation takes about 5 minutes and costs credits. Local files are uploaded straight to
- * World Labs (media assets), so no public URL is needed. URLs must open in an incognito
- * window (no login). Prepare videos first with `pnpm video:prepare` (under 20 MB).
+ * A generation takes about 6-8 minutes and 1,600 credits. Videos must be 30 s or shorter, so
+ * prepare them first with `pnpm video:prepare` (sped up to 29 s, under 20 MB; D-009). Local
+ * files are uploaded straight to World Labs (media assets), so no public URL is needed. URLs
+ * must open in an incognito window (no login).
  * Refuses to generate when DEMO_MODE=true (pass --force to override).
  */
 import { readFile, stat } from "node:fs/promises";

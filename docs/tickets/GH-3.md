@@ -118,3 +118,7 @@ Attach screenshots and the asset list.
 ## Notes for Claude Code
 
 Ask it to write a tiny TypeScript script: generate → poll → fetch world → print assets. Keep the key in `.env.local` as `WORLDLABS_API_KEY`.
+
+## Decision updates
+
+- 2026-10-18 D-009: Path 1 chosen: video to `marble-1.1-plus`, sped up to 29 s by `pnpm video:prepare` (World Labs takes videos up to 30 s; 93 s and 110 s videos failed after about 47 minutes, 5 times). Results, asset list and screenshots are in the decision comment (was: Path 1, 2 or 3 open). Jira: pending

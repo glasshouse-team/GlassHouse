@@ -19,7 +19,7 @@ Walkthrough, 60-90 seconds:
 
 Also take 15-25 photos per home: each room from 2-3 angles, the window view, the bathroom. For the gap demo on Hero 1: version 1 skips one corner on purpose (for example left of the fridge); a separate 10-second fill-in clip shows exactly that corner. Optionally move a chair or lamp and record a 30-second "check-in" clip for GH-23.
 
-Then: `pnpm video:prepare walk.mov` (720p, 30 fps, no audio, under 20 MB) and upload to the public `media` bucket.
+Then: `pnpm video:prepare walk.mov` (short side 720, 30 fps, no audio, SDR, sped up to 29 s because World Labs takes videos up to 30 s) and `pnpm worlds generate --video walk-720.mp4 --wait`, which uploads it straight to World Labs. A walkthrough joined with a fill-in clip comes back as a new world with its own layout (D-009).
 
 ## The phone recorder (GH-22, reused by GH-23)
 
@@ -37,8 +37,8 @@ Then: `pnpm video:prepare walk.mov` (720p, 30 fps, no audio, under 20 MB) and up
 - **Coverage ring:** 36 bins of 10 degrees per room; fill a bin when a heading sample lands in it; the ring shows the filled share; aim for at least 330 degrees per room.
 - **Warnings:** turning too fast (more than about 60 degrees per second), too dark (draw a small video frame to a canvas every 500 ms, average luminance under about 40/255), shaky (`devicemotion` acceleration spikes).
 - **"Next room"** saves `{ room, t }` into `room_markers`.
-- **Upload:** ask a server route for `createSignedUpload()` (lib/supabase.ts), then PUT the file to `signedUrl` with XMLHttpRequest for a progress bar (or `uploadToSignedUrl`); retry the whole file on failure. No resumable (TUS) upload: it needs a logged-in user or an anon write policy, and RLS gives neither. Keep `videoBitsPerSecond` near 1_500_000 so 90 s stays under World Labs' 20 MB limit. Raw files go to the private `captures` bucket.
-- **Prepare on the server:** lib/media.ts (`prepareVideoArgs`, `extractFramesArgs`, `joinClipsArgs`, `probeDurationSec`), output to `media`.
+- **Upload:** ask a server route for `createSignedUpload()` (lib/supabase.ts), then PUT the file to `signedUrl` with XMLHttpRequest for a progress bar (or `uploadToSignedUrl`); retry the whole file on failure. No resumable (TUS) upload: it needs a logged-in user or an anon write policy, and RLS gives neither. World Labs takes videos up to 30 s and the server has no ffmpeg (D-015): stop a recording at 30 s, or speed a longer walkthrough up with `pnpm video:prepare` before generating (D-009). `videoBitsPerSecond` near 1_500_000 keeps 30 s near 6 MB. Raw files go to the private `captures` bucket.
+- **Prepare with `pnpm video:prepare`,** not in a Vercel function (no ffmpeg there, D-015): lib/media.ts (`prepareVideoArgs`, `extractFramesArgs`, `joinClipsArgs`, `probeVideo`), output to `media`.
 - **Fill-in mode:** the same recorder for one spot, with the gap's screenshot shown faintly over the camera so the host can aim.
 - **Fallback until GH-22 exists:** `<input type="file" accept="video/*" capture="environment">` plus a typed room list.
 

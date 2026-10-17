@@ -3,7 +3,8 @@
  * Docs: https://docs.worldlabs.ai/api (request shapes checked 2026-10-17).
  *
  * Rule: generate once per version, download every asset into OUR storage, and never
- * call World Labs on a page view. Generation takes about 5 minutes.
+ * call World Labs on a page view. A generation takes about 6-8 minutes and 1,600 credits;
+ * videos must be 30 s or shorter (D-009).
  */
 import { MissingEnvError } from "./errors";
 

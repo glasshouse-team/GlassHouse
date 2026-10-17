@@ -69,8 +69,8 @@ Cut order if behind: GH-21, then GH-20, then GH-19. Floor plan v1 stays.
 
 | Risk                                   | Fallback                                                                   |
 | -------------------------------------- | -------------------------------------------------------------------------- |
-| Whole-house world is smeared or broken | Many photos to HY World on Scenario; or one splat per room placed together |
-| Walkthrough over 20 MB                 | `pnpm video:prepare`, shorter route, or World Labs media-asset upload      |
+| Whole-house world is smeared or broken | One Marble multi-image world per room placed together (D-009); or HY World |
+| Walkthrough over 30 s or 20 MB         | `pnpm video:prepare` speeds it up to 29 s and under 20 MB (D-009)          |
 | Generation slower than expected        | Start hero generations in hour 1; demo only saved versions                 |
 | Floor plan slicing noisy               | Sonnet room rectangles on the top-down render, or show the render itself   |
 | Spark splat tinting unclear            | Translucent amber spheres at gap positions                                 |

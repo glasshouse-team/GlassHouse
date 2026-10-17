@@ -70,3 +70,7 @@ Use `scripts/generate-worlds.ts`. Save every `operation_id` and `world_id` in a 
 ## Hand-off
 
 Temuri writes the listing copy and house manual for both hero homes, since he saw them: wifi, boiler, check-in steps, parking, pets, 5 facts the host agent can answer. He sends them to Beka for GH-7.
+
+## Decision updates
+
+- 2026-10-18 D-009: Film the 60-90 s walkthrough as written: `pnpm video:prepare` speeds it up to 29 s (World Labs takes up to 30 s; longer videos fail after about 47 minutes) and `pnpm worlds generate --video <file>` uploads it directly. A world takes about 6-8 minutes and 1,600 credits. Hero 1 v2 (walkthrough + fill-in clip joined raw, then prepared once) comes back as a new world with its own layout and coordinates, not v1 plus a corner (was: about 5 minutes a world; 720p under 20 MB the only limit; joining method open). Jira: pending
