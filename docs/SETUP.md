@@ -45,7 +45,7 @@ Put keys in `.env.local` (copy `.env.example`) and in Vercel. Share them private
 
 1. `pnpm supabase login`, then `pnpm supabase link --project-ref <ref>` (the ref is in the project URL).
 2. After the GH-5 review: `pnpm db:push`, then `pnpm db:types`.
-3. Check in the dashboard: buckets `media` (public) and `captures` (private) exist; Database > Replication shows `events`, `deal_messages`, `deals`, `worlds`, `gaps` in `supabase_realtime`.
+3. Check in the dashboard: buckets `media` (public) and `captures` (private) exist; Database > Replication shows `events`, `deal_messages`, `deals`, `worlds`, `gaps`, `messages` in `supabase_realtime`.
 4. Upload a test file to `media` and open its public URL in an incognito window. World Labs must be able to fetch it the same way.
 
 ## 5. Phones (HTTPS)
@@ -58,7 +58,7 @@ Phones open the camera only over HTTPS. Use a Vercel preview URL, or locally `pn
 2. Start `claude` in the repo. The first message of the session says who it works for and which ticket your branch is.
 3. Jira: run `/mcp`, choose `atlassian`, log in with your Atlassian account (site hacktoberfest.atlassian.net). Without it, Claude reads the offline copies in `docs/tickets/`.
 4. Work: `/start-ticket GH-<n>` ... `/finish-ticket`.
-5. Two parallel sessions: `git worktree add ../glasshouse-gh11 -b GH-11-tour-viewer` and run a second `claude` there (docs/WORKFLOW.md). Copy `.env.local` and `.claude/settings.local.json` into the worktree.
+5. Two parallel sessions: a second git worktree made from `origin/main`, with `.env.local` and `.claude/settings.local.json` copied into it. The commands are in docs/WORKFLOW.md.
 
 ## Troubleshooting
 

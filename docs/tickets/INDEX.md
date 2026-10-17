@@ -2,11 +2,11 @@
 
 Jira project **GH** on hacktoberfest.atlassian.net ([board](https://hacktoberfest.atlassian.net/jira/software/projects/GH/boards/2)), Epic GH-1. One file per ticket in this folder:
 
-- **GH-1 to GH-16** are offline copies of Jira from 2026-10-17. Jira is the source of truth; Claude Code reads it through the Atlassian MCP server (`/mcp` to log in) and falls back to these files.
-- **GH-17 to GH-27 are not in Jira yet.** These files are the tickets until they are created. If Jira gives them different keys, rename the files and update `.claude/ticket-map.json`.
-- Every file starts with **In the starter**: what this repo already provides for the ticket. Build on it; don't rewrite it.
+- **All 27 tickets are in Jira.** Each file holds a copy of the Jira text (Jira wins on scope and acceptance criteria) plus repo facts Jira does not have.
+- **Build notes** settle the interfaces, file paths, platform limits and test approach the ticket text leaves open. **Needs from people** lists what Claude cannot do itself.
+- **In the starter** says what this repo already provides for the ticket. Build on it; don't rewrite it.
 
-Where the repo differs from ticket text, docs/DECISIONS.md says so: AI SDK v7 (D-003), RLS on (D-006), demo dates Mon Nov 9 to Fri Nov 13, 2026 (D-007), service fee after the discount (D-010), automatic tool logging (D-011). Host pages are `app/host/...` (tickets sometimes write `app/(host)/...`). When the team changes a decision, `/record-decision` adds it there, appends a "Decision updates" line to the affected files here and updates Jira.
+Where the repo differs from ticket text, docs/DECISIONS.md says so: AI SDK v7 (D-003), RLS on (D-006), demo dates Mon Nov 9 to Fri Nov 13, 2026 (D-007), service fee after the discount (D-010), automatic tool logging (D-011), and D-012 to D-020 from the ticket review (uploads, anchors, browser-only 3D work, coordinates, 4 demo guests, askHome input, refusals, raw videos). Host pages are `app/host/...` (tickets sometimes write `app/(host)/...`). When the team changes a decision, `/record-decision` adds it there, appends a "Decision updates" line to the affected files here and updates Jira.
 
 Start a ticket in Claude Code with `/start-ticket GH-<n>`; it loads the skills listed below.
 
@@ -30,17 +30,17 @@ Start a ticket in Claude Code with `/start-ticket GH-<n>`; it loads the skills l
 | [GH-14](GH-14.md) | F2 Trip brief search: guest agent ranks and explains a shortlist | Beka | Must | 7-9 | GH-8, GH-9, GH-13 | agent-builder, ui-pages | TripBrief schema, `/api/search` stub, guest prompt draft | [open](https://hacktoberfest.atlassian.net/browse/GH-14) |
 | [GH-15](GH-15.md) | F5 Negotiation and deal room: agents negotiate within code-enforced rules; host approves | Beka | Must | 9-13 | GH-7, GH-8, GH-12, GH-13 | negotiation-engine, agent-builder, ui-pages | Validators, `acceptanceOutcome`, demo fixture, deal schemas, route and page stubs | [open](https://hacktoberfest.atlassian.net/browse/GH-15) |
 | [GH-16](GH-16.md) | F5b Host agent Q&A: Ask this home with sourced answers | Temuri | Must | 11-13 | GH-7, GH-9, GH-13 | agent-builder | host-qa prompt draft, `/api/qa` stub, both slot stubs | [open](https://hacktoberfest.atlassian.net/browse/GH-16) |
-| [GH-17](GH-17.md) | MVP checkpoint (hour 13): end-to-end demo run, backup video, cut decisions | Temuri | Milestone | 13 | GH-8, GH-9, GH-10, GH-11, GH-12, GH-14, GH-15, GH-16 | demo-readiness | `demo-readiness` skill, `/api/health`, docs/DEMO.md | not yet |
-| [GH-18](GH-18.md) | F7 Floor plan v1 from the 3D mesh (v2 stretch) | Temuri | Should | 13-16 | GH-10, GH-11 | floor-plan-geometry, verifier-vision | `lib/geometry/slice.ts` + tests, FloorPlan schema, route/script/card stubs, geometry deps | not yet |
-| [GH-19](GH-19.md) | F6 Gap check v1: blank spots, host notes, pins, fill-in version | Temuri | Should | 15-18 | GH-10, GH-11, GH-18 | verifier-vision, splat-tour-viewer | Gap schemas, gaps prompt draft, rig/route/script/GapTasks stubs, clip-join helpers | not yet |
-| [GH-20](GH-20.md) | F8 Ask the space: guest agent answers and flies the 3D camera | Beka | Should | 13-15 | GH-9, GH-11, GH-13 | agent-builder, splat-tour-viewer | `/api/ask-space` stub, `components/tour-ext/`, `useTour()` type | not yet |
-| [GH-21](GH-21.md) | F9 Honesty overlay + coverage score | Beka | Should | 15-17 | GH-11, GH-19 | splat-tour-viewer, ui-pages | `coverage_score` column, `--honesty` color token | not yet |
-| [GH-22](GH-22.md) | F10 Guided walkthrough capture in the phone browser (stretch) | Temuri | Stretch | after 18 | GH-10 | mobile-capture | Capture page stub, capture schemas, `/api/captures` stub, launcher stub | not yet |
-| [GH-23](GH-23.md) | F11 Check-in verification (stretch) | Beka | Stretch | after 18 | GH-9, GH-10 | verifier-vision, mobile-capture, ui-pages | Trip page stub, `/api/checkin` stub, `checkins` table | not yet |
-| [GH-24](GH-24.md) | F12 Spatial reviews pinned in 3D (nice-to-have) | Temuri | Nice | spare | GH-7, GH-11, GH-19 | verifier-vision, splat-tour-viewer | `review_claims` table, `split-reviews.ts` stub | not yet |
-| [GH-25](GH-25.md) | F13 Host narration to listing draft (nice-to-have) | Beka | Nice | spare | GH-9, GH-13 | agent-builder, mobile-capture | `/api/listing-draft` stub | not yet |
-| [GH-26](GH-26.md) | Demo mode, reset script and QA checklist | Beka | Demo | 18-20 | GH-17 | demo-readiness, supabase-data | `DEMO_MODE`, `/demo/check` and `reset-demo.ts` stubs, `/api/health` | not yet |
-| [GH-27](GH-27.md) | Pitch, demo script, slides and rehearsals | Temuri | Demo | 18-24 | GH-17 | demo-readiness | docs/DEMO.md (script, judge Q&A), `docs/pitch/` | not yet |
+| [GH-17](GH-17.md) | MVP checkpoint (hour 13): end-to-end demo run, backup video, cut decisions | Temuri | Milestone | 13 | GH-8, GH-9, GH-10, GH-11, GH-12, GH-14, GH-15, GH-16 | demo-readiness | `demo-readiness` skill, `/api/health`, docs/DEMO.md | [open](https://hacktoberfest.atlassian.net/browse/GH-17) |
+| [GH-18](GH-18.md) | F7 Floor plan v1 from the 3D mesh (v2 stretch) | Temuri | Should | 13-16 | GH-10, GH-11 | floor-plan-geometry, verifier-vision | `lib/geometry/slice.ts` + tests, FloorPlan schema, route/script/card stubs, geometry deps | [open](https://hacktoberfest.atlassian.net/browse/GH-18) |
+| [GH-19](GH-19.md) | F6 Gap check v1: blank spots, host notes, pins, fill-in version | Temuri | Should | 15-18 | GH-10, GH-11, GH-18 | verifier-vision, splat-tour-viewer | Gap schemas, gaps prompt draft, rig/route/script/GapTasks stubs, clip-join helpers | [open](https://hacktoberfest.atlassian.net/browse/GH-19) |
+| [GH-20](GH-20.md) | F8 Ask the space: guest agent answers and flies the 3D camera | Beka | Should | 13-15 | GH-9, GH-11, GH-13 | agent-builder, splat-tour-viewer | `/api/ask-space` stub, `components/tour-ext/`, `useTour()` type | [open](https://hacktoberfest.atlassian.net/browse/GH-20) |
+| [GH-21](GH-21.md) | F9 Honesty overlay + coverage score | Beka | Should | 15-17 | GH-11, GH-19 | splat-tour-viewer, ui-pages | `coverage_score` column, `--honesty` color token | [open](https://hacktoberfest.atlassian.net/browse/GH-21) |
+| [GH-22](GH-22.md) | F10 Guided walkthrough capture in the phone browser (stretch) | Temuri | Stretch | after 18 | GH-10 | mobile-capture | Capture page stub, capture schemas, `/api/captures` stub, launcher stub | [open](https://hacktoberfest.atlassian.net/browse/GH-22) |
+| [GH-23](GH-23.md) | F11 Check-in verification (stretch) | Beka | Stretch | after 18 | GH-9, GH-10 | verifier-vision, mobile-capture, ui-pages | Trip page stub, `/api/checkin` stub, `checkins` table | [open](https://hacktoberfest.atlassian.net/browse/GH-23) |
+| [GH-24](GH-24.md) | F12 Spatial reviews pinned in 3D (nice-to-have) | Temuri | Nice | spare | GH-7, GH-11, GH-19 | verifier-vision, splat-tour-viewer | `review_claims` table, `split-reviews.ts` stub | [open](https://hacktoberfest.atlassian.net/browse/GH-24) |
+| [GH-25](GH-25.md) | F13 Host narration to listing draft (nice-to-have) | Beka | Nice | spare | GH-9, GH-13 | agent-builder, mobile-capture | `/api/listing-draft` stub | [open](https://hacktoberfest.atlassian.net/browse/GH-25) |
+| [GH-26](GH-26.md) | Demo mode, reset script and QA checklist | Beka | Demo | 18-20 | GH-17 | demo-readiness, supabase-data | `DEMO_MODE`, `/demo/check` and `reset-demo.ts` stubs, `/api/health` | [open](https://hacktoberfest.atlassian.net/browse/GH-26) |
+| [GH-27](GH-27.md) | Pitch, demo script, slides and rehearsals | Temuri | Demo | 18-24 | GH-17 | demo-readiness | docs/DEMO.md (script, judge Q&A), `docs/pitch/` | [open](https://hacktoberfest.atlassian.net/browse/GH-27) |
 
 ## Build order per developer
 

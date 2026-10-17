@@ -15,12 +15,15 @@ The goal is simple: you never edit the same file, and `main` always works.
 ## Claude Code habits
 
 - Start every ticket with `/start-ticket GH-<n>`; end with `/finish-ticket`.
-- Two sessions per developer at most, each in its own git worktree, on different tickets or folders:
+- Two sessions per developer at most, each in its own git worktree, on different tickets or folders. Make the second one from the latest `main` on GitHub, not from your current branch:
   ```bash
-  git worktree add ../glasshouse-gh18 -b GH-18-floor-plan
-  cp .env.local .claude/settings.local.json ../glasshouse-gh18/   # keep the same dev identity
+  git fetch origin
+  git worktree add --no-track -b GH-18-floor-plan ../glasshouse-gh18 origin/main
+  cp .env.local ../glasshouse-gh18/
+  cp .claude/settings.local.json ../glasshouse-gh18/.claude/   # same developer identity
   cd ../glasshouse-gh18 && pnpm install && claude
   ```
+  `/start-ticket GH-18` there finds the branch and stays on it. After the PR merges: `git worktree remove ../glasshouse-gh18`.
 - While one session works, review the other's diff.
 - Big features (3D pipeline, floor plan, negotiation loop): ask for a plan first (plan mode) and accept it before code is written.
 - Paste real errors and screenshots into Claude instead of describing them.

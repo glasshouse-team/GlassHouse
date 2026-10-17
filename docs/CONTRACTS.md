@@ -6,7 +6,7 @@ The starter already contains drafts of everything below.
 
 ## 1. Database: `supabase/migrations/0001_core.sql` (Beka)
 
-22 tables, RLS on all, public read on non-secret tables, Realtime on events, deal_messages, deals, worlds, gaps. Details: [DATABASE.md](DATABASE.md). New columns or tables go in `000N_<name>.sql`; never edit an applied migration.
+22 tables, RLS on all, public read on non-secret tables, Realtime on events, deal_messages, deals, worlds, gaps, messages. Details: [DATABASE.md](DATABASE.md). New columns or tables go in `000N_<name>.sql`; never edit an applied migration.
 
 ## 2. Types: `lib/schemas/`
 
@@ -44,13 +44,14 @@ Agents negotiate over `hostSubtotalCents` (nights + cleaning). The 10% service f
 
 ```ts
 createAgent({ name: "guest" | "host" | "verifier", system, tools, model?: "agent" | "bulk",
-              maxSteps?, listingId?, dealId?, toolsContext? }): ToolLoopAgent  // .generate() and .stream()
+              maxSteps?, stopWhen?, output?, effort?: "low" | "medium" | "high",
+              listingId?, dealId?, toolsContext? }): ToolLoopAgent  // .generate() and .stream()
 buildHostContext(listingId, mode: "qa" | "negotiate"): Promise<HostContext>  // policy only in "negotiate"
 buildGuestContext(dealId): Promise<GuestContext>                              // includes the guest's limits
 loadPrompt(name, vars): string                                                // agents/prompts/<name>.md
 ```
 
-Tool results may include `summary` to set the feed line.
+Tool results may include `summary` to set the feed line. `toolsContext` is keyed by tool name (`{ make_offer: { policy } }`). `stopWhen` adds to the `maxSteps` cap; `output` is `Output.object({ schema })`. Prompts carry no policy numbers; listing text and facts go in the user message as quoted JSON.
 
 ## 6. Page slots (Temuri's components rendered in Beka's pages)
 
@@ -85,8 +86,66 @@ Temuri implements `<TourProvider>` in GH-11. Beka's add-ons (Ask the space, hone
 
 `<ActivityFeed filter="listing" | "deal" | "all" listingId? dealId? compact? />`, rendered in the listing page, deal room, host dashboard and `/feed`.
 
+## 9. Host Q&A: `tools/host-qa/askHome.ts` (Temuri, GH-16)
+
+```ts
+askHome(input: {
+  listingId: string; question: string; askedBy: "guest" | "guest_agent";
+  guestId?: string; dealId?: string; conversationId?: string;
+}): Promise<{
+  conversationId: string; messageId: string;
+  answer: string | null;      // null = forwarded to the host
+  sources: { type: "fact" | "rule" | "manual"; key: string; quote?: string }[];
+  forwarded: boolean;
+}>
+```
+
+Server only. `/api/qa` and Beka's guest-agent tool `ask_host` (GH-14, GH-15) both call it; the stub exists so their code compiles before GH-16.
+
+## 10. Browser uploads: `createSignedUpload()` in `lib/supabase.ts` (Beka)
+
+```ts
+createSignedUpload(bucket: "media" | "captures", path: string):
+  Promise<{ bucket: string; path: string; signedUrl: string; token: string }>
+```
+
+RLS gives the browser no write access, so every browser upload (rig screenshots GH-18/GH-19, walkthroughs GH-22, check-in videos GH-23) goes: a server route calls this, the browser PUTs the file to `signedUrl` (XMLHttpRequest for a progress bar) or calls `uploadToSignedUrl(path, token, file)`. Never send file bytes through a route body (Vercel caps bodies at 4.5 MB).
+
+## 11. Demo ids: `seed/fixtures.ts` (Beka)
+
+`DEMO_PROFILES` (Nino guest, Giorgi and Ana hosts), `HERO_LISTINGS` (hero-1, hero-2, both hosted by Giorgi) with fixed uuids, `SEED_COMPLETED_ACTION` (the event the seed logs last; the demo reset deletes events after it), `LIE_LISTING_SLUGS` (the two listings the X-ray must catch), `HERO_QA_FIXTURES` (the Ask-this-home checks and the source each answer must cite), plus the hero price, policy and demo deal (4 guests). The seed, role switcher, deals, reset and tests import these instead of looking rows up by name.
+
+## 12. Viewer: `lib/viewer.ts` (Beka)
+
+```ts
+ROLE_COOKIE = "gh_role"                     // "guest" | "host", set by the role switcher
+getViewer(): Promise<{ role: "guest" | "host"; profileId: string; name: string }>  // no cookie: Nino
+```
+
+Server only. Pages, `/api/qa`, deals and the dashboard use it instead of a login. One cookie per browser: use two browser profiles to play guest and host side by side.
+
+## 13. Tour add-ons: `components/tour-ext/` (Beka)
+
+```ts
+TourExtensions({ listingId, worldId }): ReactNode   // index.tsx: GH-20 and GH-21 mount inside it
+TourActionSchema / TourAction                        // actions.ts: fly_to, look_toward, highlight_room, show_fact
+runTourAction(tour: TourApi, action: TourAction): Promise<void>
+```
+
+Temuri's tour page renders `<TourExtensions>` inside `<TourProvider>` and outside the `<Canvas>`. Deep link: `/tour/{listingId}?version={n}&anchor={anchorId}`.
+
+## 14. Coordinates and anchors: `lib/geometry/frame.ts` (Temuri)
+
+```ts
+marbleToThree(metricScaleFactor: number, floorY?: number): Matrix4   // flips OpenCV axes, meters, floor at 0
+floorHeight(positions, index?): number                                // lowest large horizontal surface
+```
+
+The only Marble-to-three transform; the viewer, floor plan and gap check all use it. Every position in `anchors`, `gaps` and floor plans is in these meters. An anchor's `position` is where the camera stands and `look_at` what it looks at (or null). A gap counts as AI-filled while its status is `open` or `requested`.
+
 ## Change log
 
-| Date       | Change                 | Agreed by        |
-| ---------- | ---------------------- | ---------------- |
-| 2026-10-17 | Starter drafts created | (review in GH-5) |
+| Date       | Change                                                                                                                                                  | Agreed by        |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| 2026-10-17 | Starter drafts created                                                                                                                                  | (review in GH-5) |
+| 2026-10-17 | Sections 9-14 added after the ticket review (askHome, uploads, demo ids, viewer, tour add-ons, coordinates); createAgent gains stopWhen, output, effort | (review in GH-5) |

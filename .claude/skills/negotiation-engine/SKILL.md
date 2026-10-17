@@ -18,7 +18,7 @@ Money rules live in code. Already in the repo, with tests: `computeQuote` (lib/p
 
 ## The demo (must pass 5 runs in a row)
 
-Hero home 1, Mon Nov 9 to Fri Nov 13, 2026, 2 guests. List total $520 (4 x $120 + $40 cleaning). Effective floor $442 (15% max discount beats $100/night). Auto-accept $490. Guest target $470, max $500.
+Hero home 1, Mon Nov 9 to Fri Nov 13, 2026, 4 guests (D-017). List total $520 (4 x $120 + $40 cleaning). Effective floor $442 (15% max discount beats $100/night). Auto-accept $490. Guest target $470, max $500.
 
 | Round | Actor         | Action                                      | Check                                                                              |
 | ----- | ------------- | ------------------------------------------- | ---------------------------------------------------------------------------------- |
@@ -33,11 +33,15 @@ The rounds also live in `DEMO_SCRIPT` (seed/fixtures.ts) and are asserted by lib
 ## Build
 
 1. **Open:** "Negotiate" on the listing page opens a sheet: dates, guests, "What would you like to pay?" (target), "Most you'd pay" (private). `POST /api/deals` computes the list total with `computeQuote(...).hostSubtotalCents`, inserts `deals` and `deal_secrets`, logs an event.
-2. **Tools** in `tools/negotiation/`: `make_offer(amountCents, terms, reason)`, `accept_offer()`, `decline(reason)`, `escalate_to_host(reason)` (host side), `ask_guest(question)` (guest side). Each money tool calls `validateOffer` first. On failure: insert a `deal_messages` row with type `rejected` (body without host numbers, e.g. "Blocked: below the host's minimum") and return the reason to the agent as the tool result so it tries again.
+2. **Tools** in `tools/negotiation/`: `make_offer(amountCents, terms, reason)`, `accept_offer()`, `decline(reason)`, `escalate_to_host(reason)` (host side), `ask_guest(question)` (guest side). Each money tool calls `validateOffer` first. On failure: insert a `deal_messages` row with type `rejected` (body from the refusal code, never the `reason` text, which can contain host numbers; `amount_cents` null) and return `{ ok: false, code, summary }` as the tool result (not a thrown error) so the agent tries again. On success return `{ ok: true, summary, ... }`.
    Pass the policy and secrets through `toolsContext` (see agent-builder), never through the prompt.
-3. **Run loop** `POST /api/deals/[id]/run`: alternate guest turn (context `buildGuestContext`) and host turn (`buildHostContext(listingId, "negotiate")`). Each turn is one `agent.generate()` with `stopWhen: hasToolCall("make_offer", "accept_offer", "decline", "escalate_to_host", "ask_guest")` so it stops after one money action. Save each message to `deal_messages` (Realtime pushes it). In `isDemoMode()`, wait 1.5 s between turns. Stop on accept, decline, escalate, ask_guest or `max_rounds`.
+3. **Run loop** `POST /api/deals/[id]/run`: alternate guest turn (context `buildGuestContext`) and host turn (`buildHostContext(listingId, "negotiate")`). Each turn is one `agent.generate()` from `createAgent({ ..., stopWhen })` where `stopWhen` is true once a money tool returned `{ ok: true }` (`hasToolCall` would also stop on a refused call, so the agent could never retry). Server code, not a tool, applies `acceptanceOutcome` after an accept. The route returns 202 and runs the loop inside `after()` (next/server) with `export const maxDuration = 300`; refuse a second run while one is going. Save each message to `deal_messages` (Realtime pushes it). In `isDemoMode()`, wait 1.5 s between turns. Stop on accept, decline, escalate, ask_guest or `max_rounds`.
 4. **Approve** `POST /api/deals/[id]/approve` (host role only): `approved` creates a reservation with `computeQuote({ ..., discountCents: list - agreed })`; `declined` ends the deal. Log the event; the guest sees "Booked".
 5. **Deal room** `/deal/[id]`: offer cards (actor, amount, difference from list, reason), grey notes for `rejected`, a status pill, the feed for this deal. Guest controls: Stop, Accept last offer. Host controls (role switcher): Approve, Decline, Counter myself. Approvals also appear on the host dashboard with a toast.
+
+## Demo reliability (recommended)
+
+The demo must pass 5 runs in a row. Give each turn a suggested move computed in code and passed through `toolsContext`: the midpoint of the last two offers rounded down to $5, accepting once the gap is $15 or less. From $520 and a $470 opening that gives $495, $480, accept. The model writes the reason and may only deviate within the validator's rules.
 
 ## Branch tests
 

@@ -1,6 +1,6 @@
 # GH-6: Film 2 hero homes and start their 3D generations (incl. gap demo versions)
 
-> Offline copy of [GH-6](https://hacktoberfest.atlassian.net/browse/GH-6), taken 2026-10-17. Read the live ticket when the Atlassian MCP server is connected: Jira wins on scope and acceptance criteria. "In the starter" below wins on repo facts (paths, versions, dates).
+> The ticket text below the line is a copy of [GH-6](https://hacktoberfest.atlassian.net/browse/GH-6) from Jira (2026-10-17); for scope and acceptance criteria, Jira wins. The sections above the line are repo facts Jira does not have (**In the starter**, **Build notes**, **Needs from people**), and `/start-ticket` reads them every time.
 
 | Owner | Type | Priority | Hours | Depends on | Skills |
 | --- | --- | --- | --- | --- | --- |
@@ -13,6 +13,17 @@ Labels: 3d, capture, hours-1-3, must-have
 - `pnpm video:prepare <raw>` and `pnpm worlds generate --video <url> --name "Hero 1 v1" --wait` (prints the operation and world ids to paste into the comment). Joining a walkthrough and a fill-in clip: `joinClipsArgs` in `lib/media.ts`.
 - Upload to Supabase Storage by hand (dashboard) until GH-10 adds the pipeline.
 - The `mobile-capture` skill has the filming checklist.
+
+## Build notes
+
+- Upload photos to `media/listings/{HERO_LISTINGS.heroN.id}/photos/NN-{room}.jpg` (NN = order, e.g. `03-kitchen.jpg`), resized to at most 1600 px with sharp, which also drops GPS data. The seed (GH-7) reads that folder.
+- Note when you enter each room (seconds into the video). GH-10 stores it as the capture's `room_markers`; the floor plan and gap check use it as the room list.
+- Hero 1 v2: concatenate the raw walkthrough and the fill-in clip (same orientation), then `pnpm video:prepare` once.
+- Keep raw videos on a laptop or the shared drive (D-020). Upload only prepared mp4s to `media/captures/{listingId}/{captureId}/prepared.mp4`, a new uuid per clip, and post each capture id with its operation and world ids.
+
+## Needs from people
+
+- Owner consent (a screenshot in the ticket); filming both homes; house copy and manuals for GH-7.
 
 ---
 

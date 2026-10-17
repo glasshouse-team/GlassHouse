@@ -19,7 +19,7 @@ Client: `lib/marble.ts` (tested). CLI: `pnpm worlds` (scripts/generate-worlds.ts
   - `{ type: "video", video_prompt: SourceRef, text_prompt? }`: mp4, webm, mov or avi.
   - `{ type: "multi-image", multi_image_prompt: [{ azimuth?, content: SourceRef }], reconstruct_images?, text_prompt? }`: up to 4 images, up to 8 with `reconstruct_images: true`.
   - `{ type: "image", image_prompt: SourceRef, is_pano?: "auto" | true | false }` and `{ type: "text", text_prompt }`.
-- `SourceRef`: `{ source: "uri", uri }` (public URL, no cookies or login), `{ source: "media_asset", media_asset_id }` (signed upload flow, see docs.worldlabs.ai/api), or `{ source: "data_base64", data_base64, extension }`.
+- `SourceRef`: `{ source: "uri", uri }` (public URL, no cookies or login), `{ source: "media_asset", media_asset_id }` (`uploadMediaAsset()` in lib/marble.ts; the CLI does it for local files: `pnpm worlds generate --video walk-720.mp4 --wait`), or `{ source: "data_base64", data_base64, extension }`.
 - Size: URL inputs are documented up to 20 MB (videos up to 100 MB in another section). Stay under 20 MB with `pnpm video:prepare`; use the media-asset upload for anything bigger.
 - `GET /operations/{id}`: `done: false` means running; `done: true` with `error` means failed; otherwise `response.world_id`, plus `cost.total_credits`.
 - `GET /worlds/{id}`: `assets.splats.spz_urls` (size label to URL, for example "100k", "500k", "full_res"), `assets.splats.semantics_metadata.metric_scale_factor` and `ground_plane_offset`, `assets.mesh.collider_mesh_url`, `hq_mesh_url`, `full_res_mesh_url`, `assets.imagery.pano_url`, `assets.caption`, `assets.thumbnail_url`.
@@ -27,7 +27,7 @@ Client: `lib/marble.ts` (tested). CLI: `pnpm worlds` (scripts/generate-worlds.ts
 
 ## Coordinates
 
-Meters = raw x `metric_scale_factor`, then subtract `ground_plane_offset` from y to put the floor at 0 (`worldScale(world)`). If the world appears upside down in three.js, rotate 180 degrees around X (`quaternion.set(1, 0, 0, 0)`, as in Spark's example).
+Marble worlds use OpenCV axes (+y down, +z forward; docs.worldlabs.ai, export specs). Convert only with `lib/geometry/frame.ts`: `marbleToThree(metric_scale_factor, floorY)` flips Y and Z, scales to meters and lifts the floor to y = 0, with `floorY` measured from the collider by `floorHeight()`. The sign and units of `ground_plane_offset` are not documented: in GH-3, check that the measured floor and `ground_plane_offset` agree and note the result in D-009. The collider is a GLB (100-200k triangles); check `extensionsUsed` for Draco or meshopt before parsing it in Node.
 
 ## GH-3: go/no-go (hour 0-2)
 

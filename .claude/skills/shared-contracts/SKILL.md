@@ -29,7 +29,7 @@ The starter already contains drafts of all of these, plus `computeQuote` and `va
 1. Both developers read docs/CONTRACTS.md and the files above (about 20 minutes). Write down changes.
 2. Beka edits `0001_core.sql` and the core types; Temuri edits world and verifier types and the slot stubs. Same branch `GH-5-contracts`.
 3. Apply: `pnpm supabase link --project-ref <ref>` (once), then `pnpm db:push`. Then `pnpm db:types` writes `lib/database.types.ts`; type the clients in lib/supabase.ts with it.
-4. Check in the Supabase dashboard: Realtime is on for events, deal_messages, deals, worlds, gaps; buckets `media` (public) and `captures` (private) exist.
+4. Check in the Supabase dashboard: Realtime is on for events, deal_messages, deals, worlds, gaps, messages; buckets `media` (public) and `captures` (private) exist.
 5. Both slot stubs and pages render (`pnpm dev`, open /listing/demo and /host/dashboard).
 6. PR approved by both. After merge, comment "Contracts frozen at <commit>" on GH-5.
 

@@ -62,7 +62,9 @@ export const AnchorSchema = z.object({
   name: z.string(),
   kind: AnchorKind,
   room: z.string().nullable(),
+  /** Where the camera stands (eye height 1.6 m for rooms), in meters, floor at y = 0. */
   position: Vec3Schema,
+  /** What the camera looks at (the object or surface), or null for a room's default view. */
   look_at: Vec3Schema.nullable(),
   source: z.enum(["auto", "manual"]),
 });

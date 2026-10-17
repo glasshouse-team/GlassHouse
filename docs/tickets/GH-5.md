@@ -1,6 +1,6 @@
 # GH-5: Shared contracts: DB schema, Zod types, logEvent, page slots, tour API, agent core (Temuri reviews)
 
-> Offline copy of [GH-5](https://hacktoberfest.atlassian.net/browse/GH-5), taken 2026-10-17. Read the live ticket when the Atlassian MCP server is connected: Jira wins on scope and acceptance criteria. "In the starter" below wins on repo facts (paths, versions, dates).
+> The ticket text below the line is a copy of [GH-5](https://hacktoberfest.atlassian.net/browse/GH-5) from Jira (2026-10-17); for scope and acceptance criteria, Jira wins. The sections above the line are repo facts Jira does not have (**In the starter**, **Build notes**, **Needs from people**), and `/start-ticket` reads them every time.
 
 | Owner | Type | Priority | Hours | Depends on | Skills |
 | --- | --- | --- | --- | --- | --- |
@@ -13,6 +13,16 @@ Labels: backend, contracts, hours-2-4, must-have
 - A complete draft to review together (not applied to Supabase yet): `supabase/migrations/0001_core.sql` (22 tables, tested on Postgres 18), Zod schemas in `lib/schemas/core.ts`, `world.ts` and `verifier.ts`, a working `logEvent`, `computeQuote` (implemented and tested), `createAgent` (implemented and tested), the context builder stubs, all 8 slot stubs already rendered on the listing page and host dashboard, the `useTour()` type in `components/tour/TourContext.tsx`, and docs/CONTRACTS.md.
 - Differences from the text below: RLS is on, with public read on non-secret tables and no policies on `host_policies`, `deal_secrets`, `captures` and `trip_briefs` (D-006). `deal_messages.type` adds `rejected` (validator notes). `computeQuote` takes no `guests` (the price doesn't depend on it) and also returns `hostSubtotalCents`. `createAgent` also takes `listingId`, `dealId` and `toolsContext`. The migration also creates the storage buckets and the Realtime publication entries.
 - Left: review the draft together, `pnpm db:push`, `pnpm db:types`, commit `lib/database.types.ts`, post "Contracts frozen".
+
+## Build notes
+
+- The draft migration now also has `unique (listing_id, sort)` on `listing_photos`, one live deal per guest and listing (partial unique index) and `messages` in Realtime, so Q&A answers appear live. Review it, then `pnpm db:push`.
+- Contracts 9 to 14 in docs/CONTRACTS.md came out of the ticket review (askHome, uploads, demo ids, viewer, tour add-ons, coordinates); review them with the rest.
+- If `pnpm db:types` fails, the `>` redirect leaves an empty `lib/database.types.ts`: restore it from git and fix the link first.
+
+## Needs from people
+
+- Both developers review and approve; the Supabase database password for `db push`.
 
 ---
 

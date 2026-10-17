@@ -1,6 +1,6 @@
 # GH-2: Set up repo, Supabase, Vercel, API keys and CLAUDE.md
 
-> Offline copy of [GH-2](https://hacktoberfest.atlassian.net/browse/GH-2), taken 2026-10-17. Read the live ticket when the Atlassian MCP server is connected: Jira wins on scope and acceptance criteria. "In the starter" below wins on repo facts (paths, versions, dates).
+> The ticket text below the line is a copy of [GH-2](https://hacktoberfest.atlassian.net/browse/GH-2) from Jira (2026-10-17); for scope and acceptance criteria, Jira wins. The sections above the line are repo facts Jira does not have (**In the starter**, **Build notes**, **Needs from people**), and `/start-ticket` reads them every time.
 
 | Owner | Type | Priority | Hours | Depends on | Skills |
 | --- | --- | --- | --- | --- | --- |
@@ -13,6 +13,19 @@ Labels: hours-0-2, must-have, setup
 - Done, don't redo: the Next.js 16.4 scaffold with every dependency (pnpm lockfile), shadcn config (`components.json`), the folder layout, `.env.example`, `CLAUDE.md` with the full ownership map (docs/OWNERSHIP.md), the PR template, a CI workflow (typecheck, lint, test, build), CODEOWNERS placeholders, the Supabase CLI as a dev dependency (`pnpm supabase ...`) and `GET /api/health` to check which env vars are set.
 - Left, by hand (docs/SETUP.md): GitHub repo and branch protection, Supabase project and `pnpm supabase link`, Anthropic key and spending cap, Vercel import and env vars, ngrok, sharing keys privately. The GH-5 migration creates both storage buckets and the Realtime entries.
 - `@supabase/ssr` is not installed: there is no login (role switcher instead).
+
+## Build notes
+
+- The starter did the code part; what's left is accounts, keys, Vercel and Supabase (docs/SETUP.md). Done when `/api/health` shows every key as set on the Vercel URL and CI's `pnpm build` passes with no env vars.
+- Vercel: keep Fluid compute on (needed for `maxDuration = 300`) and set the Functions region to `fra1`; create the Supabase project in `eu-central-1` (Frankfurt), close to both.
+- Add env vars to Production and Preview. Changing `DEMO_MODE` needs a redeploy.
+- The repo already exists (TemuriTsutskiridze/GlassHouse); put both GitHub usernames in `.github/CODEOWNERS`.
+
+## Needs from people
+
+- Private repo limits: GitHub branch protection on a private repo needs GitHub Pro, and Vercel Hobby blocks deploys of commits made by a collaborator (Beka). Make the repo public, or use Vercel Pro (trial).
+- Supabase Free caps files at 50 MB (D-020): stay on Free with small files, or upgrade to Pro.
+- At least $40 of Anthropic credits (lower tiers have tight rate limits), World Labs credits, the Supabase database password (`link` and `db:push` ask for it), an ngrok token.
 
 ---
 

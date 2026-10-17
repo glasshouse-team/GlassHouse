@@ -11,7 +11,8 @@ when_to_use: The user mentions "build the listing page", "search page", "booking
 Next.js is 16.4 and differs from older versions. Before using a routing or rendering API, read the matching guide in `node_modules/next/dist/docs/01-app/` (for example `01-getting-started/03-layouts-and-pages.md`). Key facts for this repo:
 
 - `params` and `searchParams` are Promises: `export default async function Page(props: PageProps<"/listing/[id]">) { const { id } = await props.params; }`. `PageProps`, `LayoutProps` and `RouteContext` are global types, no import needed.
-- Cache Components is **off** (next.config.ts, docs/DECISIONS.md). Pages that read cookies or the database are dynamic automatically.
+- Cache Components is **off** (next.config.ts, docs/DECISIONS.md). Pages that read cookies (`getViewer()`), headers or `searchParams` render per request. A page that only reads the database is **prerendered once at `next build`** (stale data, and the build then needs env vars): start such pages with `await connection()` from `next/server`.
+- `next/dynamic` with `ssr: false` only works inside a Client Component (`"use client"`), not in a page or layout.
 - Server Components by default. Add `"use client"` only to components with state, effects, event handlers or browser APIs. Keep client components small and pass data down from server components.
 
 ## Data

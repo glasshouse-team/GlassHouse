@@ -1,6 +1,6 @@
 # GH-3: World Labs account + whole-house 3D go/no-go test
 
-> Offline copy of [GH-3](https://hacktoberfest.atlassian.net/browse/GH-3), taken 2026-10-17. Read the live ticket when the Atlassian MCP server is connected: Jira wins on scope and acceptance criteria. "In the starter" below wins on repo facts (paths, versions, dates).
+> The ticket text below the line is a copy of [GH-3](https://hacktoberfest.atlassian.net/browse/GH-3) from Jira (2026-10-17); for scope and acceptance criteria, Jira wins. The sections above the line are repo facts Jira does not have (**In the starter**, **Build notes**, **Needs from people**), and `/start-ticket` reads them every time.
 
 | Owner | Type | Priority | Hours | Depends on | Skills |
 | --- | --- | --- | --- | --- | --- |
@@ -15,6 +15,17 @@ Labels: 3d, hours-0-2, must-have, setup
 - `pnpm video:prepare walk.mov` writes `walk-720.mp4` (720p H.264, no audio, under 20 MB).
 - `pnpm worlds generate --video <public-url> --name "go-no-go" --wait`, then `pnpm worlds get <world_id>` prints the splat sizes and URLs, collider mesh, scale factor and ground offset for the decision comment. Photos: `--images <url1,url2,...> --azimuths 0,90,180,270`.
 - Left: account and credits, filming, a public upload, the backup paths, the decision comment, and D-009 in docs/DECISIONS.md.
+
+## Build notes
+
+- `pnpm worlds generate --video walk-720.mp4 --wait` now uploads local files straight to World Labs (media assets): the go/no-go test needs no public URL and no Supabase.
+- Record per world: splat sizes (is `full_res` over 50 MB?), the collider's `extensionsUsed` (Draco needs extra parsing in Node), and the floor from `marbleToThree` + `floorHeight` compared with `ground_plane_offset` (D-016). Put the results in D-009.
+- Fill-in join test: concatenate the raw clips first, then prepare once. Two prepared clips together exceed 20 MB, and `-c copy` needs the same size and orientation.
+- `lib/marble.ts` and the CLI already exist; extend them. Optional: `pnpm worlds inspect <world_id>` that HEADs each asset for its size and reads the collider GLB's JSON chunk (extensions, POSITION min/max).
+
+## Needs from people
+
+- World Labs credits; filming; the verdict and screenshots; one tape-measured room width to check the metric scale.
 
 ---
 

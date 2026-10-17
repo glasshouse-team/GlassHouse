@@ -6,6 +6,58 @@
  * rate never applies. (An earlier draft used Nov 6-10, which includes Fri/Sat nights.)
  */
 
+/**
+ * Fixed ids so the seed (GH-7), the role switcher (GH-8), deals (GH-15), the demo reset
+ * (GH-26), tests and demo URLs all point at the same rows. The seed upserts with these ids.
+ */
+export const DEMO_PROFILES = {
+  nino: { id: "00000000-0000-4000-8000-0000000000a1", role: "guest", name: "Nino" },
+  giorgi: { id: "00000000-0000-4000-8000-0000000000a2", role: "host", name: "Giorgi" },
+  ana: { id: "00000000-0000-4000-8000-0000000000a3", role: "host", name: "Ana" },
+} as const;
+
+/** The two real homes from GH-6. Giorgi hosts both; hero-1 runs the negotiation demo. */
+export const HERO_LISTINGS = {
+  hero1: {
+    id: "00000000-0000-4000-8000-0000000000b1",
+    slug: "hero-1",
+    hostId: DEMO_PROFILES.giorgi.id,
+  },
+  hero2: {
+    id: "00000000-0000-4000-8000-0000000000b2",
+    slug: "hero-2",
+    hostId: DEMO_PROFILES.giorgi.id,
+  },
+} as const;
+
+/**
+ * The seed logs one event with this action when it finishes. `pnpm demo:reset` (GH-26)
+ * deletes every event with a higher id, so the feed starts clean for each run.
+ */
+export const SEED_COMPLETED_ACTION = "seed.completed";
+
+/** The two deliberate "lies" the X-ray must catch (GH-7 seeds them, GH-9 tests them). */
+export const LIE_LISTING_SLUGS = {
+  /** Says "stunning sea view"; no photo shows the sea. */
+  seaView: "batumi-sea-view-flat",
+  /** Says "sleeps 6"; the photos show 4 beds. */
+  sleepsSix: "sighnaghi-family-house",
+} as const;
+
+/**
+ * "Ask this home" checks for hero-1 (GH-16). Answerable ones name the source the answer
+ * must cite; the seed (GH-7) makes sure those facts, rules and manual lines exist, and that
+ * nothing mentions a hair dryer.
+ */
+export const HERO_QA_FIXTURES = [
+  { question: "Can I bring my dog?", answerable: true, source: "rule:pets" },
+  { question: "Is there parking?", answerable: true, source: "manual:parking" },
+  { question: "Is the wifi good for video calls?", answerable: true, source: "manual:wifi" },
+  { question: "What time can we check in?", answerable: true, source: "rule:check_in_after" },
+  { question: "Is there a washing machine?", answerable: true, source: "fact:washer" },
+  { question: "Is there a hair dryer?", answerable: false },
+] as const;
+
 export const HERO_1_PRICING = {
   base_price_cents: 12_000, // $120 a night
   weekend_price_cents: null, // null = weekend nights cost the same as weekdays
@@ -28,7 +80,7 @@ export const HERO_1_POLICY = {
 export const DEMO_DEAL = {
   checkIn: "2026-11-09",
   checkOut: "2026-11-13",
-  guests: 2,
+  guests: 4, // the trip brief's "4 friends"; the price does not depend on guests
   guestTargetCents: 47_000, // $50 less than the $520 list total
   guestMaxCents: 50_000, // the guest would pay up to $500
 } as const;

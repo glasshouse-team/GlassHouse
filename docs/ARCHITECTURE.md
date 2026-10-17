@@ -73,7 +73,7 @@ flowchart TB
 ## Storage layout
 
 ```
-media/listings/{listing_id}/photos/{photo_id}.jpg
+media/listings/{listing_id}/photos/NN-{room}.jpg   (NN = sort order, e.g. 03-kitchen.jpg)
 media/worlds/{world_id}/scene-web.spz | scene-hq.spz | collider.glb | pano.jpg | floorplan.svg
 media/worlds/{world_id}/screens/{view_id}.jpg
 captures/{listing_id}/{capture_id}/raw.(webm|mp4)      (private)

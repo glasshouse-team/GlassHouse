@@ -1,6 +1,6 @@
 # GH-7: Seed data: ~12 listings, reviews, house rules, host policies, demo fixtures
 
-> Offline copy of [GH-7](https://hacktoberfest.atlassian.net/browse/GH-7), taken 2026-10-17. Read the live ticket when the Atlassian MCP server is connected: Jira wins on scope and acceptance criteria. "In the starter" below wins on repo facts (paths, versions, dates).
+> The ticket text below the line is a copy of [GH-7](https://hacktoberfest.atlassian.net/browse/GH-7) from Jira (2026-10-17); for scope and acceptance criteria, Jira wins. The sections above the line are repo facts Jira does not have (**In the starter**, **Build notes**, **Needs from people**), and `/start-ticket` reads them every time.
 
 | Owner | Type | Priority | Hours | Depends on | Skills |
 | --- | --- | --- | --- | --- | --- |
@@ -12,6 +12,19 @@ Labels: data, hours-3-5, must-have
 
 - `seed/fixtures.ts`: the hero-home price ($120 a night, no weekend price, $40 cleaning), the hero policy, the demo deal (Mon Nov 9 to Fri Nov 13, 2026, D-007) and the negotiation script. The pricing and validator tests use them, so keep the numbers or update the tests.
 - `scripts/seed.ts` is a stub (`pnpm seed`).
+
+## Build notes
+
+- Put the logic in `seed/seed.ts` (`seed()`, `restoreHeroPolicy()`, `restoreHeroManual()`); `scripts/seed.ts` only calls `seed()`, so GH-26's reset can reuse the functions.
+- Use the fixed ids in seed/fixtures.ts (`DEMO_PROFILES`, `HERO_LISTINGS`) and give other rows stable ids derived from their slug (uuid v5), so URLs survive re-seeding. Ids must be valid uuids or `logEvent` drops their events.
+- Never write `published_world_id` in the listing upsert (re-seeding would unpublish the 3D). Set `status: "published"`, `rating` and `review_count`.
+- Hero photos: list `media/listings/{id}/photos/` in Storage and upsert `listing_photos` on `(listing_id, sort)` from the `NN-{room}.jpg` names. Other listings: free-licence photos in `seed/photos/<slug>/` (git-ignored), uploaded the same way.
+- Make the data match the fixtures, and unit-test it: hero-1 fits the demo brief (`max_guests` at least 4, fireplace, workspace, mountain view, no blocked dates in November); nothing mentions a hair dryer; every `HERO_QA_FIXTURES` source exists; the two `LIE_LISTING_SLUGS` lie as described.
+- Log `SEED_COMPLETED_ACTION` as the last step: GH-26 resets everything after it.
+
+## Needs from people
+
+- From Temuri: hero photos, copy, manuals and a few concrete review complaints. From Beka: about 50 free-licence photos with credits.
 
 ---
 

@@ -74,7 +74,7 @@ If an affected ticket or file belongs to the other developer, draft one message 
 
 ## Sync mode (`/record-decision sync`)
 
-Read docs/DECISIONS.md. For every row whose Jira cell says `pending`, do steps 4 and 5 for those tickets, using the row's text as before / now / why. The starter ships with pending rows (D-003, D-006, D-007, D-010, D-011, D-012): the first sync brings Jira in line with the repo.
+Read docs/DECISIONS.md. For every row whose Jira cell says `pending`, do steps 4 and 5 for those tickets, using the row's text as before / now / why. The starter ships with pending rows (D-003, D-006, D-007, D-010 to D-020): the first sync brings Jira in line with the repo.
 
 ## Never
 

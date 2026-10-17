@@ -12,9 +12,11 @@ Requested: $ARGUMENTS
 ## 1. Find the ticket
 
 - Normalize the key: "11", "gh11", "GH-11" all mean GH-11. If no key was given, read `.claude/ticket-map.json`, list the open tickets owned by this session's developer in build order (by `hours`), and ask which one.
-- Read the ticket from Jira first, with the Atlassian MCP tool `getJiraIssue` (site hacktoberfest.atlassian.net, cloudId in `.claude/ticket-map.json`). If the Atlassian server is not connected (`/mcp` shows it), or the key is not in Jira yet (`"inJira": false`), read `docs/tickets/GH-<n>.md`. That file is an offline snapshot; when it and Jira differ, Jira wins.
+- Read the ticket from Jira first, with the Atlassian MCP tool `getJiraIssue` (site hacktoberfest.atlassian.net, cloudId in `.claude/ticket-map.json`). If the Atlassian server is not connected (`/mcp` shows it), or the key is not in Jira yet (`"inJira": false`), use the copy of the ticket text in `docs/tickets/GH-<n>.md`. For scope and acceptance criteria, Jira wins.
+- **Always read `docs/tickets/GH-<n>.md` too**, even when Jira is connected. Its sections **In the starter** (what already exists), **Build notes** (interfaces, file paths, platform limits, test approach), **Needs from people** and **Decision updates** are repo facts Jira does not have; they win on paths, interfaces, numbers and dates.
 - Note the goal, assignee, status, "Depends on", "Owns" folders and acceptance criteria.
-- Check docs/DECISIONS.md for rows that name GH-<n>, and the "Decision updates" section at the end of docs/tickets/GH-<n>.md. A decision there overrides older ticket text (a `pending` Jira cell means Jira still has the old wording).
+- Check docs/DECISIONS.md for rows that name GH-<n>. A decision there overrides older ticket text (a `pending` Jira cell means Jira still has the old wording).
+- If **Needs from people** lists something that may not be done yet (keys, photos, a GH-3 decision, real copy), ask the user about it before planning; build against fixtures or stubs where it is missing.
 
 ## 2. Check it is this developer's ticket
 
@@ -26,9 +28,12 @@ For each ticket in "Depends on", check its Jira status (or ask the user). If a b
 
 ## 4. Branch
 
-- `git status` must be clean; if not, ask what to do with the changes.
-- If there is a remote: `git fetch origin`, `git switch main`, `git pull --ff-only`.
-- `git switch -c GH-<n>-<short-slug>` (or `git switch` to it if it exists). One branch per ticket; never commit to main.
+New ticket branches start from the latest `main` on GitHub (`origin/main`), never from whatever is checked out. Run `git fetch origin` (skip it if `git remote` prints nothing), then look for the ticket's branch, local or on GitHub: `git branch -a --list "*GH-<n>-*"`.
+
+- **Already on it** (resuming): stay, uncommitted changes and all. If `git log --oneline HEAD..origin/main` lists commits, say how many and offer to merge `origin/main` in.
+- **It exists, but this folder is on another branch:** `git status` must be clean (otherwise ask what to do with the changes), then `git switch GH-<n>-<slug>` (for a branch that is only on GitHub, this makes the local copy). If git says the branch is used by another worktree, stop: the user continues in that folder.
+- **No branch yet:** `git status` must be clean (otherwise ask), then `git switch --no-track -c GH-<n>-<short-slug> origin/main` (with no remote, branch from `main`). This works even when local `main` is behind or checked out in another worktree.
+- Don't `git switch main` or pull into it here: in a second worktree, git refuses because `main` is checked out in the first. One branch per ticket; never commit to main.
 - Ask before moving the Jira ticket to In Progress: it is a write to the shared board.
 
 ## 5. Load the domain skills
@@ -67,7 +72,7 @@ Invoke every skill listed for the ticket before planning. The full map is in `.c
 ## 6. Plan
 
 - List the files to create or change. All must be in this developer's folders (docs/OWNERSHIP.md) or shared. A change needed in the other developer's folder, or in a contract file, is a request: draft it as a note for them (see the shared-contracts skill) instead of editing.
-- Check what the starter already provides for this ticket (docs/tickets/INDEX.md, "In the starter" column). Build on it; do not rewrite it.
+- Build on what the ticket file's **In the starter** section lists; do not rewrite it. Follow its **Build notes**: they settle the interfaces and limits the ticket text leaves open.
 - Order the work: Zod schemas and types, then pure logic with tests, then API routes, then UI, then feed events.
 - For tickets estimated over 2 hours, show the plan in at most 10 lines and wait for an OK.
 

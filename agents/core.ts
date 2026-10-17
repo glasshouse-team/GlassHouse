@@ -4,11 +4,16 @@
  *
  * Every tool call is logged to the activity feed automatically. To control the feed
  * line, return `{ summary: "Host agent countered at $495", ...rest }` from the tool.
+ *
+ * Sonnet 5.5 ignores `temperature` and downgrades a forced `toolChoice` to "auto" (the
+ * provider logs a warning), so check in code that the expected tool was called and retry.
  */
 import {
   isStepCount,
   ToolLoopAgent,
   type OnToolExecutionEndCallback,
+  type OutputInterface,
+  type StopCondition,
   type ToolLoopAgentSettings,
   type ToolSet,
 } from "ai";
@@ -22,26 +27,42 @@ export const AGENT_DISPLAY_NAME: Record<AgentName, string> = {
   verifier: "Verifier",
 };
 
-export interface CreateAgentOptions<TOOLS extends ToolSet> {
+export interface CreateAgentOptions<TOOLS extends ToolSet, OUTPUT extends OutputInterface = never> {
   name: AgentName;
   /** System prompt (passed to ToolLoopAgent as `instructions`). Load it with loadPrompt(). */
   system: string;
   tools: TOOLS;
   /** "agent" = Sonnet 5.5 (default), "bulk" = Haiku 5.5. */
   model?: "agent" | "bulk";
-  /** Stop after this many steps (default 8). */
+  /** Hard cap on steps (default 8). Always applies, also next to `stopWhen`. */
   maxSteps?: number;
+  /**
+   * Extra stop rule, e.g. stop once a money tool returned `{ ok: true }` (GH-15). The agent
+   * stops at whichever comes first: this rule or `maxSteps`.
+   */
+  stopWhen?: StopCondition<TOOLS> | StopCondition<TOOLS>[];
+  /** Structured final answer, e.g. `Output.object({ schema })` (GH-14 shortlist). */
+  output?: OUTPUT;
+  /** Claude effort: "low" for quick ranking or chat turns, "high" for hard checks. */
+  effort?: "low" | "medium" | "high";
   /** Attached to every logged event so feeds can filter by listing or deal. */
   listingId?: string;
   dealId?: string;
   /**
    * Server-only values for tools that declare a `contextSchema` (AI SDK v7 `toolsContext`),
-   * e.g. the host policy for make_offer. Never visible to the model.
+   * keyed by tool name, e.g. `{ make_offer: { policy } }`. Never visible to the model.
    */
   toolsContext?: Record<string, unknown>;
 }
 
-type Settings<TOOLS extends ToolSet> = ToolLoopAgentSettings<never, TOOLS>;
+/** The AI SDK's default runtime context type (not exported by "ai" itself). */
+type AgentContext = NonNullable<ToolLoopAgentSettings["runtimeContext"]>;
+type Settings<TOOLS extends ToolSet, OUTPUT extends OutputInterface> = ToolLoopAgentSettings<
+  never,
+  TOOLS,
+  AgentContext,
+  OUTPUT
+>;
 
 function summaryFrom(output: unknown): string | null {
   if (output && typeof output === "object" && "summary" in output) {
@@ -51,7 +72,9 @@ function summaryFrom(output: unknown): string | null {
   return null;
 }
 
-export function createAgent<TOOLS extends ToolSet>(options: CreateAgentOptions<TOOLS>) {
+export function createAgent<TOOLS extends ToolSet, OUTPUT extends OutputInterface = never>(
+  options: CreateAgentOptions<TOOLS, OUTPUT>,
+) {
   const display = AGENT_DISPLAY_NAME[options.name];
 
   const onToolExecutionEnd: OnToolExecutionEndCallback<ToolSet> = async ({
@@ -75,15 +98,23 @@ export function createAgent<TOOLS extends ToolSet>(options: CreateAgentOptions<T
     });
   };
 
+  const extraStops = options.stopWhen
+    ? Array.isArray(options.stopWhen)
+      ? options.stopWhen
+      : [options.stopWhen]
+    : [];
+
   // Cast: TypeScript cannot resolve the toolsContext conditional type for a generic TOOLS.
   const settings = {
     model: options.model === "bulk" ? bulkModel() : agentModel(),
     instructions: options.system,
     tools: options.tools,
-    stopWhen: isStepCount(options.maxSteps ?? 8),
+    stopWhen: [...extraStops, isStepCount(options.maxSteps ?? 8)],
     onToolExecutionEnd,
+    ...(options.output ? { output: options.output } : {}),
+    ...(options.effort ? { providerOptions: { anthropic: { effort: options.effort } } } : {}),
     ...(options.toolsContext ? { toolsContext: options.toolsContext } : {}),
-  } as unknown as Settings<TOOLS>;
+  } as unknown as Settings<TOOLS, OUTPUT>;
 
-  return new ToolLoopAgent<never, TOOLS>(settings);
+  return new ToolLoopAgent<never, TOOLS, AgentContext, OUTPUT>(settings);
 }

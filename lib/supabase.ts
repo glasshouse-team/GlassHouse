@@ -51,6 +51,32 @@ export function supabaseBrowser(): SupabaseClient {
   return browserClient;
 }
 
+export interface SignedUpload {
+  bucket: string;
+  path: string;
+  /** PUT the file here from the browser (XMLHttpRequest gives upload progress). */
+  signedUrl: string;
+  /** For `supabaseBrowser().storage.from(bucket).uploadToSignedUrl(path, token, file)`. */
+  token: string;
+}
+
+/**
+ * Lets the browser upload one file without a write policy: RLS gives the anon key no
+ * writes, so a server route calls this and returns the result to the client. Server only.
+ * Files above the plan's limit (50 MB per file on the Free plan) are refused by Storage.
+ */
+export async function createSignedUpload(
+  bucket: keyof typeof BUCKETS,
+  path: string,
+): Promise<SignedUpload> {
+  const { data, error } = await supabaseAdmin()
+    .storage.from(BUCKETS[bucket])
+    .createSignedUploadUrl(path, { upsert: true });
+  if (error || !data)
+    throw new Error(`Could not create an upload URL for ${path}: ${error?.message}`);
+  return { bucket: BUCKETS[bucket], path: data.path, signedUrl: data.signedUrl, token: data.token };
+}
+
 /** Public URL of an object in the public `media` bucket. */
 export function publicMediaUrl(path: string): string {
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL;

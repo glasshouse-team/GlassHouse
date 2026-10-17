@@ -147,6 +147,59 @@ export function generateWorld(request: GenerateWorldRequest): Promise<MarbleOper
   });
 }
 
+export interface PreparedUpload {
+  media_asset: { media_asset_id: string; file_name: string; kind: "image" | "video" };
+  upload_info: {
+    upload_url: string;
+    upload_method: string;
+    required_headers?: Record<string, string> | null;
+  };
+}
+
+/** Step 1 of a direct upload: World Labs returns a media asset id and a signed upload URL. */
+export function prepareUpload(input: {
+  fileName: string;
+  kind: "image" | "video";
+  extension?: string;
+}): Promise<PreparedUpload> {
+  return call<PreparedUpload>("/media-assets:prepare_upload", {
+    method: "POST",
+    body: JSON.stringify({
+      file_name: input.fileName.slice(-64),
+      kind: input.kind,
+      extension: input.extension,
+    }),
+  });
+}
+
+/**
+ * Uploads a file straight to World Labs and returns its `media_asset_id`, for
+ * `{ source: "media_asset", media_asset_id }`. No public URL or Supabase needed (GH-3).
+ */
+export async function uploadMediaAsset(file: {
+  fileName: string;
+  kind: "image" | "video";
+  contentType: string;
+  bytes: Uint8Array;
+}): Promise<string> {
+  const extension = file.fileName.includes(".") ? file.fileName.split(".").pop() : undefined;
+  const prepared = await prepareUpload({ fileName: file.fileName, kind: file.kind, extension });
+  const { upload_url, upload_method, required_headers } = prepared.upload_info;
+  const res = await fetch(upload_url, {
+    method: upload_method || "PUT",
+    headers: { "Content-Type": file.contentType, ...(required_headers ?? {}) },
+    body: file.bytes as BodyInit,
+  });
+  if (!res.ok) {
+    throw new MarbleError(
+      res.status,
+      `Upload to World Labs failed (HTTP ${res.status})`,
+      await res.text(),
+    );
+  }
+  return prepared.media_asset.media_asset_id;
+}
+
 export function getOperation(operationId: string): Promise<MarbleOperation> {
   return call<MarbleOperation>(`/operations/${encodeURIComponent(operationId)}`);
 }

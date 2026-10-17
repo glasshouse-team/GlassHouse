@@ -22,13 +22,14 @@ export const EventInputSchema = z.object({
   actor_type: ActorType,
   /** Who did it, as people read it: "Guest agent", "Giorgi (host)", "Verifier". */
   actor_name: z.string().min(1),
-  agent: AgentName.optional(),
+  agent: AgentName.nullish(),
   /** Machine-readable action, dot-separated: "deal.offer", "world.ready", "xray.done". */
   action: z.string().min(1),
   /** One line for the feed, past tense, at most 140 characters. */
   summary: z.string().min(1),
-  listing_id: z.uuid().optional(),
-  deal_id: z.uuid().optional(),
+  /** null is accepted because rows from the database use null for "none". */
+  listing_id: z.uuid().nullish(),
+  deal_id: z.uuid().nullish(),
   payload: z.unknown().optional(),
 });
 export type EventInput = z.infer<typeof EventInputSchema>;

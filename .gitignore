@@ -43,7 +43,8 @@ CLAUDE.local.md
 supabase/.temp/
 supabase/.branches/
 
-# local media scratch (raw walkthroughs, extracted frames)
+# local media scratch (raw walkthroughs, extracted frames); seed photos are uploaded to Storage, not committed
 /tmp/
+seed/photos/
 *.mov
 *.MOV

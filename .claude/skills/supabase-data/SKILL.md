@@ -51,7 +51,7 @@ return () => {
 };
 ```
 
-Tables in the publication: events, deal_messages, deals, worlds, gaps. Realtime respects RLS, so subscribed tables need the public read policy.
+Tables in the publication: events, deal_messages, deals, worlds, gaps, messages. Realtime respects RLS, so subscribed tables need the public read policy.
 
 ## Seed (GH-7) and reset (GH-26)
 

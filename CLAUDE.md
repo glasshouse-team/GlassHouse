@@ -53,7 +53,7 @@ The session context says which developer this session works for (`GLASSHOUSE_DEV
 
 ## Code style
 
-- Server Components by default; `"use client"` only where needed; 3D components via `next/dynamic` with `ssr: false`.
+- Server Components by default; `"use client"` only where needed; 3D components via `next/dynamic` with `ssr: false`, called from a Client Component (Next 16 rejects it in Server Components).
 - Small files, named exports, no default exports except Next.js pages, layouts and route handlers.
 - API routes: Zod-parse the body (`parseJson`), return errors via `errorResponse` (lib/http.ts).
 - Agent prompts live in agents/prompts/*.md (`loadPrompt`).

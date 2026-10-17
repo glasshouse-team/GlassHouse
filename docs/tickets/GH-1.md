@@ -1,6 +1,6 @@
 # GH-1: Glasshouse: AI-native Airbnb rebuild (Hackathon Track 01 "Make it better")
 
-> Offline copy of [GH-1](https://hacktoberfest.atlassian.net/browse/GH-1), taken 2026-10-17. Read the live ticket when the Atlassian MCP server is connected: Jira wins on scope and acceptance criteria. "In the starter" below wins on repo facts (paths, versions, dates).
+> The ticket text below the line is a copy of [GH-1](https://hacktoberfest.atlassian.net/browse/GH-1) from Jira (2026-10-17); for scope and acceptance criteria, Jira wins. The sections above the line are repo facts Jira does not have (**In the starter**, **Build notes**, **Needs from people**), and `/start-ticket` reads them every time.
 
 | Owner | Type | Priority | Hours | Depends on | Skills |
 | --- | --- | --- | --- | --- | --- |
@@ -12,6 +12,16 @@ Labels: hackathon, track-01
 
 - Everything in this repository: `CLAUDE.md`, `docs/`, `.claude/` (skills, hooks, rules, the `pr-reviewer` subagent), the shared contracts and the starter code. Start with docs/PLAN.md and this folder's INDEX.md.
 - Differences from the text below: the AI SDK is v7 (docs/DECISIONS.md D-003). Ownership is refined in docs/OWNERSHIP.md (Temuri owns the Verifier and host-qa prompts; team-wide config files need both developers). Host pages live in `app/host/` (the text writes `app/(host)/`).
+
+## Build notes
+
+- Project-wide rules from the ticket review: every browser upload goes through `createSignedUpload` (D-013), every 3D coordinate through `lib/geometry/frame.ts` (D-016), and WebGL work (top-down render, screenshots) runs in the browser rig page (D-015).
+- Pages that only read the database need `await connection()` or Next prerenders them at build time. Long routes set `export const maxDuration = 300` (Vercel Hobby's maximum).
+- Don't count on ffmpeg inside Vercel functions: prepare videos on a laptop (`pnpm video:prepare`) and take frames in the browser.
+
+## Needs from people
+
+- Decide: Supabase Free (50 MB per file) or Pro, and a public GitHub repo or paid plans (details in GH-2).
 
 ---
 

@@ -24,7 +24,7 @@ Supabase Postgres. Schema: `supabase/migrations/0001_core.sql` (draft for GH-5; 
 
 ## Realtime
 
-Published tables: `events`, `deal_messages`, `deals`, `worlds`, `gaps`. Subscribe with `supabaseBrowser().channel(...).on("postgres_changes", ...)` (supabase-data skill).
+Published tables: `events`, `deal_messages`, `deals`, `worlds`, `gaps`, `messages` (Q&A answers). Subscribe with `supabaseBrowser().channel(...).on("postgres_changes", ...)` (supabase-data skill).
 
 ## Storage
 

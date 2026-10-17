@@ -8,7 +8,7 @@
   --background: #ffffff;
   --foreground: #171717;
   --brand: #2f6f5e;
-  --brand-accent: #e8a33d;
+  --brand-accent: #3b5bdb; /* keep it clearly different from --honesty */
   /* Approximate (AI-filled) areas in the 3D and on the floor plan (GH-18, GH-21). */
   --honesty: #f5a524;
 }

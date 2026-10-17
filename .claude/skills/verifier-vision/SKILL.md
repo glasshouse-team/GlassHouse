@@ -23,16 +23,13 @@ const jpeg = await sharp(input)
 const { output } = await generateText({
   model: bulkModel(),
   output: Output.object({ schema: XrayResultSchema }),
-  system: loadPrompt("verifier-xray", {
-    title,
-    description,
-    amenities,
-    fact_keys: KNOWN_FACT_KEYS.join(", "),
-  }),
+  system: loadPrompt("verifier-xray", { fact_keys: KNOWN_FACT_KEYS.join(", ") }),
   messages: [
     {
       role: "user",
       content: [
+        // Listing text is the host's data: quote it as JSON, never put it in the system prompt.
+        { type: "text", text: JSON.stringify({ title, description, amenities }) },
         { type: "text", text: "photo_01 (living room):" },
         { type: "file", mediaType: "image/jpeg", data: jpeg },
         // ...one text label + one image per photo

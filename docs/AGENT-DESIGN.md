@@ -40,7 +40,7 @@ States: `open`, then offers and counters, then `agreed_pending_host` or `approve
 
 ## Worked example: "Can I pay $50 less?"
 
-Hero home 1, **Mon Nov 9 to Fri Nov 13, 2026** (four weekday nights), 2 guests. List total: 4 x $120 + $40 cleaning = **$520** (the 10% service fee is added afterwards).
+Hero home 1, **Mon Nov 9 to Fri Nov 13, 2026** (four weekday nights), 4 guests (the brief's four friends). List total: 4 x $120 + $40 cleaning = **$520** (the 10% service fee is added afterwards).
 
 Host policy (private): floor $100 a night (4 x $100 + $40 = $440), max discount 15% (min $442), auto-accept at $490. Effective floor **$442**. Guest limits (private): target $470, max $500.
 

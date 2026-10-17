@@ -1,6 +1,6 @@
 # GH-9: F1 Listing X-ray (Verifier): facts, contradictions and missing photos
 
-> Offline copy of [GH-9](https://hacktoberfest.atlassian.net/browse/GH-9), taken 2026-10-17. Read the live ticket when the Atlassian MCP server is connected: Jira wins on scope and acceptance criteria. "In the starter" below wins on repo facts (paths, versions, dates).
+> The ticket text below the line is a copy of [GH-9](https://hacktoberfest.atlassian.net/browse/GH-9) from Jira (2026-10-17); for scope and acceptance criteria, Jira wins. The sections above the line are repo facts Jira does not have (**In the starter**, **Build notes**, **Needs from people**), and `/start-ticket` reads them every time.
 
 | Owner | Type | Priority | Hours | Depends on | Skills |
 | --- | --- | --- | --- | --- | --- |
@@ -12,6 +12,18 @@ Labels: ai, hours-3-5, must-have, verifier
 
 - `XrayResultSchema` and `KNOWN_FACT_KEYS` in `lib/schemas/verifier.ts`; prompt draft `agents/prompts/verifier-xray.md`; stubs for `POST /api/xray/[listingId]`, `scripts/run-xray.ts` (`pnpm xray`) and `components/xray/XrayPanel.tsx`. `sharp` is installed. Use `withEvent` (tools/_withEvent.ts) for the feed line.
 - Left: `tools/verifier/xray.ts`, the route, the script and the panel.
+
+## Build notes
+
+- Label images `photo_01`, `photo_02` ... in `(sort, id)` order. After parsing, map evidence back to `listing_photos.id` and drop unknown ids and facts left without evidence.
+- Listing title, description and amenities go in the user message as JSON; the prompt now takes only `{{fact_keys}}` (verifier-vision skill example).
+- Upsert `listing_facts` with `onConflict: "listing_id"` and set `created_at` yourself (the table has no `updated_at`).
+- The provider drops min/max from the schema Claude sees, but Zod still checks them: catch `NoObjectGeneratedError` and retry once. Route: `export const maxDuration = 300`.
+- `pnpm xray [--listing <slug>] [--model bulk|agent] [--runs 3]` scores runs against `tools/verifier/fixtures/xray-expected.json` (both `LIE_LISTING_SLUGS` must be caught) and prints the token cost.
+
+## Needs from people
+
+- Seeded listings with photos (GH-7).
 
 ---
 

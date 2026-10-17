@@ -1,6 +1,6 @@
 # GH-4: Reverse-engineer Airbnb: journeys, screen inventory, brand kit, seed spec
 
-> Offline copy of [GH-4](https://hacktoberfest.atlassian.net/browse/GH-4), taken 2026-10-17. Read the live ticket when the Atlassian MCP server is connected: Jira wins on scope and acceptance criteria. "In the starter" below wins on repo facts (paths, versions, dates).
+> The ticket text below the line is a copy of [GH-4](https://hacktoberfest.atlassian.net/browse/GH-4) from Jira (2026-10-17); for scope and acceptance criteria, Jira wins. The sections above the line are repo facts Jira does not have (**In the starter**, **Build notes**, **Needs from people**), and `/start-ticket` reads them every time.
 
 | Owner | Type | Priority | Hours | Depends on | Skills |
 | --- | --- | --- | --- | --- | --- |
@@ -13,6 +13,16 @@ Labels: hours-1-2, must-have, product
 - `docs/teardown.md`: a template with all five deliverables.
 - Brand tokens `--brand`, `--brand-accent` and `--honesty` in `app/globals.css` (placeholder colors). System fonts until a brand font is picked (D-008).
 - The `reverse-engineer-airbnb` skill walks through the teardown.
+
+## Build notes
+
+- Tailwind 4: tokens live in `@theme inline` in app/globals.css (no tailwind.config.ts). Keep `--brand-accent` clearly different from `--honesty`: amber means AI-filled.
+- Fonts through `next/font` (downloaded at build, served from our own domain), or keep system fonts.
+- The seed spec must pin exact `city` strings, the two lie slugs (`LIE_LISTING_SLUGS` in seed/fixtures.ts), a snake_case amenity list, and a hero-1 that fits the demo brief: Tbilisi or Kazbegi, `max_guests` at least 4, fireplace, workspace, mountain view.
+
+## Needs from people
+
+- Airbnb screenshots (kept out of git); hero-home facts from Temuri.
 
 ---
 

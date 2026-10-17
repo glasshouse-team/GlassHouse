@@ -37,7 +37,7 @@ Then: `pnpm video:prepare walk.mov` (720p, 30 fps, no audio, under 20 MB) and up
 - **Coverage ring:** 36 bins of 10 degrees per room; fill a bin when a heading sample lands in it; the ring shows the filled share; aim for at least 330 degrees per room.
 - **Warnings:** turning too fast (more than about 60 degrees per second), too dark (draw a small video frame to a canvas every 500 ms, average luminance under about 40/255), shaky (`devicemotion` acceleration spikes).
 - **"Next room"** saves `{ room, t }` into `room_markers`.
-- **Upload:** ask the server for `createSignedUploadUrl` (Supabase), then `uploadToSignedUrl` from the browser with a progress bar; retry on failure. Raw files go to the private `captures` bucket.
+- **Upload:** ask a server route for `createSignedUpload()` (lib/supabase.ts), then PUT the file to `signedUrl` with XMLHttpRequest for a progress bar (or `uploadToSignedUrl`); retry the whole file on failure. No resumable (TUS) upload: it needs a logged-in user or an anon write policy, and RLS gives neither. Keep `videoBitsPerSecond` near 1_500_000 so 90 s stays under World Labs' 20 MB limit. Raw files go to the private `captures` bucket.
 - **Prepare on the server:** lib/media.ts (`prepareVideoArgs`, `extractFramesArgs`, `joinClipsArgs`, `probeDurationSec`), output to `media`.
 - **Fill-in mode:** the same recorder for one spot, with the gap's screenshot shown faintly over the camera so the host can aim.
 - **Fallback until GH-22 exists:** `<input type="file" accept="video/*" capture="environment">` plus a typed room list.

@@ -1,6 +1,6 @@
 # GH-8: Core pages: search, listing page with slots, booking box + computeQuote, host dashboard, role switcher
 
-> Offline copy of [GH-8](https://hacktoberfest.atlassian.net/browse/GH-8), taken 2026-10-17. Read the live ticket when the Atlassian MCP server is connected: Jira wins on scope and acceptance criteria. "In the starter" below wins on repo facts (paths, versions, dates).
+> The ticket text below the line is a copy of [GH-8](https://hacktoberfest.atlassian.net/browse/GH-8) from Jira (2026-10-17); for scope and acceptance criteria, Jira wins. The sections above the line are repo facts Jira does not have (**In the starter**, **Build notes**, **Needs from people**), and `/start-ticket` reads them every time.
 
 | Owner | Type | Priority | Hours | Depends on | Skills |
 | --- | --- | --- | --- | --- | --- |
@@ -14,6 +14,18 @@ Labels: frontend, hours-4-8, must-have
 - `computeQuote` in `lib/pricing.ts` with tests (weekday stay, weekend rate, per-date override, discount, zero nights rejected, never negative) and `formatCents` in `lib/utils.ts`.
 - Differences from the text below: the service fee is 10% of the host subtotal **after** the discount (D-010; demo total $528). The dashboard is `app/host/dashboard`.
 - Left: the real UI, the role switcher (cookie), the booking box with Reserve, the rules form. Add shadcn components with `pnpm dlx shadcn@latest add card sheet dialog calendar tabs`.
+
+## Build notes
+
+- Use `getViewer()` from lib/viewer.ts (cookie `gh_role`); the role switcher sets the cookie with a server action. Reading it in the layout makes every page render per request.
+- `/listing/[id]` accepts a uuid or a slug (`/listing/hero-1`); pass `listing.id` to the slots. On the dashboard, replace the `"demo-host"` and `"demo"` placeholders with the viewer's ids.
+- Reserve: `POST /api/reservations { listingId, checkIn, checkOut, guests }` recomputes `computeQuote` on the server with the `availability` overrides, inserts the row and logs an event.
+- The agent rules form saves through a route: the browser can't read or write `host_policies` (no RLS policy). Its event names the change, not the numbers.
+- Ship a disabled `components/deal/NegotiateButton({ listingId, checkIn, checkOut, guests })` so GH-15 only fills it in. Pages that read the database without cookies need `await connection()`.
+
+## Needs from people
+
+- The brand kit (GH-4); a phone check over ngrok.
 
 ---
 

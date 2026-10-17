@@ -67,7 +67,8 @@ create table public.listing_photos (
   source      text not null default 'upload' check (source in ('upload', 'capture_frame')),
   created_at  timestamptz not null default now()
 );
-create index listing_photos_listing_idx on public.listing_photos (listing_id, sort);
+-- One photo per position: the seed upserts on (listing_id, sort), and X-ray ids photo_NN follow sort.
+create unique index listing_photos_listing_sort_key on public.listing_photos (listing_id, sort);
 
 create table public.availability (
   listing_id            uuid not null references public.listings (id) on delete cascade,
@@ -251,6 +252,9 @@ create table public.deals (
   check (check_out > check_in)
 );
 create index deals_listing_idx on public.deals (listing_id, created_at desc);
+-- One live deal per guest per listing (docs/AGENT-DESIGN.md).
+create unique index deals_one_live_per_guest on public.deals (listing_id, guest_id)
+  where status in ('open', 'agreed_pending_host', 'escalated');
 
 -- The guest's private limits. SERVER ONLY (no RLS policies). Only the guest agent reads it.
 create table public.deal_secrets (
@@ -399,10 +403,10 @@ $$;
 -- ---------------------------------------------------------------------------
 do $$
 begin
-  -- Realtime for the live feed, deal room, world status and gap pins.
+  -- Realtime for the live feed, deal room, world status, gap pins and Q&A answers.
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
     alter publication supabase_realtime add table
-      public.events, public.deal_messages, public.deals, public.worlds, public.gaps;
+      public.events, public.deal_messages, public.deals, public.worlds, public.gaps, public.messages;
   end if;
 
   -- Storage: `media` is public (World Labs must fetch inputs without login), `captures` is private.
