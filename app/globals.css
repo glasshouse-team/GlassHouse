@@ -1,9 +1,13 @@
 @import "tailwindcss";
 
+/* Light only for now (GH-8): `dark:` classes apply under a `.dark` class, which nothing sets. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /*
  * Brand tokens from GH-4 (docs/teardown.md section 4, D-022). No Airbnb colors, fonts or logo.
  */
 :root {
+  color-scheme: light;
   --background: #ffffff;
   --foreground: #171717;
   /* Deep greenhouse green: primary buttons (white text, 6.0:1), links, logo. */
@@ -12,6 +16,25 @@
   --brand-accent: #2f6fde;
   /* Approximate (AI-filled) areas in the 3D and on the floor plan (GH-18, GH-21). Don't reuse this token. */
   --honesty: #f5a524;
+
+  /* shadcn/ui tokens, mapped onto the brand (GH-8). */
+  --card: #ffffff;
+  --card-foreground: var(--foreground);
+  --popover: #ffffff;
+  --popover-foreground: var(--foreground);
+  --primary: var(--brand);
+  --primary-foreground: #ffffff;
+  --secondary: #f5f5f5;
+  --secondary-foreground: #171717;
+  --muted: #f5f5f5;
+  --muted-foreground: #737373;
+  --accent: #f5f5f5;
+  --accent-foreground: #171717;
+  --destructive: #dc2626;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: var(--brand-accent);
+  --radius: 0.75rem;
 }
 
 @theme inline {
@@ -20,6 +43,26 @@
   --color-brand: var(--brand);
   --color-brand-accent: var(--brand-accent);
   --color-honesty: var(--honesty);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
   /* Inter from next/font/local (app/layout.tsx): bundled, so no network fetch at build time. */
   --font-sans:
     var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
@@ -27,10 +70,9 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
 }
 
