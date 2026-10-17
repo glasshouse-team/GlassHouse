@@ -110,6 +110,25 @@ async function upsertReviews(listing: SeedListing): Promise<number> {
   return rows.length;
 }
 
+/**
+ * Writes hero-1's starting X-ray row (the `washer` fact) unless a real X-ray (GH-9) has
+ * replaced it: rows the seed wrote itself (model "seed") are refreshed with the latest photos.
+ */
+async function seedHeroFacts(photos: { room_label: string | null; sort: number }[]) {
+  const db = supabaseAdmin();
+  const { data, error } = await db
+    .from("listing_facts")
+    .select("model")
+    .eq("listing_id", HERO_LISTINGS.hero1.id)
+    .maybeSingle();
+  check(error, "read hero-1 facts");
+  if (data && data.model !== "seed") return;
+  const { error: upsertError } = await db
+    .from("listing_facts")
+    .upsert(heroFactsRow(photos), { onConflict: "listing_id" });
+  check(upsertError, "hero-1 facts");
+}
+
 function heroOne(): SeedListing {
   const hero = SEED_LISTINGS.find((l) => l.slug === HERO_LISTINGS.hero1.slug);
   if (!hero) throw new Error("hero-1 is missing from seed/data/listings.ts");
@@ -163,12 +182,7 @@ export async function seed(
     reviewCount += reviews;
     await uploadLocalPhotos(listing.slug, id);
     const photos = await syncPhotos(id);
-    if (id === HERO_LISTINGS.hero1.id) {
-      const { error } = await db
-        .from("listing_facts")
-        .upsert(heroFactsRow(photos), { onConflict: "listing_id", ignoreDuplicates: true });
-      check(error, "hero-1 facts");
-    }
+    if (id === HERO_LISTINGS.hero1.id) await seedHeroFacts(photos);
     summary.push({
       slug: listing.slug,
       city: listing.city,
