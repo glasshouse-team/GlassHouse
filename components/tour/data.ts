@@ -13,6 +13,7 @@ import {
 } from "@/lib/schemas/world";
 import { getWorldFloorPlan } from "@/components/floorplan/data";
 import { hasSupabaseEnv, supabaseAdmin } from "@/lib/supabase";
+import { excerpt, firstName, ReviewPinSchema, type ReviewPin } from "./review-pins";
 import { pickTourVersion, type TourVersion } from "./spots";
 import type { TourPlans } from "./minimap";
 
@@ -86,6 +87,44 @@ export async function loadTourPlans(worlds: Pick<World, "id">[]): Promise<TourPl
     ),
   );
   return Object.fromEntries(rows.flatMap((plan) => (plan ? [[plan.world_id, plan]] : [])));
+}
+
+/**
+ * The listing's review claims for the tour's pins (GH-24, `pnpm reviews:split`), with the name
+ * and room of the anchor each was pinned to so they survive a new world version. A missing
+ * `review_claims` table or a failed read means no pins, never a broken tour.
+ */
+export async function loadReviewPins(listingId: string): Promise<ReviewPin[]> {
+  if (!hasSupabaseEnv()) return [];
+  try {
+    const { data, error } = await supabaseAdmin()
+      .from("reviews")
+      .select(
+        "id, author_name, body, review_claims(id, claim, sentiment, room, anchor_id, anchors(name, room))",
+      )
+      .eq("listing_id", listingId)
+      .order("created_at");
+    if (error) throw new Error(error.message);
+    return (data ?? []).flatMap((review) =>
+      (review.review_claims ?? []).flatMap((c) => {
+        const parsed = ReviewPinSchema.safeParse({
+          id: c.id,
+          claim: c.claim,
+          sentiment: c.sentiment,
+          room: c.room,
+          anchorId: c.anchor_id,
+          anchorName: c.anchors?.name ?? null,
+          anchorRoom: c.anchors?.room ?? null,
+          author: firstName(review.author_name),
+          review: excerpt(review.body),
+        });
+        return parsed.success ? [parsed.data] : [];
+      }),
+    );
+  } catch (error) {
+    console.error("[tour] review pins", listingId, error);
+    return [];
+  }
 }
 
 export interface LauncherData {

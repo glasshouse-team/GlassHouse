@@ -13,6 +13,7 @@ import type { Anchor, Gap, World } from "@/lib/schemas/world";
 import { AnchorPanel } from "./AnchorPanel";
 import { useTour } from "./TourContext";
 import type { TourPlans } from "./minimap";
+import type { ReviewPin } from "./review-pins";
 import { TourOverlay } from "./TourOverlay";
 import { TourProvider } from "./TourProvider";
 import { Viewer, type AnchorPick } from "./Viewer";
@@ -31,6 +32,8 @@ export interface TourShellProps {
   anchorMode: boolean;
   /** Floor plan per world id for the minimap (GH-18); rooms without one show no minimap. */
   plans?: TourPlans;
+  /** Review claims to pin in the rooms (GH-24); none means no pins and no Reviews toggle. */
+  reviewPins?: ReviewPin[];
 }
 
 function hasWebGL(): boolean {
@@ -56,6 +59,7 @@ export function TourShell(props: TourShellProps) {
       gaps={props.gaps}
       startAnchorId={props.startAnchorId}
       anchorMode={props.anchorMode}
+      reviewPins={props.reviewPins}
     >
       <div className="fixed inset-0 z-40 overflow-hidden bg-black select-none">
         <ViewerBoundary

@@ -64,6 +64,8 @@ Up to 8 frames from the arrival video, taken in the browser and sent inline, not
 
 Haiku splits each review into claims `{ claim, sentiment, room or object }`, then code matches each to the nearest anchor by room and name.
 
+Built: `pnpm reviews:split [--listing <slug>] [--dry-run]` (scripts/split-reviews.ts). Prompt `verifier-reviews.md`, schema `ReviewClaimsResultSchema`; reviews go in through `asData`. `tools/verifier/review-match.ts` cleans the claims and matches them with synonyms (workspace/desk, washer/washing machine, shower -> bathroom, pans -> kitchen); a thing never matches the same thing in another room; no match keeps the claim unpinned. The run replaces the reviews' `review_claims` rows (delete, insert) and logs one `reviews.split` event. The tour (components/tour/ReviewPins.tsx) resolves each claim by anchor id, then anchor name + room, then the room anchor, so pins survive a new world version (D-046).
+
 ## Evaluating a prompt
 
 1. Fix a small test set (the 2 lies, 2 hero homes, 2 normal listings) and expected results in a JSON file under `scripts/fixtures/` or `tools/verifier/fixtures/`.
