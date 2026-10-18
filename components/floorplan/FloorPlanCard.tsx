@@ -1,10 +1,13 @@
 import { getListingFloorPlans } from "./data";
 import { FloorPlanView } from "./FloorPlanView";
+import { roomHref } from "./links";
 
 /**
  * Listing page slot (GH-5 contract, GH-18). Keep the name and props. Shows the published
  * version's floor plan, built from the 3D model and loaded from storage, in the frame of the spot
- * where the tour starts (that room is highlighted). Clicking a room opens the tour at that spot.
+ * where the tour starts (the stored SVG itself highlights that room; the overlay adds no
+ * highlight here). Clicking a room opens the tour at that room's anchor
+ * (`/tour/<listing>?anchor=<id>&spot=<spot>`, links.ts): GH-11 reads `anchor`.
  * Renders nothing for listings without a plan.
  */
 export async function FloorPlanCard({ listingId }: { listingId: string }) {
@@ -17,7 +20,7 @@ export async function FloorPlanCard({ listingId }: { listingId: string }) {
   if (!start) return null;
   const plan = data.plans.get(start.worldId)!;
   const roomHrefs = Object.fromEntries(
-    data.spots.map((s) => [s.name, `/tour/${listingId}?spot=${encodeURIComponent(s.spot)}`]),
+    data.spots.map((s) => [s.name, roomHref(listingId, s.spot, s.anchorId)]),
   );
   const rooms = plan.rooms.map((r) => r.name);
 
@@ -43,7 +46,7 @@ export async function FloorPlanCard({ listingId }: { listingId: string }) {
           <li key={s.spot}>
             <a
               href={roomHrefs[s.name]}
-              className="inline-block rounded-full border px-3 py-1 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              className="inline-flex min-h-11 items-center rounded-full border px-4 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
               {s.name}
             </a>

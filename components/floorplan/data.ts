@@ -5,6 +5,7 @@
 import { z } from "zod";
 import { FloorPlanSchema } from "@/lib/schemas/world";
 import { supabaseAdmin } from "@/lib/supabase";
+import { pickRoomAnchors } from "./links";
 
 const StoredPlan = FloorPlanSchema.pick({
   world_id: true,
@@ -19,6 +20,8 @@ export interface PlanSpot {
   worldId: string;
   spot: string;
   name: string;
+  /** Room anchor the tour starts at for this room (links.ts), or null. */
+  anchorId: string | null;
 }
 
 export interface ListingFloorPlans {
@@ -53,15 +56,21 @@ export async function getListingFloorPlans(listingId: string): Promise<ListingFl
     .eq("version", published.version)
     .order("spot");
   if (!worlds?.length) return null;
-  const { data: rows } = await db
-    .from("floor_plans")
-    .select("world_id, svg_url, rooms, walls, doors, status, created_at")
-    .in(
-      "world_id",
-      worlds.map((w) => w.id),
-    )
-    .eq("status", "ready")
-    .order("created_at", { ascending: false });
+  const worldIds = worlds.map((w) => w.id);
+  const [{ data: rows }, { data: anchorRows }] = await Promise.all([
+    db
+      .from("floor_plans")
+      .select("world_id, svg_url, rooms, walls, doors, status, created_at")
+      .in("world_id", worldIds)
+      .eq("status", "ready")
+      .order("created_at", { ascending: false }),
+    db
+      .from("anchors")
+      .select("id, world_id, kind, source, created_at")
+      .in("world_id", worldIds)
+      .eq("kind", "room"),
+  ]);
+  const roomAnchors = pickRoomAnchors(anchorRows ?? []);
   const plans = new Map<string, StoredPlan>();
   for (const row of rows ?? []) {
     if (plans.has(row.world_id)) continue; // newest first
@@ -78,7 +87,12 @@ export async function getListingFloorPlans(listingId: string): Promise<ListingFl
   });
   return {
     version: published.version,
-    spots: ordered.map((w) => ({ worldId: w.id, spot: w.spot, name: w.spot_label ?? w.spot })),
+    spots: ordered.map((w) => ({
+      worldId: w.id,
+      spot: w.spot,
+      name: w.spot_label ?? w.spot,
+      anchorId: roomAnchors.get(w.id) ?? null,
+    })),
     plans,
   };
 }

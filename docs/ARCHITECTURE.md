@@ -49,7 +49,7 @@ flowchart TB
 | `/api/worlds/[id]/status`        | GET           | Poll; download and store assets when done      | GH-10  |
 | `/api/worlds/[id]/publish`       | POST          | Publish a version                              | GH-10  |
 | `/api/worlds/[id]/gaps`          | POST          | Gap check on rig screenshots                   | GH-19  |
-| `/api/worlds/[id]/floorplan`     | POST          | Floor plan from the collider mesh              | GH-18  |
+| `/api/worlds/[id]/floorplan`     | POST          | Floor plan from the collider mesh (host; prod needs `x-admin-secret`; 1/min) | GH-18  |
 | `/api/qa`                        | POST (stream) | Host agent answers or forwards                 | GH-16  |
 | `/api/ask-space`                 | POST (stream) | Guest agent answers with camera actions        | GH-20  |
 | `/api/deals`                     | POST          | Open a deal                                    | GH-15  |

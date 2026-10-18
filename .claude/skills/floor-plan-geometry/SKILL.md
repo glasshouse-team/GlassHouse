@@ -6,7 +6,7 @@ when_to_use: The user mentions "floor plan", "slice the mesh", "walls", "room po
 
 # Floor plan from the 3D (GH-18)
 
-The geometry comes from the world's collider mesh in **meters** (Marble's metric scale). The Verifier only names the rooms. It runs once per world version, offline (`pnpm floorplans` or `POST /api/worlds/[id]/floorplan`), never on a page view. Owner: Temuri.
+The geometry comes from the world's collider mesh in **meters** (Marble's metric scale). The Verifier only names the rooms. It runs once per world version, offline (`pnpm floorplans`, or `POST /api/worlds/[id]/floorplan`: host-only, `x-admin-secret` in production, one build a minute, D-041), never on a page view. Owner: Temuri.
 
 Already in the starter: `lib/geometry/slice.ts` (`sliceTriangle`, `sliceMesh`, `segmentLength`) with tests on a box room. Build the rest next to it: `walls.ts`, `rooms.ts` (v2), `svg.ts`, each with a small test on a synthetic mesh.
 
