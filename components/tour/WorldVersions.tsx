@@ -109,8 +109,9 @@ export function WorldVersions({ listingId }: { listingId: string }) {
   }
 
   return (
-    <section className="min-w-0 rounded-xl border p-4 text-sm">
-      <div className="flex items-center justify-between gap-2">
+    // contain-inline-size: long room names or errors never widen the dashboard grid on phones.
+    <section className="min-w-0 rounded-xl border p-3 text-sm [contain:inline-size] sm:p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-semibold">3D versions</h2>
         {panel?.demo && <Badge variant="secondary">Demo mode: saved worlds only</Badge>}
       </div>
@@ -121,7 +122,7 @@ export function WorldVersions({ listingId }: { listingId: string }) {
       )}
       <ul className="mt-3 space-y-3">
         {panel?.versions.map((v) => (
-          <li key={v.version} className="flex gap-3 rounded-lg border p-2">
+          <li key={v.version} className="flex min-w-0 gap-3 rounded-lg border p-2">
             {v.thumbnailUrl ? (
               // Our storage URL; next/image would need the Supabase host in next.config.ts.
               // eslint-disable-next-line @next/next/no-img-element
