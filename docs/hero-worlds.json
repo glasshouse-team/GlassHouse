@@ -1,0 +1,85 @@
+{
+  "$comment": "Hero home 3D worlds made by hand in GH-6, for GH-10 to import (`pnpm worlds --import`) into storage and `worlds` rows (one row per spot, migration 0002). D-009: one Marble world per room spot from an 8-photo ring; `links` are our doorway arrows, azimuth in degrees clockwise from the spot's first ring photo, pointing along (sin az, 0, -cos az) after marbleToThree. D-026: hero-2 is Temuri's real apartment; hero-1 has no 3D until a second home is photographed.",
+  "hero-2": {
+    "listingId": "00000000-0000-4000-8000-0000000000b2",
+    "entrySpot": "entrance",
+    "versions": {
+      "1": {
+        "$comment": "Gap demo version: the kitchen ring without photos 1019 and 1020 (the photo-frame wall), so Marble invented that wall: a door, an air conditioner and hanging cables that are not there. v2 shows the real plain wall with the photo frame.",
+        "spots": {
+          "kitchen": "6aae85e6-9837-42d2-98a8-1c07ab332da8"
+        }
+      },
+      "2": {
+        "$comment": "Complete version.",
+        "spots": {
+          "entrance": "4cea1a85-9031-4123-87ef-0b6a600f4a47",
+          "bathroom": "980e1ff7-4957-4e4e-ae6b-db03c3f35422",
+          "bedroom": "fbeb2785-e9e6-49e0-b6dd-ce23436c5032",
+          "kitchen": "12d14f82-3ca1-4029-a4c7-650dc68ab66f",
+          "living": "ab896c5f-df6c-44de-94e7-2b278d30d12b"
+        }
+      }
+    },
+    "spots": {
+      "entrance": {
+        "label": "Entrance hall",
+        "links": [
+          {
+            "to": "bedroom",
+            "azimuth": 355
+          },
+          {
+            "to": "kitchen",
+            "azimuth": 45
+          },
+          {
+            "to": "bathroom",
+            "azimuth": 90
+          }
+        ]
+      },
+      "bathroom": {
+        "label": "Bathroom",
+        "links": [
+          {
+            "to": "entrance",
+            "azimuth": 206
+          }
+        ]
+      },
+      "bedroom": {
+        "label": "Bedroom",
+        "links": [
+          {
+            "to": "entrance",
+            "azimuth": 180
+          }
+        ]
+      },
+      "kitchen": {
+        "label": "Kitchen",
+        "links": [
+          {
+            "to": "living",
+            "azimuth": 160
+          },
+          {
+            "to": "entrance",
+            "azimuth": 105
+          }
+        ]
+      },
+      "living": {
+        "label": "Living room",
+        "links": [
+          {
+            "to": "kitchen",
+            "azimuth": 160
+          }
+        ]
+      }
+    },
+    "photos": "media/listings/00000000-0000-4000-8000-0000000000b2/photos/ (18, NN-room.jpg; run pnpm seed to mirror them into listing_photos)"
+  }
+}

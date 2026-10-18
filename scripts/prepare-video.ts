@@ -1,15 +1,23 @@
 /**
  * Prepares a walkthrough for World Labs (owner: Temuri, GH-3 / GH-6):
- * H.264, 720p, 30 fps, no audio, sized to stay under the 20 MB URL-input limit.
+ * H.264, short side 720 (portrait 720x1280), 30 fps, no audio, SDR BT.709 (iPhone HDR is
+ * tone-mapped), at most 29 s (World Labs takes videos up to 30 s, so a 60-90 s walkthrough is
+ * sped up), sized to stay under the 20 MB URL-input limit.
  *
  *   pnpm video:prepare <input.mov> [output.mp4]
  *
- * Then upload the output to the public `media` bucket and check the URL opens in an
- * incognito window before passing it to `pnpm worlds generate --video <url>`.
+ * Then `pnpm worlds generate --video <output.mp4>` uploads it straight to World Labs.
  */
 import { statSync } from "node:fs";
 import path from "node:path";
-import { prepareVideoArgs, probeDurationSec, runFfmpeg, URL_INPUT_LIMIT_BYTES } from "@/lib/media";
+import {
+  prepareVideoArgs,
+  probeVideo,
+  runFfmpeg,
+  URL_INPUT_LIMIT_BYTES,
+  VIDEO_MAX_SECONDS,
+  videoSpeedup,
+} from "@/lib/media";
 
 async function main() {
   const [input, outputArg] = process.argv.slice(2);
@@ -19,14 +27,20 @@ async function main() {
     return;
   }
   const output = outputArg ?? path.join(path.dirname(input), `${path.parse(input).name}-720.mp4`);
-  const durationSec = await probeDurationSec(input);
-  console.log(`Input ${input}: ${durationSec.toFixed(1)} s`);
-  if (durationSec > 150) {
-    console.warn(
-      "Longer than 150 s: quality will drop to fit 20 MB. Aim for a 60-90 s walkthrough.",
+  const { durationSec, hdr } = await probeVideo(input);
+  console.log(
+    `Input ${input}: ${durationSec.toFixed(1)} s${hdr ? `, HDR (${hdr.toUpperCase()}): tone-mapping to SDR BT.709` : ""}`,
+  );
+  const speedup = videoSpeedup(durationSec);
+  if (speedup > 1) {
+    console.log(
+      `Longer than ${VIDEO_MAX_SECONDS} s (World Labs' limit): sped up ${speedup.toFixed(1)}x to 29 s.`,
     );
   }
-  await runFfmpeg(prepareVideoArgs({ input, output, durationSec }));
+  if (speedup > 4) {
+    console.warn("Over 4x skips many frames (GH-3 tested 3.2x and 3.8x). Aim for 60-90 s.");
+  }
+  await runFfmpeg(prepareVideoArgs({ input, output, durationSec, hdr: hdr !== null }));
   const bytes = statSync(output).size;
   const mb = (bytes / 1024 / 1024).toFixed(1);
   console.log(`Wrote ${output} (${mb} MB)`);

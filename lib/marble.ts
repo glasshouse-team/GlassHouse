@@ -3,7 +3,8 @@
  * Docs: https://docs.worldlabs.ai/api (request shapes checked 2026-10-17).
  *
  * Rule: generate once per version, download every asset into OUR storage, and never
- * call World Labs on a page view. Generation takes about 5 minutes.
+ * call World Labs on a page view. A generation takes about 6-9 minutes and 1,600 credits;
+ * videos must be 30 s or shorter (GH-3).
  */
 import { MissingEnvError } from "./errors";
 
@@ -212,18 +213,42 @@ export async function getWorld(worldId: string): Promise<MarbleWorld> {
   return "world" in body ? body.world : body;
 }
 
-/** Polls an operation every `intervalMs` until it finishes. Returns the full world. */
+/** A dropped connection ("fetch failed"), a 5xx or a 429 on one poll; the generation goes on. */
+function isTransientError(error: unknown): boolean {
+  if (error instanceof MarbleError) return error.status >= 500 || error.status === 429;
+  return error instanceof TypeError;
+}
+
+/**
+ * Polls an operation every `intervalMs` until it finishes. Returns the full world. Up to
+ * `maxPollErrors` transient poll errors in a row are retried; a failed generation is not.
+ */
 export async function waitForWorld(
   operationId: string,
   {
     intervalMs = 15_000,
     timeoutMs = 20 * 60_000,
+    maxPollErrors = 5,
     onProgress,
-  }: { intervalMs?: number; timeoutMs?: number; onProgress?: (op: MarbleOperation) => void } = {},
+  }: {
+    intervalMs?: number;
+    timeoutMs?: number;
+    maxPollErrors?: number;
+    onProgress?: (op: MarbleOperation) => void;
+  } = {},
 ): Promise<{ world: MarbleWorld; operation: MarbleOperation }> {
   const deadline = Date.now() + timeoutMs;
+  let pollErrors = 0;
   for (;;) {
-    const op = await getOperation(operationId);
+    let op: MarbleOperation;
+    try {
+      op = await getOperation(operationId);
+      pollErrors = 0;
+    } catch (error) {
+      if (!isTransientError(error) || ++pollErrors > maxPollErrors) throw error;
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+      continue;
+    }
     onProgress?.(op);
     if (op.done) {
       if (op.error)
@@ -234,7 +259,15 @@ export async function waitForWorld(
         );
       const worldId = op.response?.world_id;
       if (!worldId) throw new MarbleError(500, "Operation finished without a world_id", op);
-      return { world: await getWorld(worldId), operation: op };
+      // The world is paid for by now: ride out a transient error instead of losing it.
+      for (let attempt = 0; ; attempt++) {
+        try {
+          return { world: await getWorld(worldId), operation: op };
+        } catch (error) {
+          if (!isTransientError(error) || attempt >= maxPollErrors) throw error;
+          await new Promise((resolve) => setTimeout(resolve, intervalMs));
+        }
+      }
     }
     if (Date.now() > deadline)
       throw new MarbleError(408, `Still generating after ${timeoutMs / 60_000} minutes`);
@@ -262,6 +295,27 @@ export function pickSplatUrls(world: MarbleWorld): { web: string | null; hq: str
   const webLabel =
     labels.find((l) => l.toLowerCase() === "500k") ?? labels[Math.floor((labels.length - 1) / 2)];
   return { web: urls[webLabel], hq: urls[labels[labels.length - 1]] };
+}
+
+export type WorldAssetKind =
+  "splat" | "collider" | "hq_mesh" | "full_res_mesh" | "pano" | "thumbnail";
+
+/** Every downloadable asset of a world, splats smallest first (GH-3 inspect, GH-10 copies). */
+export function worldAssets(
+  world: MarbleWorld,
+): Array<{ kind: WorldAssetKind; label: string; url: string }> {
+  const a = world.assets;
+  const splats = Object.entries(a?.splats?.spz_urls ?? {})
+    .sort(([x], [y]) => splatSizeRank(x) - splatSizeRank(y))
+    .map(([label, url]) => ({ kind: "splat" as const, label: `splat ${label}`, url }));
+  const others: Array<{ kind: WorldAssetKind; label: string; url?: string | null }> = [
+    { kind: "collider", label: "collider mesh", url: a?.mesh?.collider_mesh_url },
+    { kind: "hq_mesh", label: "HQ mesh", url: a?.mesh?.hq_mesh_url },
+    { kind: "full_res_mesh", label: "full-res mesh", url: a?.mesh?.full_res_mesh_url },
+    { kind: "pano", label: "pano", url: a?.imagery?.pano_url },
+    { kind: "thumbnail", label: "thumbnail", url: a?.thumbnail_url },
+  ];
+  return [...splats, ...others.flatMap(({ url, ...rest }) => (url ? [{ ...rest, url }] : []))];
 }
 
 /** Scale metadata with safe defaults (1 = scale unknown, left in model units). */

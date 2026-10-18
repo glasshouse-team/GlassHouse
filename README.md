@@ -1,6 +1,6 @@
 # Glasshouse
 
-Airbnb rebuilt as if AI was there from day one. Three agents search, check and negotiate for people, and every home comes with a walkable 3D model and a floor plan built from the host's own footage. Blank spots are flagged, never invented.
+Airbnb rebuilt as if AI was there from day one. Three agents search, check and negotiate for people, and every home comes with a 3D tour of its rooms (one world per room spot) and a floor plan built from the host's own photos. Blank spots are flagged, never invented.
 
 - **Hackathon:** Track 01 "Make it better", 24 hours
 - **Team:** Temuri Tsutskiridze (Dev A: 3D, capture, floor plan, Verifier) and Beka Maisuradze (Dev B: app, agents, negotiation, data)
@@ -80,6 +80,6 @@ What is in `.claude/`:
 | `pnpm dev` / `pnpm build` / `pnpm start`                                    | Next.js                                                                  |
 | `pnpm check`                                                                | typecheck, lint and tests                                                |
 | `pnpm db:push` / `pnpm db:types`                                            | Apply migrations / regenerate DB types (needs `pnpm supabase link` once) |
-| `pnpm video:prepare <in.mov> [out.mp4]`                                     | 720p, 30 fps, no audio, under 20 MB for World Labs                       |
+| `pnpm video:prepare <in.mov> [out.mp4]`                                     | short side 720, SDR, at most 29 s, under 20 MB for World Labs            |
 | `pnpm worlds generate --video <url> --wait`                                 | Generate a 3D world; also `status`, `wait`, `get`                        |
 | `pnpm seed`, `pnpm demo:reset`, `pnpm xray`, `pnpm gaps`, `pnpm floorplans` | Stubs until their tickets are built                                      |

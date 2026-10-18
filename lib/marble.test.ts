@@ -3,6 +3,8 @@ import {
   pickSplatUrls,
   splatSizeRank,
   uploadMediaAsset,
+  waitForWorld,
+  worldAssets,
   worldScale,
   type MarbleWorld,
 } from "./marble";
@@ -43,6 +45,26 @@ describe("pickSplatUrls", () => {
   });
 });
 
+describe("worldAssets", () => {
+  it("lists splats smallest first, then the meshes and images that exist", () => {
+    const w = world({ full_res: "s3", "100k": "s1", "500k": "s2" });
+    w.assets = {
+      ...w.assets,
+      mesh: { collider_mesh_url: "c", hq_mesh_url: null },
+      imagery: { pano_url: "p" },
+      thumbnail_url: "t",
+    };
+    expect(worldAssets(w)).toEqual([
+      { kind: "splat", label: "splat 100k", url: "s1" },
+      { kind: "splat", label: "splat 500k", url: "s2" },
+      { kind: "splat", label: "splat full_res", url: "s3" },
+      { kind: "collider", label: "collider mesh", url: "c" },
+      { kind: "pano", label: "pano", url: "p" },
+      { kind: "thumbnail", label: "thumbnail", url: "t" },
+    ]);
+  });
+});
+
 describe("worldScale", () => {
   it("reads metric scale metadata", () => {
     expect(worldScale(world({}, { metric_scale_factor: 2.5, ground_plane_offset: -1.2 }))).toEqual({
@@ -53,6 +75,67 @@ describe("worldScale", () => {
 
   it("defaults to unscaled", () => {
     expect(worldScale(world({}))).toEqual({ metricScaleFactor: 1, groundPlaneOffset: 0 });
+  });
+});
+
+describe("waitForWorld", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+  const json = (body: object, status = 200) => new Response(JSON.stringify(body), { status });
+
+  it("keeps polling through a dropped connection and a 503", async () => {
+    vi.stubEnv("WORLDLABS_API_KEY", "test-key");
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockResolvedValueOnce(json({ detail: "unavailable" }, 503))
+      .mockResolvedValueOnce(json({ operation_id: "op1", done: false }))
+      .mockResolvedValueOnce(
+        json({ operation_id: "op1", done: true, response: { world_id: "w1" } }),
+      )
+      .mockResolvedValueOnce(json(world({ "500k": "s" })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { world: result } = await waitForWorld("op1", { intervalMs: 0 });
+    expect(result.world_id).toBe("w1");
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+
+  it("gives up after maxPollErrors transient errors in a row", async () => {
+    vi.stubEnv("WORLDLABS_API_KEY", "test-key");
+    const fetchMock = vi.fn().mockImplementation(async () => json({ detail: "slow down" }, 429));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(waitForWorld("op1", { intervalMs: 0, maxPollErrors: 2 })).rejects.toMatchObject({
+      status: 429,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("retries fetching the finished world after a 503", async () => {
+    vi.stubEnv("WORLDLABS_API_KEY", "test-key");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        json({ operation_id: "op1", done: true, response: { world_id: "w1" } }),
+      )
+      .mockResolvedValueOnce(json({ detail: "unavailable" }, 503))
+      .mockResolvedValueOnce(json(world({ "500k": "s" })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { world: result } = await waitForWorld("op1", { intervalMs: 0 });
+    expect(result.world_id).toBe("w1");
+  });
+
+  it("fails at once on a bad key", async () => {
+    vi.stubEnv("WORLDLABS_API_KEY", "bad-key");
+    const fetchMock = vi.fn().mockResolvedValue(json({ detail: "unauthorized" }, 401));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(waitForWorld("op1", { intervalMs: 0 })).rejects.toMatchObject({ status: 401 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 

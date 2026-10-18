@@ -53,7 +53,7 @@ const ask = (message: string, ms: number): SearchLine => ({
 /**
  * POST /api/search: the guest agent turns a plain-language brief into a ranked, cited
  * shortlist (GH-14, Beka). Streams NDJSON: `step` lines while it works, then one `result`.
- * Haiku parses the brief, SQL pre-filters up to 30 homes, Haiku ranks them (D-026); code drops any
+ * Haiku parses the brief, SQL pre-filters up to 30 homes, Haiku ranks them (D-027); code drops any
  * reason that doesn't cite a real fact, field or amenity.
  */
 export async function POST(request: Request) {
@@ -185,7 +185,7 @@ async function search(
       get_listing_facts: listingFactsTool(known),
     },
     output: Output.object({ schema: ShortlistSchema }),
-    // Haiku without thinking ranks in about 4 s; Sonnet 5.5 always thinks and takes 10-15 s (D-026).
+    // Haiku without thinking ranks in about 4 s; Sonnet 5.5 always thinks and takes 10-15 s (D-027).
     model: "bulk",
     thinking: "off",
     effort: "low",
