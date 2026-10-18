@@ -1,9 +1,9 @@
 import { getListing } from "@/lib/data/listings";
 import { saveHostPolicy } from "@/lib/data/policies";
-import { logEvent } from "@/lib/events";
 import { errorResponse, jsonError, parseJson } from "@/lib/http";
 import { PolicyFormSchema } from "@/lib/policy-form";
 import { getViewer } from "@/lib/viewer";
+import { withEvent } from "@/tools/_withEvent";
 
 /**
  * PUT /api/host-policies/[listingId]: the host saves the agent rules form. The browser can't
@@ -24,14 +24,18 @@ export async function PUT(request: Request, ctx: RouteContext<"/api/host-policie
         "Only this home's host can change its agent rules.",
       );
 
-    await saveHostPolicy(listing.id, form);
-    await logEvent({
-      actor_type: "human",
-      actor_name: `${viewer.name} (host)`,
-      action: "policy.updated",
-      listing_id: listing.id,
-      summary: `${viewer.name} updated the agent rules for ${listing.title}`,
-    });
+    // The feed line names the change, never the numbers (the feed is public).
+    const save = withEvent<Parameters<typeof saveHostPolicy>, void>(
+      {
+        action: "policy.updated",
+        actorName: `${viewer.name} (host)`,
+        actorType: "human",
+        summarize: () => `${viewer.name} updated the agent rules for ${listing.title}`,
+        scope: () => ({ listingId: listing.id }),
+      },
+      saveHostPolicy,
+    );
+    await save(listing.id, form);
     return Response.json({ ok: true });
   } catch (error) {
     return errorResponse(error);

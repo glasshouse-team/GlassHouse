@@ -16,6 +16,8 @@ export interface WithEventOptions<A extends unknown[], R> {
   summarize: (result: R, ...args: A) => string;
   /** Which listing or deal the call belongs to, from its arguments. */
   scope?: (...args: A) => { listingId?: string; dealId?: string };
+  /** Detail kept with a successful event (the feed shows it in the row's drawer). */
+  payload?: (result: R, ...args: A) => Record<string, unknown>;
 }
 
 export function withEvent<A extends unknown[], R>(
@@ -35,6 +37,7 @@ export function withEvent<A extends unknown[], R>(
         summary: options.summarize(result, ...args),
         listing_id: scope.listingId,
         deal_id: scope.dealId,
+        payload: options.payload?.(result, ...args),
       });
       return result;
     } catch (error) {
