@@ -57,14 +57,14 @@ export const SEED_REVIEWS: Record<string, SeedReview[]> = {
       author: "Tamar",
       rating: 5,
       sub: [5, 5, 5, 5, 5, 5],
-      body: "Bright, quiet flat and a real desk in the second bedroom. Ten minutes to Rustaveli on foot.",
+      body: "Bright, quiet flat and a real desk with two monitors in the living room. Ten minutes to Rustaveli on foot.",
       month: "2026-09",
     },
     {
       author: "Jonas",
       rating: 4,
       sub: [4, 5, 4, 5, 5, 4],
-      body: "Good apartment. The elevator only fits two people and a suitcase.",
+      body: "Good apartment. The bathroom is compact, but the walk-in shower is great.",
       month: "2026-08",
     },
     {
