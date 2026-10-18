@@ -8,7 +8,7 @@ To remove or rename a photo, delete it from the Storage folder (Supabase dashboa
 
 - **Names:** `NN-room.jpg` (or `.png`, `.webp`): two digits for the order, then the room in lower case with dashes, e.g. `01-living-room.jpg`. The room becomes the photo's label; other files are ignored.
 - **Each NN once per listing:** two angles of one room are `03-kitchen.jpg` and `04-kitchen-2.jpg`, never two `03-`. The seed stops with an error naming both files.
-- **Licence:** your own photos, or free-licence stock: CC0, public domain, CC BY or CC BY-SA, found on Openverse or Wikimedia Commons (D-032). Never Airbnb photos, and no people in the shot. Record every stock photo in the credits table below (CC BY and CC BY-SA require the credit; say "cropped" when you crop).
+- **Licence:** your own photos, or free-licence stock: CC0, public domain, CC BY or CC BY-SA, found on Openverse or Wikimedia Commons (D-038). Never Airbnb photos, and no people in the shot. Record every stock photo in the credits table below (CC BY and CC BY-SA require the credit; say "cropped" when you crop).
 - **Size:** under 2 MB each (resize to about 1600 px wide).
 - **Truthful except the two lies:** the X-ray (GH-9) compares photos with the listing, so every photo must agree with the listing's amenities and text. Only the two lie listings may contradict it, exactly as described below.
 

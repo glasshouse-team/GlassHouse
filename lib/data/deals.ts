@@ -57,6 +57,19 @@ export async function createDeal(deal: NewDeal): Promise<string> {
   return data!.id;
 }
 
+/** The guest's live deal on this home, if any (the database allows one at a time). */
+export async function getLiveDealId(listingId: string, guestId: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin()
+    .from("deals")
+    .select("id")
+    .eq("listing_id", listingId)
+    .eq("guest_id", guestId)
+    .in("status", ["open", "agreed_pending_host", "escalated"])
+    .maybeSingle();
+  check(error, "look up live deals");
+  return data?.id ?? null;
+}
+
 export async function getDeal(id: string): Promise<Deal | null> {
   const { data, error } = await supabaseAdmin()
     .from("deals")

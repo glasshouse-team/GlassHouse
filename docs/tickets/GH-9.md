@@ -82,4 +82,4 @@ XrayResult = {
 
 ## Decision updates
 
-- 2026-10-18 D-032: the X-ray coverage gaps on the gergeti cabin, Stepantsminda guesthouse, Sololaki loft, old-town flat and Sighnaghi family house are closed with credited CC photos (window views, rooftop view, twin bedrooms, Alazani valley view); licence rule in seed/PHOTOS.md. Jira: pending
+- 2026-10-18 D-038: the X-ray coverage gaps on the gergeti cabin, Stepantsminda guesthouse, Sololaki loft, old-town flat and Sighnaghi family house are closed with credited CC photos (window views, rooftop view, twin bedrooms, Alazani valley view); licence rule in seed/PHOTOS.md. Jira: pending

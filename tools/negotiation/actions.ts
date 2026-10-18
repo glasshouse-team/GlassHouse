@@ -6,6 +6,7 @@
 import { buildHostContext } from "@/agents/context";
 import { stayRangeLabel } from "@/lib/booking";
 import { getDeal, getDealMessages, saveDealMessage, updateDealIf } from "@/lib/data/deals";
+import { DatesTakenError } from "@/lib/data/reservations";
 import { logEvent } from "@/lib/events";
 import type { Deal, DealStatus } from "@/lib/schemas/core";
 import { formatCents } from "@/lib/utils";
@@ -44,6 +45,28 @@ function ownGuest(deal: Deal, viewer: Viewer) {
 const lost = () =>
   new DealActionError(409, "deal_moved", "The deal changed a moment ago. Look at it again.");
 
+/**
+ * A booking that failed after the deal was approved: the deal ends declined, the feed says why,
+ * and the person gets a friendly message (not the raw database error).
+ */
+async function bookingFailed(deal: Deal, amountCents: number, error: unknown): Promise<never> {
+  await updateDealIf(deal.id, { status: "approved" }, { status: "declined" });
+  const message =
+    error instanceof DatesTakenError ||
+    (error instanceof Error && /booked in the meantime/.test(error.message))
+      ? "These dates were booked in the meantime, so this stay couldn't be booked."
+      : "We couldn't book this stay. Try again or pick other dates.";
+  await logEvent({
+    actor_type: "system",
+    actor_name: "Glasshouse",
+    action: "deal.booking_failed",
+    deal_id: deal.id,
+    listing_id: deal.listing_id,
+    summary: `Couldn't book at ${formatCents(amountCents)}: ${message}`,
+  });
+  throw new DealActionError(409, "cannot_book", message);
+}
+
 /** The host approves the agreed price: the reservation is created with the discount line. */
 export async function approve(dealId: string, viewer: Viewer): Promise<string> {
   const deal = await load(dealId);
@@ -57,12 +80,7 @@ export async function approve(dealId: string, viewer: Viewer): Promise<string> {
   try {
     return await bookDeal(approved, viewer.name);
   } catch (error) {
-    await updateDealIf(dealId, { status: "approved" }, { status: "declined" });
-    throw new DealActionError(
-      409,
-      "cannot_book",
-      error instanceof Error ? error.message : "Could not book.",
-    );
+    return bookingFailed(approved, approved.final_total_cents ?? approved.list_total_cents, error);
   }
 }
 
@@ -213,6 +231,12 @@ export async function acceptLast(dealId: string, viewer: Viewer): Promise<DealSt
     listing_id: deal.listing_id,
     summary: `${viewer.name} accepted ${formatCents(last.amount_cents)} for ${stayRangeLabel(deal.check_in, deal.check_out)}`,
   });
-  if (status === "approved") await bookDeal(agreed, "Host's agent rules (auto-accept)");
+  if (status === "approved") {
+    try {
+      await bookDeal(agreed, "Host's agent rules (auto-accept)");
+    } catch (error) {
+      await bookingFailed(agreed, last.amount_cents, error);
+    }
+  }
   return status;
 }
