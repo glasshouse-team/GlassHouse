@@ -6,7 +6,7 @@
 
 /**
  * Tables the seed never writes, so every row in them was made by a demo run or a test
- * (D-031). Deleting them cascades to deal_messages, deal_secrets and deal events (deals),
+ * (D-032). Deleting them cascades to deal_messages, deal_secrets and deal events (deals),
  * checkins (reservations) and messages (conversations). Seed tables (listings, photos,
  * reviews, policies, availability) and 3D, capture and X-ray rows are never deleted.
  */

@@ -1,0 +1,42 @@
+# Demo QA checklist (GH-26)
+
+Tick each line on the **deployed URL** with `DEMO_MODE=true`, after `pnpm demo:reset`. The checklist is the one in Jira GH-26 (with D-009 and D-026 applied); the second column says how to run it. Stage setup and script: docs/DEMO.md.
+
+## Before every run
+
+1. `pnpm demo:reset --dry-run` shows what will go (deals, reservations, Q&A conversations, trip briefs, events after the latest `seed.completed`). Then `pnpm demo:reset`; it ends with a table of seed rows kept and **Demo ready**.
+2. Open `/demo/check` on the deployed URL. Every row green (amber rows are explained on the row). Reload to re-run; each check has a 5 s limit.
+
+`pnpm demo:reset` never deletes seed rows (listings, photos, reviews, policies, availability) or 3D, capture and X-ray rows. It restores hero-1's host policy (`HERO_1_POLICY`) and house manual (drops answers saved from Q&A, GH-16) and publishes hero 2 v1, the gap version (D-026): v1's spot worlds become `published`, other published versions go back to `ready`, v1's requested or filled gaps go back to `open`, and `listings.published_world_id` points at v1's entry spot. With no hero 2 worlds yet it says so and skips that step.
+
+## Checklist
+
+| Check                                                                                                                                           | How to run it                                                                                                                                                                  |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [ ] `computeQuote` tests pass; validators block a lowball                                                                                       | `pnpm check` (lib/pricing.test.ts and lib/validators.test.ts, "blocks a lowball accept below the floor").                                                                      |
+| [ ] "$50 less" passes 5 runs in a row                                                                                                           | Hero 1, Nov 9-13, 4 guests, target $470, max $500: $470, $495, $480, then Approve on the host phone and "Booked". `pnpm demo:reset` between runs; 5 runs, no failure.          |
+| [ ] X-ray catches both lies                                                                                                                     | `/demo/check` "Both lies caught" is green; open `batumi-sea-view-flat` (sea view) and `sighnaghi-family-house` (sleeps 6) and see the contradiction in the X-ray panel.        |
+| [ ] The brief returns the hero home first in under 10 s                                                                                         | Paste the demo brief from docs/DEMO.md into search; time from Enter to the first ranked card.                                                                                  |
+| [ ] Hero 2's 3D tour loads on laptop, iPhone and Android; every doorway arrow leads to the right room and arrives facing into it (D-009, D-026) | Open hero 2's tour on all three devices. From the entry spot follow every arrow; each must land in the room it names, facing into it.                                          |
+| [ ] Jump to room and the minimap work                                                                                                           | In the tour, use Jump to room for every spot; the minimap dot follows.                                                                                                         |
+| [ ] The gap check pin is at the kitchen corner; v2 has a higher score                                                                           | Hero 2 v1 (after reset): the gap pin sits on the blank cooktop corner. Host dashboard world versions: v2's coverage score is higher than v1's.                                 |
+| [ ] The feed shows every action within 2 s                                                                                                      | Keep `/feed` open on a second screen during a run; each step appears within 2 s with the right actor.                                                                          |
+| [ ] Network logs: no World Labs calls on page views                                                                                             | DevTools Network tab, filter `worldlabs`, load search, a listing and the tour: zero requests. `/demo/check` also fails if a published hero 2 asset URL points at worldlabs.ai. |
+| [ ] Reset → run → reset → run works twice                                                                                                       | `pnpm demo:reset`, full demo, `pnpm demo:reset`, full demo. `/demo/check` is green after each reset.                                                                           |
+
+## What `/demo/check` checks
+
+| Group       | Row                           | Green when                                                                                                                                       |
+| ----------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Environment | each required key             | `ANTHROPIC_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` are set (names only, never values) |
+| Environment | `WORLDLABS_API_KEY`           | set (amber if missing: only new generations need it)                                                                                             |
+| Environment | `DEMO_MODE`                   | `true` (amber otherwise)                                                                                                                         |
+| Database    | Supabase connection           | the listings count reads and is above 0                                                                                                          |
+| Database    | Seed watermark                | a `seed.completed` event exists                                                                                                                  |
+| Demo state  | No leftover deals             | no open, pending or escalated deals (amber for leftover reservations)                                                                            |
+| Demo state  | Hero 1 free on the demo dates | Nov 9-13 not blocked or booked                                                                                                                   |
+| Demo state  | Hero 1 host policy            | the row matches `HERO_1_POLICY` (only differing field names are shown)                                                                           |
+| 3D          | Hero 2 spot worlds load       | hero 2 has a published version, it is v1, and every spot's splat and collider answer HEAD 200 from our storage                                   |
+| X-ray       | X-ray rows for every listing  | every published listing has a `listing_facts` row (amber while a row is still the seed's placeholder)                                            |
+| X-ray       | Both lies caught              | both lie listings have at least one contradiction                                                                                                |
+| Claude      | Claude API ping               | `bulkModel()` answers "Reply ok" (no retries)                                                                                                    |
