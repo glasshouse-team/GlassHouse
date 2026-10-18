@@ -108,6 +108,7 @@ function setup() {
     [config.labels.needsHuman, "d93f0b", "Autopilot will not merge this PR: a person must"],
     [config.labels.pr, "0e8a16", "Opened by /autopilot"],
     [config.labels.hold, "fbca04", "Autopilot: do not merge until removed"],
+    [config.labels.ready, "0e8a16", "Gate passed: a person clicks Merge (D-030)"],
   ];
   for (const [name, color, description] of labels)
     gh([

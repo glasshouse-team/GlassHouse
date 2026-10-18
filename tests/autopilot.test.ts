@@ -57,7 +57,18 @@ describe("inbox", () => {
       { id: 7, author: "TemuriTsutskiridze", body: "Use hero 1 for the demo, not hero 2." },
     ];
     expect(inbox(comments, "temuri").map((c) => c.id)).toEqual([2, 4, 7]);
-    expect(inbox(comments, "beka").map((c) => c.id)).toEqual([3, 5, 7]);
+    // Beka posted #4 and #6 after answer #3, so #3 counts as read; request #5 still waits.
+    expect(inbox(comments, "beka").map((c) => c.id)).toEqual([5, 7]);
+  });
+
+  it("treats answers, handoffs and status as read once I post after them", () => {
+    const comments = [
+      msg(1, { from: "beka", to: "temuri", kind: "handoff" }),
+      msg(2, { from: "beka", to: "temuri", kind: "request" }),
+      msg(3, { from: "temuri", to: "beka", kind: "status" }),
+      msg(4, { from: "beka", to: "temuri", kind: "answer" }),
+    ];
+    expect(inbox(comments, "temuri").map((c) => c.id)).toEqual([2, 4]);
   });
 
   it("drops a hand-written comment once either Claude answers it", () => {

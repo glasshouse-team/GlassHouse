@@ -16,6 +16,8 @@ export const KINDS = /** @type {const} */ ([
 ]);
 
 const MARK = "autopilot-msg";
+/** Kinds that need no reply. */
+const INFO_KINDS = ["status", "answer", "done", "handoff"];
 
 /** The other developer. */
 export function peerOf(/** @type {string} */ dev) {
@@ -92,12 +94,13 @@ export function inbox(comments, dev) {
       .filter((c) => c.meta && c.meta.re != null && DEVS.includes(/** @type {any} */ (c.meta.from)))
       .map((c) => c.meta?.re),
   );
-  return parsed.filter((c) => {
+  // Informational messages need no reply: they count as read once `dev` posts after them.
+  const lastOwn = parsed.reduce((last, c, i) => (c.meta?.from === dev ? i : last), -1);
+  return parsed.filter((c, i) => {
     if (answered.has(c.id)) return false;
     if (!c.meta) return true;
     if (c.meta.from === dev) return false;
-    if (c.meta.kind === "status" || c.meta.kind === "answer" || c.meta.kind === "done")
-      return c.meta.to === dev;
+    if (INFO_KINDS.includes(c.meta.kind)) return c.meta.to === dev && i > lastOwn;
     return c.meta.to === dev || c.meta.to === "both";
   });
 }
