@@ -1,6 +1,6 @@
 ---
 name: marble-world-pipeline
-description: Generate whole-house 3D worlds with the World Labs Marble API, then store and version them - input preparation with ffmpeg, generate and poll, download assets into our storage, metric scale, publish, demo mode, fallbacks. Use for GH-3 (go/no-go test), GH-6 (hero homes) and GH-10 (pipeline).
+description: Generate per-spot 3D worlds (one per room spot) with the World Labs Marble API, then store and version them - input preparation with ffmpeg, generate and poll, download assets into our storage, metric scale, publish, demo mode, fallbacks. Use for GH-3 (go/no-go test), GH-6 (hero homes) and GH-10 (pipeline).
 when_to_use: The user mentions "World Labs", "Marble", "generate the 3D", "go/no-go test", "world version", "publish world", "splat", "spz", "collider mesh", "metric scale", "prepare the video", "the 3D looks wrong", "HY World".
 ---
 
@@ -8,7 +8,7 @@ when_to_use: The user mentions "World Labs", "Marble", "generate the 3D", "go/no
 
 Client: `lib/marble.ts` (tested). CLI: `pnpm worlds` (scripts/generate-worlds.ts). Video prep: `pnpm video:prepare` (lib/media.ts, ffmpeg-static). API docs: https://docs.worldlabs.ai/api (checked 2026-10-17).
 
-**Rule: generate once per version, copy every asset into our Supabase storage, and never call World Labs on a page view.** A generation takes about 6-8 minutes and 1,600 credits; `marble-1.1-plus` costs the same as `marble-1.1` (GH-3). Videos must be 30 s or shorter: longer ones are accepted, then fail after about 47 minutes (D-009).
+**Rule: generate once per version, copy every asset into our Supabase storage, and never call World Labs on a page view.** A generation takes about 6-9 minutes and 1,600 credits; `marble-1.1-plus` costs the same as `marble-1.1` (GH-3). Videos must be 30 s or shorter: longer ones are accepted, then fail after about 47 minutes.
 
 ## API in one screen
 
@@ -29,18 +29,20 @@ Client: `lib/marble.ts` (tested). CLI: `pnpm worlds` (scripts/generate-worlds.ts
 
 Marble worlds use OpenCV axes (+y down, +z forward; docs.worldlabs.ai, export specs). Convert only with `lib/geometry/frame.ts`: `marbleToThree(metric_scale_factor, floorY)` flips Y and Z, scales to meters and lifts the floor to y = 0, with `floorY` measured from the collider by `floorHeight()`. World Labs' SPZ docs ground the splat with `metric.y -= ground_plane_offset` (meters, after scaling), so after the flip the floor is at y = -ground_plane_offset. GH-3 measured that within 3 cm on video worlds, but on a 4-photo world the offset marked a bed top, so keep measuring the floor from the collider (D-009). The collider is an uncompressed trimesh GLB (130-215k triangles, no node transforms) in the splat's raw frame; `colliderToThree()` (lib/geometry/collider.ts) reads it in Node, and `pnpm worlds inspect <world_id>` prints asset sizes, GLB extensions and the floor check.
 
-## GH-3: go/no-go (done: D-009)
+## GH-3: go/no-go (done: D-009, per-spot tour)
 
-Path 1 won. The recipe for a home:
+One world per room spot, linked by our doorway arrows, like Zillow. Whole-house worlds from a video or from 8 photos mixed rooms (a toilet by the kitchen, a fridge in the hall), and every Marble world blurs about 1 m from where its photos were taken, even with photos from 2 spots. The recipe:
 
-1. Film a 60-90 s walkthrough (filming rules: mobile-capture skill).
-2. `pnpm video:prepare walk.mov` writes `walk-720.mp4`: short side 720, SDR (iPhone HDR is tone-mapped), sped up to 29 s.
-3. `pnpm worlds generate --video walk-720.mp4 --name "Hero 1 v1" --prompt "A one-bedroom apartment: ..." --wait` uploads the file straight to World Labs (no public URL needed) and waits up to 60 minutes.
-4. `pnpm worlds inspect <world_id>`: asset sizes, collider format, floor check. Open `marble_url` signed in to Marble with the API key's account (API worlds are private).
+1. Per spot, 8 photos from the middle of the room: chest height, 0.5x lens, turning right about 45 degrees each (mobile-capture skill). iPhone HEIC: convert with `sips -s format jpeg`, then bake the EXIF rotation (sharp `.rotate()`), because World Labs may ignore it.
+2. `pnpm worlds generate --images <8 jpgs in turning order> --azimuths 0,45,90,135,180,225,270,315 --reconstruct --prompt "The <room> of a real apartment, seen from its middle. Keep everything exactly as the photos show; do not add objects, doors or windows that are not in them." --wait`. A 9-photo ring: drop the most redundant shot and keep 40-degree steps for the rest.
+3. `pnpm worlds inspect <world_id>`: asset sizes, collider, floor check. In bedrooms `ground_plane_offset` marks the bed top; trust `floorHeight`.
+4. The spot graph: for each doorway, the spot it leads to and its azimuth (the direction of the ring photo it is centred in). After `marbleToThree`, azimuth az points along (sin az, 0, -cos az). A Sonnet step can label this from the photos.
 
-Fallback (Path 3): one Marble multi-image world per room (`--images` with 4 photos and `--azimuths`, 5.4 minutes in GH-3), placed together in the viewer. HY World (Path 2) was not needed. A walkthrough + fill-in clip joined into one video comes back as a new layout: a fill-in version is a new world with its own coordinates (GH-19).
+Layout prompts help only a little: with `--no-recaption` (prompt as written) a whole-house world kept the right rooms around the hall but still pulled in objects from other rooms; with World Labs' own rewrite it merged rooms.
 
 ## GH-10: the pipeline
+
+Per spot (D-009): one generation and one `worlds` row per spot, plus the spot's doorway links (schema change proposed in GH-5).
 
 1. `POST /api/worlds { listingId, captureIds }`: next `worlds.version`, status `generating`, store `operation_id`, log "World v2 generating for <listing>".
 2. `GET /api/worlds/[id]/status` (the host page polls every 15 s): `getOperation`; when done, `getWorld`, then download each asset (`fetch` then `upload` to `media/worlds/{id}/...`): web splat (`pickSplatUrls().web`), HQ splat, collider mesh, HQ mesh, pano, thumbnail; save URLs from OUR storage, scale metadata, caption, cost; status `ready`; log an event.

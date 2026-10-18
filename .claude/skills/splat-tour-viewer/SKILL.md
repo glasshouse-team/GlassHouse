@@ -1,7 +1,7 @@
 ---
 name: splat-tour-viewer
-description: Build the walkable whole-house 3D tour - React Three Fiber + Spark Gaussian splats, metric scale, three-mesh-bvh collisions, desktop and phone controls, Jump to room, anchor mode, camera fly-to, the useTour() API, pins and the honesty overlay. Use for GH-11, GH-19 pins, GH-20 and GH-21 (tour-ext add-ons) and GH-24 review pins.
-when_to_use: The user mentions "3D viewer", "tour page", "walk through the house", "splat", "Spark", "collisions", "walk through walls", "jump to room", "fly the camera", "anchor mode", "minimap", "useTour", "pins in 3D", "honesty overlay", "tint AI-filled areas", "3D on phone is slow".
+description: Build the per-spot 3D tour (Zillow-style) - React Three Fiber + Spark Gaussian splats, metric scale, look-around controls, doorway arrows that switch spot worlds, Jump to room, anchor mode, camera fly-to, the useTour() API, pins and the honesty overlay. Use for GH-11, GH-19 pins, GH-20 and GH-21 (tour-ext add-ons) and GH-24 review pins.
+when_to_use: The user mentions "3D viewer", "tour page", "walk through the house", "splat", "Spark", "collisions", "walk through walls", "jump to room", "doorway arrows", "next room", "fly the camera", "anchor mode", "minimap", "useTour", "pins in 3D", "honesty overlay", "tint AI-filled areas", "3D on phone is slow".
 ---
 
 # Splat tour viewer
@@ -39,22 +39,24 @@ const splat = useMemo(() => new SplatMesh({ url: world.spz_url }), [world.spz_ur
 return <primitive object={splat} />;
 ```
 
-**Coordinates:** Marble worlds use OpenCV axes (+y down, +z forward), so always flip; never "only if it looks upside down". Use the one transform in `lib/geometry/frame.ts` for the splat and the collider together (one parent group): `marbleToThree(metric_scale_factor, floorY)` flips Y and Z, scales to meters and lifts the floor to y = 0. Measure `floorY` from the collider with `floorHeight()` instead of trusting the sign of `ground_plane_offset`, which World Labs does not document. The floor plan (GH-18) and gap check (GH-19) use the same functions, so positions agree everywhere. Use the web splat on phones, HQ behind a desktop toggle.
+**Coordinates:** Marble worlds use OpenCV axes (+y down, +z forward), so always flip; never "only if it looks upside down". Use the one transform in `lib/geometry/frame.ts` for the splat and the collider together (one parent group): `marbleToThree(metric_scale_factor, floorY)` flips Y and Z, scales to meters and lifts the floor to y = 0. Measure `floorY` from the collider with `floorHeight()` instead of using `ground_plane_offset`: in bedrooms it marks the bed top (GH-3). The floor plan (GH-18) and gap check (GH-19) use the same functions, so positions agree everywhere. Use the web splat on phones, HQ behind a desktop toggle.
 
-## Collisions and walking
+## Spots and arrows (D-009)
 
-- Load the collider mesh (GLTFLoader from three/examples/jsm or drei `useGLTF`), apply the same transform, keep it invisible (`visible = false`), and build a BVH:
-  `import { computeBoundsTree, acceleratedRaycast } from "three-mesh-bvh"; THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree; THREE.Mesh.prototype.raycast = acceleratedRaycast; geometry.computeBoundsTree();`
-- Each frame: raycast in the move direction (`raycaster.firstHitOnly = true`) and stop 0.3 m before a hit; raycast down from 1 m above the camera to follow the floor and keep the eye at 1.6 m.
-- Desktop: drei `PointerLockControls` + WASD/arrow keys, Shift to run. Phone: on-screen joystick (left thumb) + drag to look. "Dollhouse" toggle: drei `CameraControls` orbiting from above.
+Each spot is its own Marble world; there is no walking between rooms.
+
+- Look around: drei `CameraControls` with the eye at the spot (x = 0, z = 0, 1.5 m above the floor); drag rotates, phones can also use the gyro. Allow at most about 1 m of movement: Marble worlds blur further from their spot (GH-3).
+- Doorway arrows: for each link `{ to, azimuth }` of the spot, the direction is (sin az, 0, -cos az) after `marbleToThree` (azimuth 0 = the world's forward). Cast that ray at 1 m height against the invisible collider (three-mesh-bvh `computeBoundsTree`, `acceleratedRaycast`, `firstHitOnly`) and place the arrow on the floor about 0.5 m before the hit, pointing along the ray.
+- Clicking an arrow: fade out, dispose the current SplatMesh, load the target spot's splat, set the yaw to face into the room (the target's link back to this spot, plus 180 degrees), fade in. Preload the neighbours' web splats.
+- Jump to room is the list of spots, with the same transition. The collider stays invisible: it places arrows and anchors and gives the floor.
 
 ## Camera moves
 
-drei `CameraControls`: `controls.setLookAt(px, py, pz, tx, ty, tz, true)` animates. `flyTo(anchorId)` moves the eye to the anchor's `position` and looks at its `look_at` (or straight ahead if null). Turn the walking controls off during the move and back on after, so only one control moves the camera. Wall rays ignore hits whose normal is mostly vertical (|normal.y| > 0.6).
+drei `CameraControls`: `controls.setLookAt(px, py, pz, tx, ty, tz, true)` animates. `flyTo(anchorId)` switches to the anchor's spot first if it is in another spot's world (arrow transition), then turns to its `look_at` (or straight ahead if null).
 
 ## useTour() (implement exactly as declared in TourContext.tsx)
 
-`ready, worldId, scene, camera, anchors, gaps, flyTo(), lookAt(), highlightRoom(), addOverlay(object) => remove`. `<TourProvider>` sits outside the Canvas (React context does not cross into or out of the R3F Canvas on its own; the inner bridge hands scene and camera up) and loads anchors and gaps for the world. `addOverlay` adds at the scene root, in world meters (floor y = 0). `gaps` holds all gaps of the shown world; AI-filled means status `open` or `requested`. Beka verifies it from `components/tour-ext/`.
+`ready, worldId, scene, camera, anchors, gaps, flyTo(), lookAt(), highlightRoom(), addOverlay(object) => remove`. `<TourProvider>` sits outside the Canvas (React context does not cross into or out of the R3F Canvas on its own; the inner bridge hands scene and camera up) and loads anchors and gaps for the world. `addOverlay` adds at the scene root, in world meters (floor y = 0). `worldId`, `anchors` and `gaps` belong to the current spot's world; `gaps` holds all gaps of it; AI-filled means status `open` or `requested`. Beka verifies it from `components/tour-ext/`.
 
 ## Anchor mode (`?anchors=1`, dev only)
 
@@ -90,4 +92,4 @@ Device pixel ratio up to 1.5; web splat on phones; dispose SplatMesh, geometries
 
 ## Done when (GH-11)
 
-Hero home 1 loads in under 10 s on a laptop and works on an iPhone and an Android phone; no walking through walls; steady eye height; Jump to room works for every room; anchors saved for both hero homes; zero requests to World Labs while viewing.
+Hero home 1 loads in under 10 s on a laptop and works on an iPhone and an Android phone; every doorway arrow leads to the right room and arrives facing into it; the view stays within about 1 m of each spot; Jump to room works for every spot; anchors saved for both hero homes; zero requests to World Labs while viewing.

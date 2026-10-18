@@ -133,3 +133,7 @@ Beka's add-ons on top of the tour (Ask the space panel, honesty overlay) live in
 ## Rule after merge
 
 Need a new column? Add a **new** migration file (`0002_<name>.sql`), never edit `0001`, and post a message to the other developer.
+
+## Decision updates
+
+- 2026-10-18 D-009: (proposed, needs Beka's OK) A home version has one world per spot. Proposal: `worlds` gains `spot` (text) and `links` (jsonb, `[{ to, azimuth }]`), unique on (listing_id, version, spot); `listings.published_world_id` points at the entry spot of the published version; `captures.kind` gains `ring`. `useTour()` keeps its names; `flyTo` may switch spots (was: one world per home version). Jira: pending
