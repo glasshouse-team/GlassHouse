@@ -157,7 +157,8 @@ export interface XrayOptions {
   save?: boolean;
 }
 
-async function xrayListing(listingId: string, options: XrayOptions = {}): Promise<XrayRun> {
+/** The X-ray without a feed line; `runXray` below logs one. Eval runs (`pnpm xray --runs 3`) use this. */
+export async function xrayListing(listingId: string, options: XrayOptions = {}): Promise<XrayRun> {
   const db = supabaseAdmin();
   const [{ data: listing, error }, { data: photos, error: photoError }] = await Promise.all([
     db.from("listings").select("*").eq("id", listingId).maybeSingle(),

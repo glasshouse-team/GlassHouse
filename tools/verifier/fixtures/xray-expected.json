@@ -1,0 +1,15 @@
+{
+  "$comment": "GH-9 eval set for `pnpm xray --runs 3`. A lie is caught when one contradiction's claim or finding contains one of its `match` words (case-insensitive). On every listing, contradictions that match no lie count as invented: all seed listings are truthful except the two lies (seed/PHOTOS.md). `facts`: keys that must be present with this value.",
+  "batumi-sea-view-flat": {
+    "lies": [{ "name": "sea view", "match": ["sea"] }]
+  },
+  "sighnaghi-family-house": {
+    "lies": [
+      { "name": "sleeps 6 with 4 beds", "match": ["sleeps 6", "6 guests", "six", "sleeps"] }
+    ],
+    "facts": { "beds_counted": 4 }
+  },
+  "hero-2": {
+    "facts": { "washer": true, "tv": true, "has_desk": true }
+  }
+}
