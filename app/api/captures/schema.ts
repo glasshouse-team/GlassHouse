@@ -158,6 +158,12 @@ export function rawUrlFor(kind: CreateCapture["kind"], paths: readonly string[])
   return kind === "ring" ? `captures/${first.replace(/[^/]+$/, "")}` : `captures/${first}`;
 }
 
+/** Feed line when a fill-in capture starts, e.g. "Giorgi started re-shooting an AI-filled area in the Kitchen". */
+export function fillInSummary(name: string, room: string | null): string {
+  const where = room?.trim() ? ` in the ${room.trim().slice(0, 60)}` : "";
+  return `${name} started re-shooting an AI-filled area${where}`;
+}
+
 /** Feed line for a finished upload, e.g. "Giorgi uploaded an 8-photo ring of the Kitchen". */
 export function uploadSummary(
   name: string,

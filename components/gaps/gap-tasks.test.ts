@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   gapTourHref,
   groupGapTasks,
+  recordNowHref,
+  recordNowLabel,
   severityLabel,
   type GapTaskGap,
   type GapTaskWorld,
@@ -119,5 +121,18 @@ describe("gapTourHref and severityLabel", () => {
   it("encodes the spot and names severities", () => {
     expect(gapTourHref(L, 2, "living room")).toBe(`/tour/${L}?version=2&spot=living%20room`);
     expect([1, 2, 3, 4].map(severityLabel)).toEqual(["Minor", "Noticeable", "Major", "Severity 4"]);
+  });
+});
+
+describe("Record now", () => {
+  it("links to the phone capture page in fill-in mode for that gap", () => {
+    const gapId = "22222222-2222-4222-8222-222222222222";
+    expect(recordNowHref(L, gapId)).toBe(`/host/capture/${L}?gap=${gapId}`);
+    expect(recordNowHref("a b", "c&d")).toBe("/host/capture/a%20b?gap=c%26d");
+  });
+
+  it("reads Record again once the re-shoot was started", () => {
+    expect(recordNowLabel("open")).toBe("Record now");
+    expect(recordNowLabel("requested")).toBe("Record again");
   });
 });

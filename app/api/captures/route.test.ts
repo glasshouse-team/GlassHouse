@@ -7,6 +7,8 @@ const state = vi.hoisted(() => ({
   capture: null as unknown,
   files: [] as { name: string; size: number | null }[],
   gapListing: null as string | null,
+  /** The gap's status in the fake database (Record now moves open to requested). */
+  gapStatus: "open",
   /** The row's status in the fake database; getCapture's snapshot can be stale (a race). */
   dbStatus: "uploading",
 }));
@@ -24,6 +26,12 @@ vi.mock("./store", () => ({
   }),
   listCaptureFiles: async () => state.files,
   gapListingId: async () => state.gapListing,
+  // Like the real conditional update: open -> requested only.
+  requestGapFill: vi.fn(async () => {
+    if (state.gapStatus !== "open") return null;
+    state.gapStatus = "requested";
+    return { room: "Kitchen" };
+  }),
   signUploads: async (paths: string[]) =>
     paths.map((path) => ({
       bucket: "captures",
@@ -37,7 +45,7 @@ import { logEvent } from "@/lib/events";
 import { DEMO_PROFILES, HERO_LISTINGS } from "@/seed/fixtures";
 import { PATCH } from "./[id]/route";
 import { POST } from "./route";
-import { insertCapture, setCaptureStatus } from "./store";
+import { insertCapture, requestGapFill, setCaptureStatus } from "./store";
 
 const hero = { id: HERO_LISTINGS.hero1.id, host_id: HERO_LISTINGS.hero1.hostId, title: "Hero" };
 const CAPTURE_ID = "33333333-3333-4333-8333-333333333333";
@@ -86,7 +94,9 @@ beforeEach(() => {
   state.capture = null;
   state.files = [];
   state.gapListing = null;
+  state.gapStatus = "open";
   state.dbStatus = "uploading";
+  vi.mocked(requestGapFill).mockClear();
   vi.mocked(insertCapture).mockClear();
   vi.mocked(setCaptureStatus).mockClear();
   vi.mocked(logEvent).mockClear();
@@ -141,6 +151,28 @@ describe("POST /api/captures", () => {
     state.gapListing = hero.id;
     expect((await post(fillIn)).status).toBe(201);
     expect(vi.mocked(insertCapture).mock.calls[0]![0].gap_id).toBe(fillIn.gapId);
+  });
+
+  it("moves the gap from open to requested when its fill-in starts, and logs it once", async () => {
+    const fillIn = { ...clip, kind: "fill_in", gapId: "55555555-5555-4555-8555-555555555555" };
+    state.gapListing = hero.id;
+    expect((await post(fillIn)).status).toBe(201);
+    expect(requestGapFill).toHaveBeenCalledWith(fillIn.gapId);
+    expect(state.gapStatus).toBe("requested");
+    expect(vi.mocked(logEvent).mock.calls.map((c) => c[0].action)).toEqual(["gap.requested"]);
+    expect(vi.mocked(logEvent).mock.calls[0]![0].summary).toBe(
+      "Giorgi started re-shooting an AI-filled area in the Kitchen",
+    );
+    // A second capture of the same gap changes nothing and logs nothing.
+    expect((await post(fillIn)).status).toBe(201);
+    expect(logEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not touch any gap for a walkthrough or a fill-in without a gap", async () => {
+    expect((await post(clip)).status).toBe(201);
+    expect((await post({ ...clip, kind: "fill_in" })).status).toBe(201);
+    expect(requestGapFill).not.toHaveBeenCalled();
+    expect(logEvent).not.toHaveBeenCalled();
   });
 
   it("rejects a 90 s clip (World Labs takes 30 s, D-015)", async () => {

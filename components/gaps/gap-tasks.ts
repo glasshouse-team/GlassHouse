@@ -43,6 +43,20 @@ export function gapTourHref(listingId: string, version: number, spot: string): s
   return `/tour/${listingId}?version=${version}&spot=${encodeURIComponent(spot)}`;
 }
 
+/**
+ * "Record now": the phone capture page in fill-in mode for one gap (GH-22 reads `?gap=`, shows
+ * the gap's room and instruction and records a fill-in clip; POST /api/captures then moves the
+ * gap to `requested`).
+ */
+export function recordNowHref(listingId: string, gapId: string): string {
+  return `/host/capture/${encodeURIComponent(listingId)}?gap=${encodeURIComponent(gapId)}`;
+}
+
+/** Button text: a requested gap was already started once, so it reads "Record again". */
+export function recordNowLabel(status: string): string {
+  return status === "requested" ? "Record again" : "Record now";
+}
+
 const SEVERITY: Record<number, string> = { 1: "Minor", 2: "Noticeable", 3: "Major" };
 
 /** "Major" for severity 3. */

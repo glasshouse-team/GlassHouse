@@ -21,6 +21,8 @@ export interface GapCandidate {
   severity: number;
   /** Unit ray from the camera through the box centre. */
   dir: Vec3;
+  /** The finding's box in its view (0..1), for the confirm step's red box. */
+  bbox?: { x: number; y: number; w: number; h: number };
 }
 
 export interface PlacedGap extends GapCandidate {
@@ -44,6 +46,7 @@ export function gapCandidates(result: GapCheckResult, views: readonly ViewSpec[]
       description: f.description.trim().slice(0, MAX_DESCRIPTION),
       severity: f.severity ?? 1,
       dir: viewRay(view.yaw, u, v),
+      bbox: f.bbox,
     });
   }
   return out;

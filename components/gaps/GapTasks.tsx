@@ -2,7 +2,13 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { formatCoverage } from "@/lib/coverage";
 import { hasSupabaseEnv, supabaseAdmin } from "@/lib/supabase";
-import { groupGapTasks, severityLabel, type GapTaskVersion } from "./gap-tasks";
+import {
+  groupGapTasks,
+  recordNowHref,
+  recordNowLabel,
+  severityLabel,
+  type GapTaskVersion,
+} from "./gap-tasks";
 
 const STATUS_TEXT: Record<string, string> = { open: "Open", requested: "Re-shoot requested" };
 
@@ -109,6 +115,13 @@ export async function GapTasks({ listingId }: { listingId: string }) {
                             <span>{STATUS_TEXT[gap.status] ?? gap.status}</span>
                           </div>
                           <p className="mt-1 [overflow-wrap:anywhere]">{gap.description}</p>
+                          {/* Opens the phone capture page for exactly this spot (GH-22 fill-in). */}
+                          <Link
+                            href={recordNowHref(listingId, gap.id)}
+                            className="mt-2 inline-flex h-11 items-center rounded-md bg-amber-900 px-3 font-medium text-amber-50 hover:bg-amber-800 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:h-8 dark:bg-amber-200 dark:text-amber-950 dark:hover:bg-amber-100"
+                          >
+                            {recordNowLabel(gap.status)}
+                          </Link>
                         </li>
                       ))}
                     </ul>
