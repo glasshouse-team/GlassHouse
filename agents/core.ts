@@ -47,6 +47,11 @@ export interface CreateAgentOptions<TOOLS extends ToolSet, OUTPUT extends Output
   output?: OUTPUT;
   /** Claude effort: "low" for quick ranking or chat turns, "high" for hard checks. */
   effort?: "low" | "medium" | "high";
+  /**
+   * "off" turns Claude's adaptive thinking off for fast, short answers. Only the bulk model
+   * (Haiku 5.5, at low to high effort) allows it; Sonnet 5.5 always thinks.
+   */
+  thinking?: "adaptive" | "off";
   /** Attached to every logged event so feeds can filter by listing or deal. */
   listingId?: string;
   dealId?: string;
@@ -132,7 +137,16 @@ export function createAgent<TOOLS extends ToolSet, OUTPUT extends OutputInterfac
     stopWhen: [...extraStops, isStepCount(options.maxSteps ?? 8)],
     onToolExecutionEnd,
     ...(options.output ? { output: options.output } : {}),
-    ...(options.effort ? { providerOptions: { anthropic: { effort: options.effort } } } : {}),
+    ...(options.effort || options.thinking === "off"
+      ? {
+          providerOptions: {
+            anthropic: {
+              ...(options.effort ? { effort: options.effort } : {}),
+              ...(options.thinking === "off" ? { thinking: { type: "disabled" } } : {}),
+            },
+          },
+        }
+      : {}),
     ...(options.toolsContext ? { toolsContext: options.toolsContext } : {}),
   } as unknown as Settings<TOOLS, OUTPUT>;
 
