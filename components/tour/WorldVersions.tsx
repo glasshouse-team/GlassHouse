@@ -52,13 +52,17 @@ export function WorldVersions({ listingId }: { listingId: string }) {
   const [publishing, setPublishing] = useState<number | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/worlds?listingId=${listingId}`, { cache: "no-store" });
-    if (!res.ok) {
-      setError(await readError(res));
-      return;
+    try {
+      const res = await fetch(`/api/worlds?listingId=${listingId}`, { cache: "no-store" });
+      if (!res.ok) {
+        setError(await readError(res));
+        return;
+      }
+      setPanel((await res.json()) as Panel);
+      setError(null);
+    } catch {
+      setError("Could not load the 3D versions. Check the connection and reload.");
     }
-    setPanel((await res.json()) as Panel);
-    setError(null);
   }, [listingId]);
 
   useEffect(() => {
@@ -71,31 +75,47 @@ export function WorldVersions({ listingId }: { listingId: string }) {
   const pollKey = pollIds.join(",");
   useEffect(() => {
     if (!pollKey) return;
-    const timer = setInterval(async () => {
-      await Promise.all(
+    // One round at a time: a status call that copies a finished world's splats can take
+    // minutes (maxDuration 300), so the next round is scheduled only after this one ends.
+    // Overlapping rounds would download and upload the same files twice.
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const round = async () => {
+      // allSettled: one failed status call must not skip the reload or go unhandled.
+      await Promise.allSettled(
         pollKey.split(",").map((id) => fetch(`/api/worlds/${id}/status`, { cache: "no-store" })),
       );
+      if (stopped) return;
       await load();
-    }, POLL_MS);
-    return () => clearInterval(timer);
+      if (!stopped) timer = setTimeout(round, POLL_MS);
+    };
+    timer = setTimeout(round, POLL_MS);
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
   }, [pollKey, load]);
 
   async function publish(version: VersionSummary) {
     setPublishing(version.version);
-    const res = await fetch(`/api/worlds/${version.publishRowId}/publish`, { method: "POST" });
-    if (!res.ok) setError(await readError(res));
+    try {
+      const res = await fetch(`/api/worlds/${version.publishRowId}/publish`, { method: "POST" });
+      if (!res.ok) setError(await readError(res));
+    } catch {
+      setError("Could not publish. Check the connection and try again.");
+    }
     await load();
     setPublishing(null);
   }
 
   return (
-    // contain-inline-size: long spot names or errors never widen the dashboard grid on phones.
+    // contain-inline-size: long room names or errors never widen the dashboard grid on phones.
     <section className="min-w-0 rounded-xl border p-3 text-sm [contain:inline-size] sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-semibold">3D versions</h2>
         {panel?.demo && <Badge variant="secondary">Demo mode: saved worlds only</Badge>}
       </div>
-      {error && <p className="mt-2 text-red-600 [overflow-wrap:anywhere]">{error}</p>}
+      {error && <p className="mt-2 text-red-600">{error}</p>}
       {!panel && !error && <p className="mt-2 text-neutral-500">Loading versions…</p>}
       {panel && panel.versions.length === 0 && (
         <p className="mt-2 text-neutral-500">No 3D version yet. Photograph a room to start one.</p>
@@ -103,28 +123,19 @@ export function WorldVersions({ listingId }: { listingId: string }) {
       <ul className="mt-3 space-y-3">
         {panel?.versions.map((v) => (
           <li key={v.version} className="flex min-w-0 gap-3 rounded-lg border p-2">
-            <figure className="w-20 shrink-0 sm:w-24">
-              {v.thumbnailUrl ? (
-                // Our storage URL; next/image would need the Supabase host in next.config.ts.
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={v.thumbnailUrl}
-                  alt={`Version ${v.version}: ${v.thumbnailLabel ?? "entry room"}`}
-                  className="h-14 w-full rounded object-cover sm:h-16"
-                />
-              ) : (
-                <div className="h-14 w-full rounded bg-neutral-100 sm:h-16" />
-              )}
-              {v.thumbnailUrl && (
-                <figcaption className="mt-1 text-[11px] leading-tight text-neutral-500 [overflow-wrap:anywhere]">
-                  {v.thumbnailSameAs !== null
-                    ? `Same as v${v.thumbnailSameAs}`
-                    : (v.thumbnailLabel ?? "")}
-                </figcaption>
-              )}
-            </figure>
+            {v.thumbnailUrl ? (
+              // Our storage URL; next/image would need the Supabase host in next.config.ts.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={v.thumbnailUrl}
+                alt={`Version ${v.version}${v.thumbnailSpot ? `: ${v.thumbnailSpot}` : ""}`}
+                className="h-16 w-24 shrink-0 rounded object-cover"
+              />
+            ) : (
+              <div className="h-16 w-24 shrink-0 rounded bg-neutral-100" />
+            )}
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">v{v.version}</span>
                 <Badge variant={STATUS_VARIANT[v.status]}>{STATUS_TEXT[v.status]}</Badge>
                 <span className="text-xs text-neutral-500">
@@ -135,23 +146,25 @@ export function WorldVersions({ listingId }: { listingId: string }) {
                 {v.done} of {v.total} room spots done
                 {v.status === "generating" && " · checks every 15 s, about 6-9 minutes a spot"}
               </p>
-              <ul className="mt-1 space-y-0.5 text-xs text-neutral-500 [overflow-wrap:anywhere]">
-                {v.spots.map((s) => (
-                  <li key={s.id}>
-                    {s.spot_label ?? s.spot}: {s.status}
-                    {s.error && <span className="text-red-600"> ({s.error})</span>}
-                  </li>
-                ))}
-              </ul>
-              {/* 44 px touch targets on phones, compact from sm up. */}
+              {/* Wraps, never nowrap: on one line it stretched the dashboard column on
+                  phones and the whole page scrolled sideways (GH-10 QA). */}
+              <p className="mt-1 text-xs text-neutral-500 [overflow-wrap:anywhere]">
+                {v.spots
+                  .map(
+                    (s) =>
+                      `${s.spot_label ?? s.spot}: ${s.status}${s.error ? ` (${s.error})` : ""}`,
+                  )
+                  .join(" · ")}
+              </p>
+              {/* 44 px tall on phones (touch target), compact from sm up. */}
               <div className="mt-2 flex flex-wrap gap-2">
-                <Button asChild size="sm" variant="outline" className="h-11 min-w-20 sm:h-8">
+                <Button asChild size="sm" variant="outline" className="h-11 sm:h-8">
                   <Link href={previewHref(listingId, v.version)}>Preview</Link>
                 </Button>
                 {v.status !== "published" && (
                   <Button
                     size="sm"
-                    className="h-11 min-w-20 sm:h-8"
+                    className="h-11 sm:h-8"
                     disabled={v.status !== "ready" && v.status !== "archived"}
                     onClick={() => publish(v)}
                   >

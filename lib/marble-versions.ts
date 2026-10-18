@@ -33,14 +33,13 @@ export interface VersionSummary {
   done: number;
   total: number;
   /**
-   * Thumbnail of the entry spot, else of the first spot that has one. When that spot is a
-   * copy (D-031), a spot this version shot itself is shown instead if it has a thumbnail.
+   * A thumbnail that tells this version apart: the entry spot's when no other version
+   * shows that image, else the first spot whose image is this version's own (the re-shot
+   * room, since copied spots share files, D-031), else the entry spot's.
    */
   thumbnailUrl: string | null;
-  /** Room name of the thumbnail's spot. */
-  thumbnailLabel: string | null;
-  /** The version whose world files this thumbnail reuses (D-031), else null. */
-  thumbnailSameAs: number | null;
+  /** The label of the spot the thumbnail shows. */
+  thumbnailSpot: string | null;
   createdAt: string;
   /** Credits this version cost (copied spots cost 0, D-031). */
   credits: number;
@@ -63,38 +62,24 @@ export function versionStatus(statuses: WorldStatus[]): VersionStatus {
   return "ready";
 }
 
-/** Copied spot rows cost 0 credits (D-031); fresh ones carry the spot's cost. */
-const isCopy = (row: WorldVersionRow) => row.cost_credits === 0;
-
-/** The row whose thumbnail stands for a version: the entry spot, unless it is a copy. */
-function thumbnailRow(sorted: WorldVersionRow[]): WorldVersionRow | null {
-  const withThumb = sorted.filter((s) => s.thumbnail_url);
-  const first = withThumb[0] ?? null;
-  if (!first || !isCopy(first)) return first;
-  return withThumb.find((s) => !isCopy(s)) ?? first;
-}
-
-/**
- * For a copied thumbnail row, the other version that holds the same picture: the one whose
- * row is not a copy, else the newest other one. Null when the picture is this version's own.
- */
-function sameAsVersion(row: WorldVersionRow | null, rows: WorldVersionRow[]): number | null {
-  if (!row || !isCopy(row)) return null;
-  const twins = rows
-    .filter((r) => r.version !== row.version && r.thumbnail_url === row.thumbnail_url)
-    .sort((a, b) => Number(isCopy(a)) - Number(isCopy(b)) || b.version - a.version);
-  return twins[0]?.version ?? null;
-}
-
 /** Groups spot rows into versions, newest first. `entrySpot` picks the thumbnail. */
 export function summarizeVersions(
   rows: WorldVersionRow[],
   entrySpot?: string | null,
 ): VersionSummary[] {
   const byVersion = new Map<number, WorldVersionRow[]>();
+  /** Thumbnail URL -> the versions that show it. */
+  const thumbVersions = new Map<string, Set<number>>();
   for (const row of rows) {
     byVersion.set(row.version, [...(byVersion.get(row.version) ?? []), row]);
+    if (row.thumbnail_url) {
+      const versions = thumbVersions.get(row.thumbnail_url) ?? new Set<number>();
+      versions.add(row.version);
+      thumbVersions.set(row.thumbnail_url, versions);
+    }
   }
+  const ownThumb = (s: WorldVersionRow) =>
+    !!s.thumbnail_url && thumbVersions.get(s.thumbnail_url)?.size === 1;
   return [...byVersion.entries()]
     .sort(([a], [b]) => b - a)
     .map(([version, spots]) => {
@@ -104,7 +89,10 @@ export function summarizeVersions(
           a.spot.localeCompare(b.spot),
       );
       const entry = sorted[0];
-      const thumb = thumbnailRow(sorted);
+      const thumb =
+        sorted.find(ownThumb) ??
+        (entry.thumbnail_url ? entry : sorted.find((s) => s.thumbnail_url)) ??
+        null;
       return {
         version,
         status: versionStatus(sorted.map((s) => s.status)),
@@ -112,8 +100,7 @@ export function summarizeVersions(
         done: sorted.filter((s) => FINISHED.includes(s.status)).length,
         total: sorted.length,
         thumbnailUrl: thumb?.thumbnail_url ?? null,
-        thumbnailLabel: thumb ? (thumb.spot_label ?? thumb.spot) : null,
-        thumbnailSameAs: sameAsVersion(thumb, rows),
+        thumbnailSpot: thumb ? (thumb.spot_label ?? thumb.spot) : null,
         createdAt: sorted.map((s) => s.created_at).sort()[sorted.length - 1],
         credits: sorted.reduce((n, s) => n + (s.cost_credits ?? 0), 0),
         publishRowId: entry.id,

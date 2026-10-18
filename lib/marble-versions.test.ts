@@ -72,33 +72,21 @@ describe("summarizeVersions", () => {
     expect(v3.spots[0].spot).toBe("entrance");
   });
 
-  it("says which version a copied thumbnail comes from (D-031)", () => {
-    const [v3, v2] = summarizeVersions(rows, "entrance");
-    expect(v3).toMatchObject({ thumbnailSameAs: 2, thumbnailLabel: "entrance" });
-    expect(v2).toMatchObject({ thumbnailUrl: "e.webp", thumbnailSameAs: null });
-  });
-
-  it("shows the room a version shot itself when its entry spot is a copy", () => {
-    const hero2 = [
-      row({ version: 2, spot: "living", thumbnail_url: "l2.webp", cost_credits: 1600 }),
-      row({ version: 2, spot: "kitchen", thumbnail_url: "k2.webp", cost_credits: 1600 }),
-      row({ version: 1, spot: "living", thumbnail_url: "l2.webp", cost_credits: 0 }),
-      row({
-        version: 1,
-        spot: "kitchen",
-        spot_label: "Kitchen",
-        thumbnail_url: "k1.webp",
-        cost_credits: 1600,
-      }),
+  it("shows the re-shot spot's own thumbnail when the entry image is shared (D-031)", () => {
+    // hero-2: v1 reuses v2's entrance (same files), so both entry thumbnails are the same.
+    const hero = [
+      row({ version: 2, spot: "entrance", thumbnail_url: "shared-e.webp" }),
+      row({ version: 2, spot: "bath", spot_label: "Bathroom", thumbnail_url: "v2-bath.webp" }),
+      row({ version: 1, spot: "entrance", thumbnail_url: "shared-e.webp" }),
+      row({ version: 1, spot: "bath", spot_label: "Bathroom", thumbnail_url: "v1-bath.webp" }),
     ];
-    const [v2, v1] = summarizeVersions(hero2, "living");
-    expect(v2).toMatchObject({ thumbnailUrl: "l2.webp", thumbnailSameAs: null });
-    expect(v1).toMatchObject({
-      thumbnailUrl: "k1.webp",
-      thumbnailLabel: "Kitchen",
-      thumbnailSameAs: null,
-      publishRowId: "1-living",
-    });
+    const [v2, v1] = summarizeVersions(hero, "entrance");
+    expect(v2).toMatchObject({ thumbnailUrl: "v2-bath.webp", thumbnailSpot: "Bathroom" });
+    expect(v1).toMatchObject({ thumbnailUrl: "v1-bath.webp", thumbnailSpot: "Bathroom" });
+    expect(v1.publishRowId).toBe("1-entrance");
+    // Only one version: the entry spot's image is its own.
+    const [only] = summarizeVersions(hero.slice(0, 2), "entrance");
+    expect(only).toMatchObject({ thumbnailUrl: "shared-e.webp", thumbnailSpot: "entrance" });
   });
 
   it("polls only generating rows and links the preview to the tour", () => {
