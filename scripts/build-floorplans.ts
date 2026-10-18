@@ -1,6 +1,7 @@
 /**
- * Builds the floor plans (walls, room footprints, SVG, room anchors) from the stored collider
- * meshes (GH-18, owner: Temuri). See docs/tickets/GH-18.md and lib/geometry/store-floorplans.ts.
+ * Builds the floor plans (walls, room outlines with m² areas, SVG, room anchors) from the
+ * stored collider meshes (GH-18, owner: Temuri). See docs/tickets/GH-18.md and
+ * lib/geometry/store-floorplans.ts. Prints each room's area; a host calibration is kept.
  * No World Labs calls: colliders come from our storage.
  *
  *   pnpm floorplans                              every version of every listing with worlds
@@ -61,6 +62,14 @@ async function main() {
       for (const plan of result.plans) {
         console.log(`  ${plan.spot.padEnd(10)} ${plan.walls} walls  ${plan.svgUrl ?? ""}`);
       }
+      const scale = result.calibration
+        ? `calibrated from the ${result.calibration.room} ${result.calibration.axis} ${result.calibration.meters} m (x${result.calibration.scale})`
+        : "not calibrated";
+      console.log(`  areas (${scale}):`);
+      for (const { room, area_m2 } of result.areas) {
+        console.log(`    ${room.padEnd(14)} ${area_m2 === null ? "no outline" : `${area_m2} m²`}`);
+      }
+      console.log(`    ${"total".padEnd(14)} ${result.totalArea ?? "-"} m²`);
       if (values.out) {
         const dir = path.resolve(values.out);
         mkdirSync(dir, { recursive: true });

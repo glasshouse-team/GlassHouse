@@ -114,6 +114,25 @@ export type Gap = z.infer<typeof GapSchema>;
 /** 2D point on the floor plane in meters: [x, z]. */
 export const Point2Schema = z.tuple([z.number(), z.number()]);
 
+/**
+ * One real measurement of one room by the host (GH-18 v2), stored on that room in
+ * floor_plans.rooms; scale = meters / measured_m applies to every room of the version.
+ */
+export const FloorPlanCalibrationSchema = z.object({
+  room: z.string(),
+  axis: z.enum(["width", "length"]),
+  /** The real length the host entered. */
+  meters: z.number().positive(),
+  /** The same length in the 3D's meters. */
+  measured_m: z.number().positive(),
+  /** Real meters per 3D meter. */
+  scale: z.number().positive(),
+  /** Who entered it (profile name) and when (ISO time). */
+  by: z.string(),
+  at: z.string(),
+});
+export type FloorPlanCalibration = z.infer<typeof FloorPlanCalibrationSchema>;
+
 export const FloorPlanSchema = z.object({
   id: z.uuid(),
   world_id: z.uuid(),
@@ -124,7 +143,10 @@ export const FloorPlanSchema = z.object({
       /** Label position (v1) or polygon centroid (v2). */
       label: Point2Schema,
       polygon: z.array(Point2Schema).nullable(),
+      /** Floor area (v2), calibrated when the plan is host-calibrated. */
       area_m2: z.number().nullable(),
+      /** Only on the room the host measured (v2). */
+      calibration: FloorPlanCalibrationSchema.optional(),
     }),
   ),
   /** Wall segments [x1, z1, x2, z2] in meters. */

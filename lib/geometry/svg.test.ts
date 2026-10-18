@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { escapeXml, planLayout, renderPlanSvg, type PlanShape } from "./svg";
+import { escapeXml, formatArea, planLayout, renderPlanSvg, type PlanShape } from "./svg";
 import { rotatePoint, type Wall } from "./walls";
 
 const DEG = Math.PI / 180;
@@ -66,6 +66,30 @@ describe("renderPlanSvg", () => {
     expect(svg).toContain('font-weight="600"');
     expect(svg).toContain("#d7ece5");
     expect(svg).toContain('fill="url(#hatch)"');
+  });
+
+  it("draws room areas, the total, a calibrated scale bar and the calibration note", () => {
+    const room = turnedRoom(0);
+    const calibrated = renderPlanSvg(
+      { ...room, rooms: [{ ...room.rooms[0], area_m2: 14.52 }] },
+      { scale: 1.25, note: "Calibrated from: Kitchen width 3.75 m", totalArea: 14.52 },
+    );
+    expect(calibrated).toContain(">14.5 m²</text>");
+    expect(calibrated).toContain(">1 m · total 14.5 m²</text>");
+    expect(calibrated).toContain("Calibrated from: Kitchen width 3.75 m");
+    expect(calibrated).not.toContain("Plan is approximate");
+    // One real meter is 0.8 of the 3D's meters at scale 1.25.
+    const bar = calibrated.match(
+      /<g stroke="#27272a" stroke-width="0.04"><line x1="([-\d.]+)" y1="[-\d.]+" x2="([-\d.]+)"/,
+    )!;
+    expect(Number(bar[2]) - Number(bar[1])).toBeCloseTo(0.8, 3);
+    // No area: name only.
+    expect(svg).not.toContain("m²");
+  });
+
+  it("formats areas with one decimal", () => {
+    expect(formatArea(11.249)).toBe("11.2 m²");
+    expect(formatArea(9)).toBe("9.0 m²");
   });
 
   it("escapes room names", () => {

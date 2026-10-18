@@ -12,6 +12,8 @@ const StoredPlan = FloorPlanSchema.pick({
   rooms: true,
   walls: true,
   doors: true,
+  total_area_m2: true,
+  scale_source: true,
 });
 export type StoredPlan = z.infer<typeof StoredPlan>;
 
@@ -55,7 +57,9 @@ export async function getListingFloorPlans(listingId: string): Promise<ListingFl
   if (!worlds?.length) return null;
   const { data: rows } = await db
     .from("floor_plans")
-    .select("world_id, svg_url, rooms, walls, doors, status, created_at")
+    .select(
+      "world_id, svg_url, rooms, walls, doors, total_area_m2, scale_source, status, created_at",
+    )
     .in(
       "world_id",
       worlds.map((w) => w.id),
@@ -87,7 +91,7 @@ export async function getListingFloorPlans(listingId: string): Promise<ListingFl
 export async function getWorldFloorPlan(worldId: string): Promise<StoredPlan | null> {
   const { data } = await supabaseAdmin()
     .from("floor_plans")
-    .select("world_id, svg_url, rooms, walls, doors")
+    .select("world_id, svg_url, rooms, walls, doors, total_area_m2, scale_source")
     .eq("world_id", worldId)
     .eq("status", "ready")
     .order("created_at", { ascending: false })
