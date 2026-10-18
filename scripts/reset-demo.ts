@@ -1,12 +1,28 @@
 /**
- * Restore the demo state: delete demo deals, messages, reservations and events made after
- * the seed; restore the hero policy; publish Hero 2 v1, the gap version (D-026: hero 2 has the
- * 3D, one world per room spot, D-009). Print "Demo ready".
- * Built in GH-26 (owner: Beka). See docs/tickets/GH-26.md.
+ * `pnpm demo:reset [--dry-run]` (GH-26): deletes what demo runs left (deals, reservations,
+ * Q&A conversations, trip briefs, and events logged after the latest seed.completed),
+ * restores hero-1's policy and manual, and publishes hero 2 v1, the gap version (D-026).
+ * `--dry-run` prints the plan and writes nothing. Logic: seed/reset.ts, seed/reset-plan.ts.
  */
-console.error(
-  "scripts/reset-demo.ts is not implemented yet. It is built in GH-26 (Beka); see docs/tickets/GH-26.md.",
-);
-process.exit(1);
+import { parseArgs } from "node:util";
+import { describePlan } from "../seed/reset-plan";
+import { applyReset, DEMO_WORLD, planReset, seedCounts } from "../seed/reset";
 
-export {};
+async function main() {
+  const { values } = parseArgs({ options: { "dry-run": { type: "boolean", default: false } } });
+  const plan = await planReset();
+  const dryRun = values["dry-run"];
+  console.log(dryRun ? "Dry run, nothing is written. Would:" : "Resetting the demo:");
+  for (const line of describePlan(plan, DEMO_WORLD.listing.slug)) console.log(`  - ${line}`);
+  if (dryRun) return;
+
+  await applyReset(plan);
+  console.log("Seed rows kept:");
+  console.table(await seedCounts());
+  console.log("Demo ready");
+}
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : error);
+  process.exit(1);
+});

@@ -93,6 +93,45 @@ describe("host tools", () => {
     ).toMatchObject({ ok: true });
   });
 
+  it("keeps the refusal reason out of the public summary", async () => {
+    const { tools } = side({ theirLastCents: 40_000 });
+    const result = await run(tools.accept_offer, { reason: "ok" });
+    expect(result).toMatchObject({ ok: false, code: "below_floor" });
+    expect(String(result.summary)).not.toMatch(/below_floor|floor/);
+  });
+
+  it("lets only one of two parallel moves through", async () => {
+    const { tools, saved } = side();
+    const results = await Promise.all([
+      run(tools.make_offer, { amountCents: 49_500, terms: [], reason: "a" }),
+      run(tools.make_offer, { amountCents: 50_000, terms: [], reason: "b" }),
+    ]);
+    expect(results.filter((r) => r.ok === true)).toHaveLength(1);
+    expect(saved.filter((m) => m.type === "counter")).toHaveLength(1);
+  });
+
+  it("drops a reason that names the host's private amounts", async () => {
+    const { tools, saved } = side({ privateAmountsCents: [10_000, 44_200, 49_000] });
+    await run(tools.make_offer, {
+      amountCents: 49_500,
+      terms: [],
+      reason: "I can't go under $442, so $495.",
+    });
+    expect(saved[0]).toMatchObject({ type: "counter", amount_cents: 49_500, body: "" });
+  });
+
+  it("does not move when the deal moved on meanwhile", async () => {
+    const { tools, saved, state } = side({ stillCurrent: async () => false });
+    expect(
+      await run(tools.make_offer, { amountCents: 49_500, terms: [], reason: "x" }),
+    ).toMatchObject({
+      ok: false,
+      code: "deal_moved",
+    });
+    expect(saved).toEqual([]);
+    expect(state.outcome).toBeNull();
+  });
+
   it("refuses moves past the round limit", async () => {
     const { tools } = side({ round: 7 });
     expect(
@@ -106,7 +145,10 @@ describe("host tools", () => {
   it("allows one move per turn, and can decline or hand over to the host", async () => {
     const a = side();
     await run(a.tools.decline, { reason: "Not this time" });
-    expect(a.state.outcome).toEqual({ type: "decline", body: "Not this time" });
+    expect(a.state.outcome).toEqual({
+      type: "decline",
+      body: "The host agent declined this deal.",
+    });
     expect(
       await run(a.tools.make_offer, { amountCents: 49_500, terms: [], reason: "x" }),
     ).toMatchObject({
@@ -139,9 +181,20 @@ describe("guest tools", () => {
       code: "above_guest_max",
     });
     expect(state.outcome).toBeNull();
-    await run(tools.ask_guest, { question: "The best price is $510. Book it?" });
+    await run(tools.ask_guest, { question: "The host wants $510, over your $500. Book it?" });
     expect(state.outcome).toMatchObject({ type: "question" });
+    // The deal room (read by the host too) gets code-written text, not the agent's question.
+    expect(JSON.stringify(state.outcome)).not.toMatch(/500|510/);
     expect(tools.decline).toBeUndefined();
+  });
+
+  it("accepts the host's extras with the price", async () => {
+    const { tools, state } = guest({
+      theirLastCents: 49_000,
+      theirLastTerms: { late_checkout: true },
+    });
+    expect(await run(tools.accept_offer, { reason: "ok" })).toMatchObject({ ok: true });
+    expect(state.outcome).toMatchObject({ type: "accept", terms: { late_checkout: true } });
   });
 
   it("counters $480 in the demo", async () => {

@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { bookingProblem, stayRangeLabel } from "@/lib/booking";
 import { getAvailability, getListing } from "@/lib/data/listings";
-import { createReservation, hasOverlappingReservation } from "@/lib/data/reservations";
+import {
+  createReservation,
+  DatesTakenError,
+  hasOverlappingReservation,
+} from "@/lib/data/reservations";
 import { errorResponse, jsonError, parseJson } from "@/lib/http";
 import { computeQuote } from "@/lib/pricing";
 import { IsoDate } from "@/lib/schemas/core";
@@ -77,6 +81,7 @@ export async function POST(request: Request) {
 
     return Response.json({ id, quote }, { status: 201 });
   } catch (error) {
+    if (error instanceof DatesTakenError) return jsonError(409, "already_booked", error.message);
     return errorResponse(error);
   }
 }

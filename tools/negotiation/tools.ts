@@ -38,19 +38,29 @@ export interface TurnSide {
   maxRounds: number;
   /** "offer" for the guest's opening move, "counter" after that. */
   moveKind: "offer" | "counter";
-  /** The other side's latest offer: what accept_offer accepts. */
+  /** The other side's latest offer: what accept_offer accepts, with its extras. */
   theirLastCents: number | null;
+  theirLastTerms?: OfferTerms;
   /** "Nov 9 to Nov 13", for feed lines. */
   stay: string;
   /** Host side only. Never passed to the guest side. */
   policy?: NegotiationPolicy;
   /** Guest side only. Never passed to the host side. */
   guestMaxCents?: number;
+  /**
+   * This side's private amounts (host: floor, effective floor, auto-accept; guest: maximum).
+   * A reason the model wrote that names one is not shown to the other side.
+   */
+  privateAmountsCents?: number[];
+  /** Re-reads the deal just before a move is saved: false when it moved on meanwhile. */
+  stillCurrent?: () => Promise<boolean>;
   save: (message: DealMessageDraft) => Promise<void>;
 }
 
 export interface TurnState {
   outcome: TurnOutcome | null;
+  /** Set synchronously when a move is claimed, so two parallel tool calls can't both move. */
+  claimed?: boolean;
 }
 
 const ACTOR = { guest_agent: "Guest agent", host_agent: "Host agent" } as const;
@@ -59,13 +69,42 @@ function termsRecord(terms: readonly string[]): OfferTerms {
   return Object.fromEntries(terms.map((t) => [t, true]));
 }
 
+/** Every way an amount can be written: 50000, 500, $500, 500.00, 50,000. */
+function amountForms(cents: number): string[] {
+  const dollars = cents / 100;
+  const forms = [String(cents), cents.toLocaleString("en-US"), dollars.toFixed(2)];
+  if (Number.isInteger(dollars)) forms.push(String(dollars), dollars.toLocaleString("en-US"));
+  return forms;
+}
+
+/** True when model-written text names one of this side's private amounts. */
+export function revealsPrivateAmount(text: string, privateAmountsCents: number[] = []): boolean {
+  return privateAmountsCents.some((cents) =>
+    amountForms(cents).some((form) =>
+      new RegExp(`(^|[^\\d.,])${form.replace(/[.,]/g, (c) => `\\${c}`)}(?![\\d])`).test(text),
+    ),
+  );
+}
+
+/** What the deal room shows for moves that end a turn without a price. Code-written (D-019). */
+const EXIT_BODIES = {
+  question: "The guest agent asked the guest how to go on.",
+  escalate: "The host agent asked the host to decide.",
+  decline: "The host agent declined this deal.",
+} as const;
+
 /** The tools for one side's turn. `state.outcome` is set by the first move that went through. */
 export function negotiationTools(side: TurnSide, state: TurnState): ToolSet {
   const who = ACTOR[side.by];
 
+  const turnOver = {
+    ok: false as const,
+    code: "turn_over",
+    summary: `${who} already moved this turn`,
+  };
+
   async function money(move: Move, terms: OfferTerms, body: string) {
-    if (state.outcome)
-      return { ok: false as const, code: "turn_over", summary: `${who} already moved this turn` };
+    if (state.outcome || state.claimed) return turnOver;
     const check = validateOffer({
       by: side.by,
       kind: move.kind,
@@ -88,19 +127,33 @@ export function negotiationTools(side: TurnSide, state: TurnState): ToolSet {
         terms: {},
         body: REFUSAL_NOTES[check.code],
       });
+      // The code goes back to the agent only; the public summary names no reason (D-019, D-024).
       return {
         ok: false as const,
         code: check.code,
-        summary: `${who}'s move was refused by the rules (${check.code}); it tries again`,
+        summary: `${who}'s move was refused by the rules; it tries again`,
       };
     }
-    await side.save({
-      actor: side.by,
-      type: move.kind,
-      amount_cents: move.amountCents,
-      terms,
-      body,
-    });
+    if (state.outcome || state.claimed) return turnOver;
+    state.claimed = true;
+    if (side.stillCurrent && !(await side.stillCurrent()))
+      return {
+        ok: false as const,
+        code: "deal_moved",
+        summary: `The deal moved on before ${who} could`,
+      };
+    try {
+      await side.save({
+        actor: side.by,
+        type: move.kind,
+        amount_cents: move.amountCents,
+        terms,
+        body: revealsPrivateAmount(body, side.privateAmountsCents) ? "" : body,
+      });
+    } catch (error) {
+      state.claimed = false;
+      throw error;
+    }
     state.outcome = { type: move.kind, amountCents: move.amountCents, terms };
     return {
       ok: true as const,
@@ -108,10 +161,26 @@ export function negotiationTools(side: TurnSide, state: TurnState): ToolSet {
     };
   }
 
-  async function exit(type: "decline" | "escalate" | "question", body: string, summary: string) {
-    if (state.outcome)
-      return { ok: false as const, code: "turn_over", summary: `${who} already moved this turn` };
-    await side.save({ actor: side.by, type, amount_cents: null, terms: {}, body });
+  /**
+   * Ends the turn without a price. The model's text stays with this side's agent: the deal room,
+   * which both sides read, gets a code-written line (the text could name a private limit).
+   */
+  async function exit(type: "decline" | "escalate" | "question", summary: string) {
+    if (state.outcome || state.claimed) return turnOver;
+    state.claimed = true;
+    if (side.stillCurrent && !(await side.stillCurrent()))
+      return {
+        ok: false as const,
+        code: "deal_moved",
+        summary: `The deal moved on before ${who} could`,
+      };
+    const body = EXIT_BODIES[type];
+    try {
+      await side.save({ actor: side.by, type, amount_cents: null, terms: {}, body });
+    } catch (error) {
+      state.claimed = false;
+      throw error;
+    }
     state.outcome = { type, body };
     return { ok: true as const, summary };
   }
@@ -138,7 +207,11 @@ export function negotiationTools(side: TurnSide, state: TurnState): ToolSet {
           code: "nothing_to_accept",
           summary: `${who} had no offer to accept`,
         };
-      return money({ kind: "accept", amountCents: side.theirLastCents }, {}, reason.trim());
+      return money(
+        { kind: "accept", amountCents: side.theirLastCents },
+        side.theirLastTerms ?? {},
+        reason.trim(),
+      );
     },
   });
 
@@ -149,12 +222,12 @@ export function negotiationTools(side: TurnSide, state: TurnState): ToolSet {
       decline: tool({
         description: "End the negotiation without a deal.",
         inputSchema: z.object({ reason: z.string() }),
-        execute: ({ reason }) => exit("decline", reason.trim(), `${who} declined the deal`),
+        execute: () => exit("decline", `${who} declined the deal`),
       }),
       escalate_to_host: tool({
         description: "Hand the deal to the host in person, for something only they can decide.",
         inputSchema: z.object({ reason: z.string() }),
-        execute: ({ reason }) => exit("escalate", reason.trim(), `${who} asked the host to decide`),
+        execute: () => exit("escalate", `${who} asked the host to decide`),
       }),
     };
   }
@@ -165,8 +238,7 @@ export function negotiationTools(side: TurnSide, state: TurnState): ToolSet {
       description:
         "Ask the guest in person, for example when the host's best price is above what they want to pay.",
       inputSchema: z.object({ question: z.string() }),
-      execute: ({ question }) =>
-        exit("question", question.trim(), `${who} asked the guest a question`),
+      execute: () => exit("question", `${who} asked the guest a question`),
     }),
   };
 }

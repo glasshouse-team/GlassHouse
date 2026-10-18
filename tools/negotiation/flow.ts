@@ -36,7 +36,10 @@ import { NEGOTIATION_LOG_INPUTS, negotiationTools, type TurnState } from "./tool
 
 /** A suggestion for this turn, from public offers plus this side's own private limit. */
 export type Suggestion =
-  Move | { kind: "keep"; amountCents: number; term: string } | { kind: "ask_guest" };
+  | Move
+  | { kind: "keep"; amountCents: number; term: string }
+  | { kind: "ask_guest" }
+  | { kind: "escalate" };
 
 const roundUpToStep = (cents: number) => Math.ceil(cents / 500) * 500;
 
@@ -62,11 +65,16 @@ export function hostSuggestion(
   )
     return { kind: "accept", amountCents: theirs };
   const floor = effectiveFloorCents(policy, { listTotalCents, nights, cleaningCents });
+  // A floor above the list (cheap override nights) leaves nothing to counter with: hand over.
+  if (floor > listTotalCents) return { kind: "escalate" };
   const base = suggestMove("host_agent", offers, listTotalCents);
   if (base.kind === "accept" && base.amountCents >= floor) return base;
   return {
     kind: "counter",
-    amountCents: Math.max(base.kind === "accept" ? floor : base.amountCents, roundUpToStep(floor)),
+    amountCents: Math.min(
+      listTotalCents,
+      Math.max(base.kind === "accept" ? floor : base.amountCents, roundUpToStep(floor)),
+    ),
   };
 }
 
@@ -86,10 +94,34 @@ export function guestSuggestion(
 
 function describe(s: Suggestion): string {
   if (s.kind === "ask_guest") return "ask the guest (call ask_guest)";
+  if (s.kind === "escalate") return "hand the deal to the host (call escalate_to_host)";
   if (s.kind === "keep")
     return `keep ${formatCents(s.amountCents)} and offer ${s.term.replace("_", " ")} (make_offer with that term)`;
   if (s.kind === "accept") return `accept their ${formatCents(s.amountCents)} (accept_offer)`;
   return `${s.kind} at ${formatCents(s.amountCents)} (make_offer with amountCents ${s.amountCents})`;
+}
+
+/** Which side a message's actor speaks for (a person counts for their side). */
+function sideOf(actor: string): OfferBy | null {
+  if (actor === "guest_agent" || actor === "guest") return "guest_agent";
+  if (actor === "host_agent" || actor === "host") return "host_agent";
+  return null;
+}
+
+/** The side to move: the opposite of the last money move; the guest opens. */
+export function nextSide(
+  messages: Pick<DealMessageRow, "actor" | "type" | "amount_cents">[],
+): OfferBy {
+  const last = [...messages]
+    .reverse()
+    .find(
+      (m) =>
+        (m.type === "offer" || m.type === "counter" || m.type === "accept") &&
+        m.amount_cents !== null &&
+        sideOf(m.actor) !== null,
+    );
+  if (!last) return "guest_agent";
+  return sideOf(last.actor) === "guest_agent" ? "host_agent" : "guest_agent";
 }
 
 function offersFrom(messages: DealMessageRow[]): PastOffer[] {
@@ -137,12 +169,13 @@ export async function runNegotiation(
 
   for (let turn = 0; turn < (options.maxTurns ?? 12) && deal.status === "open"; turn++) {
     if (deal.rounds >= policy.max_rounds) {
-      deal =
-        (await updateDealIf(
-          dealId,
-          { status: "open", rounds: deal.rounds },
-          { status: "expired" },
-        )) ?? deal;
+      const expired = await updateDealIf(
+        dealId,
+        { status: "open", rounds: deal.rounds },
+        { status: "expired" },
+      );
+      if (!expired) break;
+      deal = expired;
       await logEvent({
         actor_type: "system",
         actor_name: "Glasshouse",
@@ -155,9 +188,18 @@ export async function runNegotiation(
     }
     if (turn > 0 && pauseMs > 0) await new Promise((r) => setTimeout(r, pauseMs));
 
-    const side: OfferBy = deal.rounds % 2 === 0 ? "guest_agent" : "host_agent";
-    const offers = offersFrom(await getDealMessages(dealId));
-    const theirs = [...offers].reverse().find((o) => o.by !== side)?.amountCents ?? null;
+    const messages = await getDealMessages(dealId);
+    const side = nextSide(messages);
+    const offers = offersFrom(messages);
+    const theirLast = [...messages]
+      .reverse()
+      .find(
+        (m) =>
+          (m.type === "offer" || m.type === "counter") &&
+          m.amount_cents !== null &&
+          sideOf(m.actor) !== side,
+      );
+    const theirs = theirLast?.amount_cents ?? null;
     const suggestion =
       side === "host_agent"
         ? hostSuggestion(offers, deal.list_total_cents, nights, cleaningCents, policy)
@@ -169,6 +211,7 @@ export async function runNegotiation(
           );
 
     const state: TurnState = { outcome: null };
+    const roundsAtStart = deal.rounds;
     const tools = negotiationTools(
       {
         by: side,
@@ -182,8 +225,28 @@ export async function runNegotiation(
             ? "offer"
             : "counter",
         theirLastCents: theirs,
+        theirLastTerms: (theirLast?.terms ?? {}) as Record<string, boolean | number | string>,
         stay,
-        ...(side === "host_agent" ? { policy } : { guestMaxCents: guest.guestMaxCents }),
+        ...(side === "host_agent"
+          ? {
+              policy,
+              privateAmountsCents: [
+                policy.floor_nightly_cents,
+                effectiveFloorCents(policy, {
+                  listTotalCents: deal.list_total_cents,
+                  nights,
+                  cleaningCents,
+                }),
+                ...(policy.auto_accept_total_cents !== null
+                  ? [policy.auto_accept_total_cents]
+                  : []),
+              ],
+            }
+          : { guestMaxCents: guest.guestMaxCents, privateAmountsCents: [guest.guestMaxCents] }),
+        stillCurrent: async () => {
+          const now = await getDeal(dealId);
+          return now?.status === "open" && now.rounds === roundsAtStart;
+        },
         save: (message) => saveDealMessage(dealId, message),
       },
       state,
@@ -248,7 +311,10 @@ async function playSuggestion(
   const reason = "Suggested by Glasshouse to keep the deal moving.";
   let name: string;
   let input: Record<string, unknown>;
-  if (s.kind === "ask_guest") {
+  if (s.kind === "escalate") {
+    name = "escalate_to_host";
+    input = { reason };
+  } else if (s.kind === "ask_guest") {
     name = "ask_guest";
     input = { question: "The host's best price is above your limit. Accept it anyway?" };
   } else if (s.kind === "accept") {
@@ -260,7 +326,16 @@ async function playSuggestion(
   }
   const tool = tools[name];
   if (!tool) return;
-  const result = (await tool.execute(input, callOptions)) as { ok?: boolean; summary?: string };
+  let result: { ok?: boolean; summary?: string };
+  try {
+    result = (await tool.execute(input, callOptions)) as { ok?: boolean; summary?: string };
+  } catch (error) {
+    console.error("[negotiation] fallback move failed", error);
+    result = {
+      ok: false,
+      summary: `${where.by === "guest_agent" ? "Guest" : "Host"} agent's move failed`,
+    };
+  }
   await logEvent({
     actor_type: "agent",
     actor_name: where.by === "guest_agent" ? "Guest agent" : "Host agent",
@@ -273,11 +348,21 @@ async function playSuggestion(
     payload: {
       ok: result.ok === true,
       fallback: true,
-      ...(name === "make_offer"
+      ...(name === "make_offer" && result.ok === true
         ? { input: { amountCents: input.amountCents, terms: input.terms } }
         : {}),
     },
   });
+  // Code's move refused too (e.g. a floor above every price): hand over instead of stalling.
+  if (result.ok !== true && name !== "escalate_to_host" && name !== "ask_guest") {
+    const handOver = where.by === "host_agent" ? "escalate_to_host" : "ask_guest";
+    await playSuggestion(
+      tools,
+      where.by === "host_agent" ? { kind: "escalate" } : { kind: "ask_guest" },
+      where,
+    );
+    void handOver;
+  }
 }
 
 async function applyOutcome(
