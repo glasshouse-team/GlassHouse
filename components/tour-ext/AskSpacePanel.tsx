@@ -61,9 +61,19 @@ export function AskSpacePanel({
 
   // Actions run after awaits, so they read the latest tour (a fly_to can switch spots).
   const tourRef = useRef(tour);
+  const onCommit = useRef<(() => void) | null>(null);
   useEffect(() => {
     tourRef.current = tour;
+    onCommit.current?.();
+    onCommit.current = null;
   });
+  // After a fly_to that switched spots, the next action must see the new spot's anchors:
+  // wait for this panel's next render (or 300 ms, if it already happened).
+  const nextCommit = () =>
+    new Promise<void>((resolve) => {
+      onCommit.current = resolve;
+      setTimeout(resolve, 300);
+    });
 
   const transport = useMemo(() => new DefaultChatTransport({ api: "/api/ask-space" }), []);
   const { messages, sendMessage, status, error } = useChat({ transport });
@@ -76,6 +86,7 @@ export function AskSpacePanel({
     for (const action of takeNewActions(messages, done.current)) {
       queue.current = queue.current
         .then(() => runTourAction(tourRef.current, action))
+        .then(() => (action.type === "fly_to" ? nextCommit() : undefined))
         .catch((e) => console.warn("[ask-space] tour action failed", e));
     }
   }, [messages]);
