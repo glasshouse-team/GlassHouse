@@ -8,7 +8,7 @@ const ICONS = { fact: Camera, rule: ScrollText, manual: BookOpen } as const;
 export function SourceChips({ sources }: { sources: QaMessage["sources"] }) {
   if (sources.length === 0) return null;
   return (
-    <ul className="flex flex-wrap gap-1.5" aria-label="Sources">
+    <ul className="flex max-w-full flex-wrap gap-1.5" aria-label="Sources">
       {sources.map((source) => {
         const Icon = ICONS[source.type];
         const label = sourceLabel(source);
@@ -16,10 +16,10 @@ export function SourceChips({ sources }: { sources: QaMessage["sources"] }) {
           <li
             key={`${source.type}:${source.key}`}
             title={source.quote ? `${label}\n\n"${source.quote}"` : label}
-            className="inline-flex max-w-full items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-0.5 text-xs text-emerald-900"
+            className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-0.5 text-xs text-emerald-900"
           >
             <Icon className="size-3 shrink-0" aria-hidden />
-            <span className="truncate">{label}</span>
+            <span className="min-w-0 truncate">{label}</span>
           </li>
         );
       })}
