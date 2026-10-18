@@ -407,11 +407,14 @@ function gateFor(number) {
     contractPatches: patches,
     contractFiles: config.contractFiles,
   });
-  if (pr.state !== "OPEN")
-    (decision.reasons.unshift(`PR is ${pr.state.toLowerCase()}`), (decision.merge = false));
-  if (pr.author.login !== me.login)
-    (decision.reasons.push(`not my PR (author ${pr.author.login}): its author merges`),
-      (decision.merge = false));
+  if (pr.state !== "OPEN") {
+    decision.reasons.unshift(`PR is ${pr.state.toLowerCase()}`);
+    decision.merge = false;
+  }
+  if (pr.author.login !== me.login) {
+    decision.reasons.push(`not my PR (author ${pr.author.login}): its author merges`);
+    decision.merge = false;
+  }
   return { number: pr.number, title: pr.title, url: pr.url, branch: pr.headRefName, ...decision };
 }
 
