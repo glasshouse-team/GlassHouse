@@ -52,7 +52,9 @@ export function answerText(parts: readonly PartLike[]): string {
       .flatMap((p) => (p.type === "text" && p.text ? [p.text.trim()] : []))
       .filter(Boolean)
       .join(" ");
-  const lastTool = parts.findLastIndex((p) => p.type.startsWith("tool-"));
+  const lastTool = parts.findLastIndex(
+    (p) => p.type.startsWith("tool-") || p.type === "dynamic-tool",
+  );
   return (lastTool >= 0 && texts(lastTool + 1)) || texts(0);
 }
 
