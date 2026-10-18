@@ -4,6 +4,7 @@ import { CaptureLauncher } from "@/components/capture/CaptureLauncher";
 import { ActivityFeed } from "@/components/feed/ActivityFeed";
 import { GapTasks } from "@/components/gaps/GapTasks";
 import { approvalPrompt } from "@/components/deal/format";
+import { AddHomeDialog } from "@/components/host/AddHomeDialog";
 import { AgentRulesForm } from "@/components/host/AgentRulesForm";
 import { ApprovalsQueue } from "@/components/host/ApprovalsQueue";
 import { ListingDraft } from "@/components/host/ListingDraft";
@@ -44,7 +45,10 @@ export default async function HostDashboardPage() {
 
   return (
     <div className="space-y-10">
-      <h1 className="text-2xl font-semibold tracking-tight">Welcome back, {viewer.name}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">Welcome back, {viewer.name}</h1>
+        <AddHomeDialog />
+      </div>
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Needs you</h2>
@@ -66,7 +70,9 @@ export default async function HostDashboardPage() {
       </section>
 
       {listings.length === 0 && (
-        <p className="text-sm text-muted-foreground">You have no homes listed yet.</p>
+        <p className="text-sm text-muted-foreground">
+          You have no homes listed yet. Use Add a home to list your first one.
+        </p>
       )}
       {listings.map((listing, i) => {
         const policy = policies[i];

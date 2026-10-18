@@ -116,7 +116,7 @@ describe("buildResetPlan and describePlan", () => {
     expect(plan.deletions).toEqual(counts);
     expect(plan.eventsToDelete).toBe(11);
     const lines = describePlan(plan, "hero-2");
-    expect(lines).toHaveLength(DEMO_TABLES.length + 3);
+    expect(lines).toHaveLength(DEMO_TABLES.length + 4);
     expect(lines).toContain("delete 11 events with id > 67 (the latest seed.completed)");
     expect(lines.at(-1)).toBe("skip publishing hero-2: no worlds exist yet");
   });
@@ -125,5 +125,35 @@ describe("buildResetPlan and describePlan", () => {
     for (const seedTable of ["listings", "reviews", "listing_photos", "host_policies"]) {
       expect(DEMO_TABLES).not.toContain(seedTable);
     }
+  });
+});
+
+describe("homes added in the app (D-043)", () => {
+  it("lists them, sorted, in the plan and its description", () => {
+    const plan = buildResetPlan({
+      counts,
+      eventWatermark: 5,
+      eventsAboveWatermark: 2,
+      worlds: [],
+      gaps: [],
+      version: 1,
+      addedHomes: ["sunny-flat-x7k2qa", "cabin-in-the-hills-a1b2c3"],
+    });
+    expect(plan.addedHomes).toEqual(["cabin-in-the-hills-a1b2c3", "sunny-flat-x7k2qa"]);
+    expect(describePlan(plan, "hero-2")).toContain(
+      "delete 2 homes added in the app, with their rows: cabin-in-the-hills-a1b2c3, sunny-flat-x7k2qa",
+    );
+  });
+  it("keeps every listing when none were added", () => {
+    const plan = buildResetPlan({
+      counts,
+      eventWatermark: 5,
+      eventsAboveWatermark: 2,
+      worlds: [],
+      gaps: [],
+      version: 1,
+    });
+    expect(plan.addedHomes).toEqual([]);
+    expect(describePlan(plan, "hero-2")).toContain("keep listings: no homes were added in the app");
   });
 });

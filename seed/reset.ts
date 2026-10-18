@@ -4,6 +4,7 @@
  * 3D, capture or X-ray rows; see DEMO_TABLES for what goes.
  */
 import { supabaseAdmin } from "@/lib/supabase";
+import { SEED_LISTINGS } from "./data/listings";
 import { HERO_LISTINGS, SEED_COMPLETED_ACTION } from "./fixtures";
 import {
   buildResetPlan,
@@ -17,6 +18,9 @@ import { restoreHeroManual, restoreHeroPolicy } from "./seed";
 
 /** Hero 2 carries the 3D; v1 is the gap version (D-026). */
 export const DEMO_WORLD = { listing: HERO_LISTINGS.hero2, version: 1 } as const;
+
+/** The seed's slugs, as a PostgREST list: listings outside it were added in the app. */
+const SEED_SLUGS = `(${SEED_LISTINGS.map((l) => l.slug).join(",")})`;
 
 function check(error: { message: string } | null, what: string): void {
   if (error) throw new Error(`Demo reset failed at ${what}: ${error.message}`);
@@ -36,6 +40,9 @@ export async function planReset(): Promise<ResetPlan> {
   const counts = Object.fromEntries(
     await Promise.all(DEMO_TABLES.map(async (t) => [t, await countRows(t)] as const)),
   ) as Record<DemoTable, number>;
+
+  const added = await db.from("listings").select("slug").not("slug", "in", SEED_SLUGS);
+  check(added.error, "read homes added in the app");
 
   const seedEvents = await db.from("events").select("id").eq("action", SEED_COMPLETED_ACTION);
   check(seedEvents.error, "read seed.completed events");
@@ -70,6 +77,7 @@ export async function planReset(): Promise<ResetPlan> {
     worlds: worlds.data ?? [],
     gaps,
     version: DEMO_WORLD.version,
+    addedHomes: (added.data ?? []).map((l) => l.slug),
   });
 }
 
@@ -107,6 +115,10 @@ export async function applyReset(plan: ResetPlan): Promise<void> {
     const { error } = await db.from(table).delete().not("id", "is", null);
     check(error, `delete ${table}`);
   }
+  // Homes added in the app (D-043); their policies, photos, worlds and captures cascade.
+  // By slug, not the planned list, so homes added since planning go too.
+  const { error: homesError } = await db.from("listings").delete().not("slug", "in", SEED_SLUGS);
+  check(homesError, "delete homes added in the app");
   if (plan.eventWatermark !== null) {
     const { error } = await db.from("events").delete().gt("id", plan.eventWatermark);
     check(error, "delete events");

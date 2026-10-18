@@ -1,7 +1,8 @@
 /**
  * `pnpm demo:reset [--dry-run]` (GH-26): deletes what demo runs left (deals, reservations,
  * Q&A conversations, trip briefs, and events logged after the latest seed.completed),
- * restores hero-1's policy and manual, and publishes hero 2 v1, the gap version (D-026).
+ * deletes homes hosts added in the app (D-043), restores hero-1's policy and manual, and
+ * publishes hero 2 v1, the gap version (D-026).
  * `--dry-run` prints the plan and writes nothing. Logic: seed/reset.ts, seed/reset-plan.ts.
  */
 import { parseArgs } from "node:util";
