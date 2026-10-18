@@ -64,7 +64,7 @@ vi.mock("@/agents/context", async (importOriginal) => {
 import { createReservation } from "@/lib/data/reservations";
 import { logEvent } from "@/lib/events";
 import { DEMO_DEAL, DEMO_PROFILES, HERO_1_POLICY, HERO_LISTINGS } from "@/seed/fixtures";
-import { runNegotiation } from "./flow";
+import { nextSide, runNegotiation } from "./flow";
 
 const LISTING = {
   id: HERO_LISTINGS.hero1.id,
@@ -208,6 +208,39 @@ describe("runNegotiation", () => {
     expect(host.every((m) => m.amount_cents === 52_000)).toBe(true);
     expect(host[0].terms).toEqual({ late_checkout: true });
     expect(h.deal.rounds).toBe(HERO_1_POLICY.max_rounds);
+  });
+});
+
+describe("nextSide", () => {
+  const m = (actor: string, type: string, amount_cents: number | null) => ({
+    actor,
+    type,
+    amount_cents,
+  });
+  it("is the side opposite the last money move; a person's counter counts for its side", () => {
+    expect(nextSide([])).toBe("guest_agent");
+    expect(nextSide([m("guest_agent", "offer", 47_000)])).toBe("host_agent");
+    expect(nextSide([m("guest_agent", "offer", 47_000), m("host", "counter", 50_000)])).toBe(
+      "guest_agent",
+    );
+    expect(
+      nextSide([
+        m("guest_agent", "offer", 47_000),
+        m("host_agent", "rejected", null),
+        m("guest", "info", null),
+      ]),
+    ).toBe("host_agent");
+  });
+
+  it("after the host counters in person, the guest agent answers", async () => {
+    setUp(DEMO_DEAL.guestTargetCents, DEMO_DEAL.guestMaxCents);
+    h.messages = [
+      { actor: "guest_agent", type: "offer", amount_cents: 47_000, terms: {}, body: "" },
+      { actor: "host", type: "counter", amount_cents: 49_000, terms: {}, body: "" },
+    ];
+    h.deal.rounds = 2;
+    await runNegotiation("d", { pauseMs: 0, maxTurns: 1 });
+    expect(h.messages[2]).toMatchObject({ actor: "guest_agent" });
   });
 });
 

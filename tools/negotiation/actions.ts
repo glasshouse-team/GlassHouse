@@ -213,6 +213,17 @@ export async function acceptLast(dealId: string, viewer: Viewer): Promise<DealSt
     listing_id: deal.listing_id,
     summary: `${viewer.name} accepted ${formatCents(last.amount_cents)} for ${stayRangeLabel(deal.check_in, deal.check_out)}`,
   });
-  if (status === "approved") await bookDeal(agreed, "Host's agent rules (auto-accept)");
+  if (status === "approved") {
+    try {
+      await bookDeal(agreed, "Host's agent rules (auto-accept)");
+    } catch (error) {
+      await updateDealIf(dealId, { status: "approved" }, { status: "declined" });
+      throw new DealActionError(
+        409,
+        "cannot_book",
+        error instanceof Error ? error.message : "Could not book.",
+      );
+    }
+  }
   return status;
 }
