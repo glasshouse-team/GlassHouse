@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  ANYWHERE,
+  elsewhereNote,
   matchCities,
+  searchCities,
+  vibeCities,
   nightlyBudgetCents,
   priceCeilingCents,
   toTripBrief,
@@ -10,10 +14,12 @@ import {
 // What Haiku should make of the demo brief.
 const demo: BriefDraft = {
   destinations: ["Kazbegi", "Tbilisi"],
+  fitting_cities: ["Kazbegi", "Tbilisi"],
   check_in: null,
   check_out: null,
   nights: null,
   guests: 4,
+  guests_guess: null,
   budget_amount_usd: 60,
   budget_per: "night_per_person",
   must_haves: ["mountain view"],
@@ -25,9 +31,7 @@ const demo: BriefDraft = {
 };
 
 function brief(draft: BriefDraft) {
-  const result = toTripBrief(draft);
-  if (!("brief" in result)) throw new Error(result.problem);
-  return result.brief;
+  return toTripBrief(draft).brief;
 }
 
 describe("toTripBrief", () => {
@@ -41,14 +45,24 @@ describe("toTripBrief", () => {
     });
   });
 
-  it("asks a question when the destination or the guests are missing", () => {
-    expect(toTripBrief({ ...demo, destinations: [" "] })).toEqual({
-      problem: expect.stringMatching(/Where would you like to go/),
-    });
-    expect(toTripBrief({ ...demo, guests: null })).toEqual({
-      problem: "How many people are coming?",
-    });
-    expect(toTripBrief({ ...demo, guests: 0 })).toHaveProperty("problem");
+  it("searches a vague brief instead of asking: vibe cities or anywhere, a guessed group", () => {
+    expect(toTripBrief(demo).assumptions).toEqual([]);
+    expect(
+      brief({ ...demo, destinations: [" "], fitting_cities: ["Batumi"] }).destinations,
+    ).toEqual(["Batumi"]);
+    expect(brief({ ...demo, destinations: [], fitting_cities: [] }).destinations).toEqual([
+      ANYWHERE,
+    ]);
+    const family = toTripBrief({ ...demo, guests: null, guests_guess: 4 });
+    expect(family.brief.guests).toBe(4);
+    expect(family.guestsStated).toBe(false);
+    expect(family.brief.guests_assumed).toBe(true);
+    expect(toTripBrief(demo).brief.guests_assumed).toBe(false);
+    expect(toTripBrief(demo).guestsStated).toBe(true);
+    expect(family.assumptions[0]).toMatch(/Searched for 4 guests/);
+    expect(toTripBrief({ ...demo, guests: null }).brief.guests).toBe(2);
+    expect(toTripBrief({ ...demo, guests: 0 }).brief.guests).toBe(2);
+    expect(toTripBrief({ ...demo, guests: 40, guests_guess: null }).brief.guests).toBe(2);
   });
 
   it("keeps valid dates and counts the nights; drops reversed or malformed ones", () => {
@@ -89,5 +103,63 @@ describe("matchCities", () => {
     expect(matchCities(["Kazbegi", "tbilisi"])).toEqual(["Kazbegi", "Tbilisi"]);
     expect(matchCities(["Stepantsminda", "Gudauri"])).toEqual(["Kazbegi"]);
     expect(matchCities(["Paris"])).toEqual([]);
+  });
+});
+
+describe("places we have no homes in", () => {
+  it("searches the seeded cities instead and says so; the label and saved brief never say Paris", () => {
+    const paris = toTripBrief({ ...demo, destinations: ["Paris"], fitting_cities: [] });
+    expect(paris.brief.destinations).toEqual([ANYWHERE]);
+    expect(paris.elsewhere).toEqual(["Paris"]);
+    expect(elsewhereNote(paris.elsewhere, [])).toBe(
+      "Glasshouse has no homes in Paris yet (only Tbilisi, Kazbegi, Batumi and Sighnaghi), so I searched all of Georgia.",
+    );
+    expect(elsewhereNote(["Paris"], ["Sighnaghi"])).toMatch(/so I searched Sighnaghi\.$/);
+    expect(elsewhereNote([], ["Tbilisi"])).toBeNull();
+    const both = toTripBrief({ ...demo, destinations: ["Paris", "Tbilisi"], fitting_cities: [] });
+    expect(both.brief.destinations).toEqual(["Tbilisi"]);
+    expect(both.elsewhere).toEqual(["Paris"]);
+  });
+
+  it("treats vibe words as hints, not unknown places, and drops unknown fitting cities", () => {
+    const hills = toTripBrief({
+      ...demo,
+      destinations: ["the mountains"],
+      fitting_cities: ["Kazbegi", "Rome"],
+    });
+    expect(hills.elsewhere).toEqual([]);
+    expect(hills.brief.destinations).toEqual(["Kazbegi"]);
+    expect(toTripBrief({ ...demo, destinations: ["Georgia"] }).brief.destinations).toEqual([
+      "Georgia",
+    ]);
+  });
+});
+
+describe("vague places", () => {
+  it("reads the vibe: mountains, sea, wine, city", () => {
+    expect(vibeCities("somewhere quiet in the mountains")).toEqual(["Kazbegi"]);
+    expect(vibeCities("beach trip with friends")).toEqual(["Batumi"]);
+    expect(vibeCities("wine tasting")).toEqual(["Sighnaghi"]);
+    expect(vibeCities("city break")).toEqual(["Tbilisi"]);
+    expect(vibeCities("something romantic")).toEqual([]);
+  });
+
+  it("prefers the cities the guest named, then the vibe, then everywhere", () => {
+    expect(searchCities(["Batumi"], ["Kazbegi"], "beach in batumi")).toEqual({
+      cities: ["Batumi"],
+      named: true,
+    });
+    expect(searchCities([], ["Sighnaghi"], "hiking and wine")).toEqual({
+      cities: ["Sighnaghi", "Kazbegi"],
+      named: false,
+    });
+    expect(searchCities([ANYWHERE], [], "something romantic")).toEqual({
+      cities: [],
+      named: false,
+    });
+    expect(searchCities(["the mountains"], [], "the mountains")).toEqual({
+      cities: ["Kazbegi"],
+      named: false,
+    });
   });
 });

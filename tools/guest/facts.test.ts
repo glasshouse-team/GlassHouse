@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   candidateCard,
   cleanShortlist,
+  fillShortlist,
   resolveFactKey,
   sourceLabel,
   type Candidate,
@@ -188,5 +189,59 @@ describe("candidateCard", () => {
     expect(card.xray).not.toBe("not checked yet");
     expect(candidateCard(cabin).xray).toBe("not checked yet");
     expect(JSON.stringify(card)).not.toContain("house_manual");
+  });
+});
+
+describe("fillShortlist", () => {
+  const extra = home("chalet", { rating: 4.9, review_count: 12, property_type: "cabin" }, false);
+  const lie = {
+    ...home("lie", { rating: 4.95 }),
+    facts: {
+      facts: [],
+      contradictions: [{ claim: "sea view", evidence: "no sea", severity: "high" }],
+      missing_photos: [],
+    },
+  } as unknown as Candidate;
+  const one = {
+    ranked: [
+      {
+        listingId: "hero-1",
+        score: 80,
+        reasons: [{ text: "Fireplace", factKey: "amenity:fireplace", source: "Listed amenity" }],
+        concerns: [],
+        negotiationHint: null,
+      },
+    ],
+    others: [{ listingId: "lie", why: "No sea in the photos" }],
+    notes: [],
+  };
+
+  it("adds the best-rated unranked homes with cited reasons, below every ranked one", () => {
+    const { shortlist, added } = fillShortlist(one, [hero, cabin, extra, lie]);
+    expect(added).toBe(2);
+    expect(shortlist.ranked.map((r) => r.listingId)).toEqual(["hero-1", "chalet", "cabin"]);
+    expect(shortlist.ranked[1]).toMatchObject({
+      score: 55,
+      reasons: [
+        { text: "Rated 4.9 by 12 guests", factKey: "field:rating" },
+        { text: "Cabin in Kazbegi, sleeps 4", factKey: "field:max_guests" },
+      ],
+    });
+    expect(shortlist.ranked[1].reasons.every((r) => resolveFactKey(r.factKey!, extra))).toBe(true);
+    expect(shortlist.others.map((o) => o.listingId)).toEqual(["lie"]);
+  });
+
+  it("uses homes the model set aside last, with their Verifier contradiction as a concern", () => {
+    const { shortlist } = fillShortlist({ ...one, ranked: [] }, [lie, cabin]);
+    expect(shortlist.ranked.map((r) => r.listingId)).toEqual(["cabin", "lie"]);
+    expect(shortlist.ranked[1].concerns[0].text).toBe(
+      "Verifier found 1 claim the photos don't back",
+    );
+    expect(shortlist.others).toEqual([]);
+  });
+
+  it("leaves a full shortlist alone", () => {
+    const full = { ...one, ranked: [one.ranked[0], one.ranked[0], one.ranked[0]] };
+    expect(fillShortlist(full, [extra]).added).toBe(0);
   });
 });
