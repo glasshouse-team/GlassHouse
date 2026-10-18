@@ -73,4 +73,4 @@ A realistic, repeatable dataset that makes every demo moment work: search, X-ray
 
 ## Decision updates
 
-- 2026-10-18 D-026: Hero 2's seed row now describes Temuri's real apartment (one bedroom, a double bed and a sofa bed for 4, desk with two monitors, two balcony doors; no dishwasher or elevator) and two reviews match it; run pnpm seed to mirror its 18 photos into listing_photos. Hero 1 stays the Kazbegi placeholder (was: both hero rows waited for GH-6 facts). Jira: pending
+- 2026-10-18 D-026: Hero 2's seed row now describes Temuri's real apartment (one bedroom, a double bed and a sofa bed for 4, desk with two monitors, two balcony doors; no dishwasher or elevator) and two reviews match it; run pnpm seed to mirror its 18 photos into listing_photos. Hero 1 stays the Kazbegi placeholder (was: both hero rows waited for GH-6 facts). Jira: updated
