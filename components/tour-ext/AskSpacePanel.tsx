@@ -92,7 +92,9 @@ export function AskSpacePanel({
   }, [messages]);
 
   const bottom = useRef<HTMLDivElement>(null);
-  useEffect(() => bottom.current?.scrollIntoView({ block: "end" }), [messages, status]);
+  useEffect(() => {
+    bottom.current?.scrollIntoView({ block: "end" });
+  }, [messages, status]);
 
   function ask(text: string) {
     const question = text.trim();
