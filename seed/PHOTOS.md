@@ -17,6 +17,7 @@ To remove or rename a photo, delete it from the Storage folder (Supabase dashboa
 Real photos of the filmed homes, uploaded straight to `media/listings/{id}/photos/` with the same names (hero-1 id `00000000-0000-4000-8000-0000000000b1`, hero-2 id `00000000-0000-4000-8000-0000000000b2`), or dropped into `seed/photos/hero-1/` and `seed/photos/hero-2/`.
 
 - hero-1 needs: the living room with the fireplace and the desk by the window, both bedrooms (the view of the mountain from one window), the kitchen, the bathroom, and one photo that clearly shows the washing machine named `NN-laundry.jpg` or `NN-washing-machine.jpg` (the `washer` fact points at it). No hair dryer in any photo.
+- hero-2 is Temuri's real apartment (D-026): 18 photos are uploaded, `01-living-room.jpg` to `18-entrance.jpg`, with the washing machine in `15-washing-machine.jpg`. Its seed row matches them.
 - The hero rows in `seed/data/listings.ts` are placeholders. When Temuri's real title, description, amenities and manual arrive, replace them there: every `pnpm seed` rewrites the hero rows, and placeholder text that disagrees with the real photos would make the X-ray report contradictions on the hero homes.
 
 ## Shot list for the other ten (about 50 photos)
