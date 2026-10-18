@@ -103,6 +103,32 @@ describe("waitForWorld", () => {
     expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
+  it("gives up after maxPollErrors transient errors in a row", async () => {
+    vi.stubEnv("WORLDLABS_API_KEY", "test-key");
+    const fetchMock = vi.fn().mockImplementation(async () => json({ detail: "slow down" }, 429));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(waitForWorld("op1", { intervalMs: 0, maxPollErrors: 2 })).rejects.toMatchObject({
+      status: 429,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("retries fetching the finished world after a 503", async () => {
+    vi.stubEnv("WORLDLABS_API_KEY", "test-key");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        json({ operation_id: "op1", done: true, response: { world_id: "w1" } }),
+      )
+      .mockResolvedValueOnce(json({ detail: "unavailable" }, 503))
+      .mockResolvedValueOnce(json(world({ "500k": "s" })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { world: result } = await waitForWorld("op1", { intervalMs: 0 });
+    expect(result.world_id).toBe("w1");
+  });
+
   it("fails at once on a bad key", async () => {
     vi.stubEnv("WORLDLABS_API_KEY", "bad-key");
     const fetchMock = vi.fn().mockResolvedValue(json({ detail: "unauthorized" }, 401));

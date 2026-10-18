@@ -3,8 +3,8 @@
  * Docs: https://docs.worldlabs.ai/api (request shapes checked 2026-10-17).
  *
  * Rule: generate once per version, download every asset into OUR storage, and never
- * call World Labs on a page view. A generation takes about 6-8 minutes and 1,600 credits;
- * videos must be 30 s or shorter (D-009).
+ * call World Labs on a page view. A generation takes about 6-9 minutes and 1,600 credits;
+ * videos must be 30 s or shorter (GH-3).
  */
 import { MissingEnvError } from "./errors";
 
@@ -259,7 +259,15 @@ export async function waitForWorld(
         );
       const worldId = op.response?.world_id;
       if (!worldId) throw new MarbleError(500, "Operation finished without a world_id", op);
-      return { world: await getWorld(worldId), operation: op };
+      // The world is paid for by now: ride out a transient error instead of losing it.
+      for (let attempt = 0; ; attempt++) {
+        try {
+          return { world: await getWorld(worldId), operation: op };
+        } catch (error) {
+          if (!isTransientError(error) || attempt >= maxPollErrors) throw error;
+          await new Promise((resolve) => setTimeout(resolve, intervalMs));
+        }
+      }
     }
     if (Date.now() > deadline)
       throw new MarbleError(408, `Still generating after ${timeoutMs / 60_000} minutes`);

@@ -8,7 +8,7 @@
  * World Labs grounds the splat with `metric.y -= ground_plane_offset` (meters, after scaling), so
  * after the flip the floor is at y = -ground_plane_offset. GH-3 measured that within 3 cm on video
  * worlds, but on a 4-photo world the offset marked a bed top, so the floor is measured from the
- * collider mesh (floorHeight) and the offset is only a cross-check (D-009).
+ * collider mesh (floorHeight) and the offset is only a cross-check (GH-3).
  */
 import { Matrix4, Vector3 } from "three";
 

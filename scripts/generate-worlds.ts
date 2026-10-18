@@ -10,11 +10,11 @@
  *   pnpm worlds get <world_id>
  *   pnpm worlds inspect <world_id> [--json]   (asset sizes, collider format, floor vs ground_plane_offset)
  *
- * A generation takes about 6-8 minutes and 1,600 credits. Videos must be 30 s or shorter, so
- * prepare them first with `pnpm video:prepare` (sped up to 29 s, under 20 MB; D-009). Local
+ * A generation takes about 6-9 minutes and 1,600 credits. Videos must be 30 s or shorter, so
+ * prepare them first with `pnpm video:prepare` (sped up to 29 s, under 20 MB; GH-3). Local
  * files are uploaded straight to World Labs (media assets), so no public URL is needed. URLs
  * must open in an incognito window (no login).
- * Refuses to generate when DEMO_MODE=true (pass --force to override).
+ * Makes no World Labs call at all when DEMO_MODE=true (pass --force to override).
  */
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
@@ -129,7 +129,7 @@ async function remoteSize(url: string): Promise<number | null> {
 }
 
 /**
- * What GH-3 records per world (D-009): asset sizes, the collider's format and extensions, and
+ * What GH-3 records per world: asset sizes, the collider's format and extensions, and
  * the floor measured from the collider (marbleToThree + floorHeight) against ground_plane_offset.
  * World Labs' SPZ docs ground the splat with `metric.y -= ground_plane_offset` in the OpenCV frame,
  * so after our flip the collider floor should sit at y = -ground_plane_offset.
@@ -285,6 +285,13 @@ async function main() {
   });
   const [command, id] = positionals;
   const timeoutMinutes = Number(values.timeout ?? DEFAULT_TIMEOUT_MINUTES);
+  if (!(timeoutMinutes > 0)) throw new Error(`--timeout must be a positive number of minutes`);
+  // DEMO_MODE means no World Labs calls at all (CLAUDE.md), not only no paid ones.
+  if (command && isDemoMode() && !values.force) {
+    throw new Error(
+      "DEMO_MODE=true: no World Labs calls. Use the saved versions, or pass --force.",
+    );
+  }
 
   if (command === "status" && id) {
     console.log(JSON.stringify(await getOperation(id), null, 2));
@@ -300,11 +307,6 @@ async function main() {
   }
 
   if (command === "generate") {
-    if (isDemoMode() && !values.force) {
-      throw new Error(
-        "DEMO_MODE=true: refusing to generate. Use the saved versions, or pass --force.",
-      );
-    }
     const model = (values.model ?? settings.marbleModel) as MarbleModel;
     let request: GenerateWorldRequest;
     if (values.video) {
