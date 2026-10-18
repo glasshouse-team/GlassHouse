@@ -496,7 +496,7 @@ export const SEED_LISTINGS: SeedListing[] = [
     city: "Tbilisi",
     neighborhood: "Old Tbilisi",
     property_type: "apartment",
-    max_guests: 3,
+    max_guests: 2,
     bedrooms: 1,
     beds: 2,
     baths: 1,
