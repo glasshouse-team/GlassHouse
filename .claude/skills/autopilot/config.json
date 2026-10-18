@@ -1,0 +1,40 @@
+{
+  "$comment": "Settings for /autopilot (D-029). logins: GitHub accounts, used for review requests and the merge gate. contractFiles: files whose exports, props or columns need both developers (docs/CONTRACTS.md); a PR that changes their exports waits for a person.",
+  "repo": "glasshouse-team/GlassHouse",
+  "logins": { "temuri": "TemuriTsutskiridze", "beka": "beqa200" },
+  "labels": {
+    "channel": "agent-channel",
+    "humans": "needs-human-list",
+    "needsHuman": "needs-human",
+    "pr": "autopilot",
+    "hold": "autopilot-hold"
+  },
+  "contractFiles": [
+    "supabase/migrations/0001_core.sql",
+    "lib/schemas/core.ts",
+    "lib/schemas/world.ts",
+    "lib/schemas/verifier.ts",
+    "lib/events.ts",
+    "lib/pricing.ts",
+    "lib/validators.ts",
+    "lib/supabase.ts",
+    "lib/viewer.ts",
+    "lib/geometry/frame.ts",
+    "agents/core.ts",
+    "agents/context.ts",
+    "seed/fixtures.ts",
+    "tools/host-qa/askHome.ts",
+    "components/feed/ActivityFeed.tsx",
+    "components/tour/TourContext.tsx",
+    "components/tour-ext/index.tsx",
+    "components/tour-ext/actions.ts",
+    "components/xray/XrayPanel.tsx",
+    "components/tour/TourLauncher.tsx",
+    "components/floorplan/FloorPlanCard.tsx",
+    "components/ask-home/AskThisHome.tsx",
+    "components/ask-home/QuestionsWaiting.tsx",
+    "components/gaps/GapTasks.tsx",
+    "components/tour/WorldVersions.tsx",
+    "components/capture/CaptureLauncher.tsx"
+  ]
+}
