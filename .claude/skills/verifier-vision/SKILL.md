@@ -58,7 +58,7 @@ One top-down render plus the room list and one frame per room; output `RoomLabel
 
 ## GH-23 Check-in comparison (Beka)
 
-About 12 frames from the arrival video. Match each to a room, compare with that room's listing photos and world screenshots; report `matches`, `differences { room, listed, seen, evidence_frame, severity }`, `missing_items`. Only visible facts, no guesses about cleanliness. Define the schema in `lib/schemas/checkin.ts` (Beka's file; verifier.ts is Temuri's).
+Up to 8 frames from the arrival video, taken in the browser and sent inline, not stored (D-032). Match each to a room, compare with that room's listing photos and world screenshots; report `matches`, `differences { room, listed, seen, evidence_frame, severity }`, `missing_items`. Only visible facts, no guesses about cleanliness. Define the schema in `lib/schemas/checkin.ts` (Beka's file; verifier.ts is Temuri's).
 
 ## GH-24 Review claims
 
