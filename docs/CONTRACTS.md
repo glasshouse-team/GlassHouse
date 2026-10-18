@@ -111,7 +111,7 @@ createSignedUpload(bucket: "media" | "captures", path: string):
   Promise<{ bucket: string; path: string; signedUrl: string; token: string }>
 ```
 
-RLS gives the browser no write access, so every browser upload (rig screenshots GH-18/GH-19, walkthroughs GH-22, check-in videos GH-23) goes: a server route calls this, the browser PUTs the file to `signedUrl` (XMLHttpRequest for a progress bar) or calls `uploadToSignedUrl(path, token, file)`. Never send file bytes through a route body (Vercel caps bodies at 4.5 MB).
+RLS gives the browser no write access, so every browser upload (rig screenshots GH-18/GH-19, walkthroughs GH-22) goes: a server route calls this, the browser PUTs the file to `signedUrl` (XMLHttpRequest for a progress bar) or calls `uploadToSignedUrl(path, token, file)`. Never send file bytes through a route body (Vercel caps bodies at 4.5 MB). One exception: GH-23 sends at most 8 small JPEG check-in frames inline (D-033).
 
 ## 11. Demo ids: `seed/fixtures.ts` (Beka)
 

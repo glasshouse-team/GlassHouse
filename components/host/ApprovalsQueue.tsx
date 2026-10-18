@@ -64,11 +64,13 @@ export function ApprovalsQueue({ initial, listings }: ApprovalsQueueProps) {
       )
       .subscribe(async (status) => {
         if (status !== "SUBSCRIBED") return;
-        const { data } = await db
+        const { data, error } = await db
           .from("deals")
           .select("*")
           .eq("status", "agreed_pending_host")
           .in("listing_id", idsKey.split(","));
+        // Keep what's shown if the reload fails; live updates still arrive.
+        if (error) return;
         const fresh = (data ?? []).flatMap((row) => {
           const d = DealSchema.safeParse(row);
           if (!d.success || d.data.final_total_cents === null) return [];
