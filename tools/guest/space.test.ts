@@ -37,7 +37,8 @@ function gap(over: Partial<Gap> = {}): Gap {
     world_id: KITCHEN,
     room: "Kitchen",
     issue: "blank",
-    description: "The corner right of the cooktop is blank.",
+    description:
+      "The photo-frame wall is AI-filled: the 3D shows a door, an air conditioner and cables that are not there.",
     severity: 2,
     position: { x: 2, y: 0.9, z: 0 },
     view_dir: null,
@@ -63,9 +64,9 @@ const washer = anchor({
   position: { x: 0, y: 1.6, z: 3 },
   look_at: { x: 0, y: 0.5, z: 4 },
 });
-const cooktop = anchor({
+const frameWall = anchor({
   id: "33333333-3333-4333-8333-333333333333",
-  name: "cooktop",
+  name: "photo-frame wall",
   world_id: KITCHEN,
   room: "Kitchen",
   position: { x: 0, y: 1.6, z: 0 },
@@ -82,7 +83,7 @@ function space(over: Partial<Space> = {}): Space {
       { worldId: OFFICE, spot: "living", label: "Living room" },
       { worldId: KITCHEN, spot: "kitchen", label: "Kitchen" },
     ],
-    anchors: [desk, washer, cooktop],
+    anchors: [desk, washer, frameWall],
     gaps: [gap()],
     facts: [
       { key: "workspace", value: "desk, ultrawide monitor, office chair", confidence: 0.9 },
@@ -98,10 +99,10 @@ describe("distance and the honesty note", () => {
   });
 
   it("flags an anchor within 1.5 m of an AI-filled gap of its own world", () => {
-    // cooktop looks at (1, 0, 0); the gap is at (2, 0) => 1 m away.
-    expect(nearbyGap(cooktop, [gap()])?.id).toBe(gap().id);
-    expect(honestyNoteForAnchor(cooktop, [gap()])).toBe(HONESTY_NOTE);
-    expect(honestyNoteForAnchor(cooktop, [gap({ status: "requested" })])).toBe(HONESTY_NOTE);
+    // frameWall looks at (1, 0, 0); the gap is at (2, 0) => 1 m away.
+    expect(nearbyGap(frameWall, [gap()])?.id).toBe(gap().id);
+    expect(honestyNoteForAnchor(frameWall, [gap()])).toBe(HONESTY_NOTE);
+    expect(honestyNoteForAnchor(frameWall, [gap({ status: "requested" })])).toBe(HONESTY_NOTE);
   });
 
   it("counts exactly 1.5 m but not further", () => {
@@ -112,11 +113,11 @@ describe("distance and the honesty note", () => {
   });
 
   it("ignores filled or dismissed gaps, gaps without a position and other spots' gaps", () => {
-    expect(nearbyGap(cooktop, [gap({ status: "filled" })])).toBeNull();
-    expect(nearbyGap(cooktop, [gap({ status: "dismissed" })])).toBeNull();
-    expect(nearbyGap(cooktop, [gap({ position: null })])).toBeNull();
+    expect(nearbyGap(frameWall, [gap({ status: "filled" })])).toBeNull();
+    expect(nearbyGap(frameWall, [gap({ status: "dismissed" })])).toBeNull();
+    expect(nearbyGap(frameWall, [gap({ position: null })])).toBeNull();
     // Same coordinates, other world: they mean nothing in this spot (D-009).
-    expect(nearbyGap(cooktop, [gap({ world_id: OFFICE })])).toBeNull();
+    expect(nearbyGap(frameWall, [gap({ world_id: OFFICE })])).toBeNull();
     expect(nearbyGap(washer, [gap()])).toBeNull();
   });
 });
@@ -133,7 +134,7 @@ describe("space tools", () => {
   });
 
   it("adds the honesty note near the kitchen gap", () => {
-    const result = flyTo(space(), "Nino", cooktop.id);
+    const result = flyTo(space(), "Nino", frameWall.id);
     expect(result).toMatchObject({ ok: true, honestyNote: HONESTY_NOTE });
   });
 
@@ -193,15 +194,19 @@ describe("spaceCard", () => {
     const card = spaceCard(space());
     expect(card.current_spot).toBe("Living room");
     expect(card.anchors).toContainEqual({
-      id: cooktop.id,
-      name: "cooktop",
+      id: frameWall.id,
+      name: "photo-frame wall",
       kind: "object",
       room: "Kitchen",
       in_current_spot: false,
       near_ai_filled_area: true,
     });
     expect(card.ai_filled_areas).toEqual([
-      { room: "Kitchen", description: "The corner right of the cooktop is blank." },
+      {
+        room: "Kitchen",
+        description:
+          "The photo-frame wall is AI-filled: the 3D shows a door, an air conditioner and cables that are not there.",
+      },
     ]);
     expect(JSON.stringify(card)).not.toMatch(/position|look_at|"x"/);
   });

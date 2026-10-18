@@ -8,7 +8,14 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { MessageCircleQuestion, Send, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type KeyboardEvent,
+} from "react";
 import { useTour } from "@/components/tour/TourContext";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -28,6 +35,17 @@ export interface AskSpacePanelProps {
 /** Typing must not walk the camera (WASD, arrows): keep keys inside the panel. */
 const keepKeys = (e: KeyboardEvent) => e.stopPropagation();
 
+/** The panel starts open from the `sm` breakpoint up; on phones it starts closed so the tour shows. */
+const WIDE = "(min-width: 640px)";
+function subscribeWide(onChange: () => void) {
+  const query = window.matchMedia(WIDE);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+const isWide = () => window.matchMedia(WIDE).matches;
+// The server (and hydration) render it closed, so the markup always matches.
+const wideOnServer = () => false;
+
 export function AskSpacePanel({
   listingId,
   worldId = null,
@@ -35,7 +53,10 @@ export function AskSpacePanel({
   suggestions = SUGGESTED_QUESTIONS,
 }: AskSpacePanelProps) {
   const tour = useTour();
-  const [open, setOpen] = useState(true);
+  const wide = useSyncExternalStore(subscribeWide, isWide, wideOnServer);
+  // null until the guest opens or closes it; until then it follows the screen width.
+  const [chosen, setOpen] = useState<boolean | null>(null);
+  const open = chosen ?? wide;
   const [input, setInput] = useState("");
 
   // Actions run after awaits, so they read the latest tour (a fly_to can switch spots).
@@ -76,7 +97,7 @@ export function AskSpacePanel({
   if (!open)
     return (
       <Button
-        className="pointer-events-auto fixed right-4 bottom-4 z-30 rounded-full shadow-lg"
+        className="pointer-events-auto fixed right-4 bottom-4 z-30 h-11 rounded-full shadow-lg sm:h-9"
         onClick={() => setOpen(true)}
       >
         <MessageCircleQuestion /> Ask this space
@@ -86,7 +107,7 @@ export function AskSpacePanel({
   return (
     <section
       aria-label="Ask this space"
-      className="pointer-events-auto fixed right-4 bottom-4 z-30 flex max-h-[min(32rem,70vh)] w-[min(22rem,calc(100vw-2rem))] flex-col rounded-2xl border border-neutral-200 bg-white/95 text-sm text-neutral-900 shadow-xl backdrop-blur"
+      className="pointer-events-auto fixed right-4 bottom-4 z-30 flex max-h-[45vh] sm:max-h-[min(32rem,70vh)] w-[min(22rem,calc(100vw-2rem))] flex-col rounded-2xl border border-neutral-200 bg-white/95 text-sm text-neutral-900 shadow-xl backdrop-blur"
       onKeyDown={keepKeys}
       onKeyUp={keepKeys}
     >
@@ -95,6 +116,7 @@ export function AskSpacePanel({
         <Button
           variant="ghost"
           size="icon-sm"
+          className="size-11 sm:size-8"
           aria-label="Close Ask this space"
           onClick={() => setOpen(false)}
         >
@@ -113,7 +135,7 @@ export function AskSpacePanel({
                 <button
                   key={q}
                   type="button"
-                  className="rounded-full border border-neutral-300 px-3 py-1 text-xs hover:bg-neutral-100"
+                  className="min-h-11 rounded-full border border-neutral-300 px-3 py-1 text-xs hover:bg-neutral-100 sm:min-h-0"
                   onClick={() => ask(q)}
                 >
                   {q}
@@ -180,9 +202,15 @@ export function AskSpacePanel({
           maxLength={500}
           placeholder="Where would I work?"
           aria-label="Your question about this home"
-          className="min-w-0 flex-1 rounded-full border border-neutral-300 px-3 py-1.5 outline-none focus:border-neutral-500"
+          className="min-h-11 min-w-0 flex-1 rounded-full border border-neutral-300 px-3 py-1.5 text-base outline-none focus:border-neutral-500 sm:min-h-0 sm:text-sm"
         />
-        <Button type="submit" size="icon-sm" disabled={busy || !input.trim()} aria-label="Ask">
+        <Button
+          type="submit"
+          size="icon-sm"
+          className="size-11 sm:size-8"
+          disabled={busy || !input.trim()}
+          aria-label="Ask"
+        >
           <Send />
         </Button>
       </form>

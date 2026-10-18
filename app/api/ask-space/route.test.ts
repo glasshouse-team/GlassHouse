@@ -23,7 +23,7 @@ import { POST } from "./route";
 
 const LISTING = "00000000-0000-4000-8000-0000000000b2";
 const KITCHEN = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
-const COOKTOP = "33333333-3333-4333-8333-333333333333";
+const FRAME_WALL = "33333333-3333-4333-8333-333333333333";
 
 const space: Space = {
   listingId: LISTING,
@@ -33,9 +33,9 @@ const space: Space = {
   spots: [{ worldId: KITCHEN, spot: "kitchen", label: "Kitchen" }],
   anchors: [
     {
-      id: COOKTOP,
+      id: FRAME_WALL,
       world_id: KITCHEN,
-      name: "cooktop",
+      name: "photo-frame wall",
       kind: "object",
       room: "Kitchen",
       position: { x: 0, y: 1.6, z: 0 },
@@ -49,7 +49,8 @@ const space: Space = {
       world_id: KITCHEN,
       room: "Kitchen",
       issue: "blank",
-      description: "The corner right of the cooktop is blank.",
+      description:
+        "The photo-frame wall is AI-filled: the 3D shows a door, an air conditioner and cables that are not there.",
       severity: 2,
       position: { x: 2, y: 0.9, z: 0 },
       view_dir: null,
@@ -94,7 +95,7 @@ function scriptedModel(anchorId: string) {
     step(
       [
         { type: "text-start", id: "t1" },
-        { type: "text-delta", id: "t1", delta: "Here is the cooktop." },
+        { type: "text-delta", id: "t1", delta: "Here is the photo-frame wall." },
         { type: "text-end", id: "t1" },
       ],
       "stop",
@@ -150,7 +151,7 @@ describe("POST /api/ask-space", () => {
 
   it("says the 3D isn't ready without calling a model", async () => {
     lookup.current = { status: "no_3d", listingId: LISTING, listingTitle: "Tbilisi flat" };
-    const mock = scriptedModel(COOKTOP);
+    const mock = scriptedModel(FRAME_WALL);
     const response = await ask("Where would I work?");
     expect(response.status).toBe(200);
     const text = (await chunks(response))
@@ -162,8 +163,8 @@ describe("POST /api/ask-space", () => {
   });
 
   it("flies to the anchor, adds the honesty note and logs to the feed", async () => {
-    const mock = scriptedModel(COOKTOP);
-    const response = await ask("What's in the kitchen corner?");
+    const mock = scriptedModel(FRAME_WALL);
+    const response = await ask("What's on the kitchen wall by the photo frames?");
     const all = await chunks(response);
 
     expect(vi.mocked(loadSpace)).toHaveBeenCalledWith(
@@ -172,17 +173,17 @@ describe("POST /api/ask-space", () => {
     const output = all.find((c) => c.type === "tool-output-available");
     expect(output?.output).toMatchObject({
       ok: true,
-      action: { type: "fly_to", anchorId: COOKTOP },
+      action: { type: "fly_to", anchorId: FRAME_WALL },
       honestyNote: "That area is partly AI-filled; the host hasn't filmed it yet.",
     });
-    expect(all.some((c) => c.type === "text-delta" && c.delta === "Here is the cooktop.")).toBe(
-      true,
-    );
+    expect(
+      all.some((c) => c.type === "text-delta" && c.delta === "Here is the photo-frame wall."),
+    ).toBe(true);
 
     // The question reaches the model as data, after the home's anchors.
     const prompt = JSON.stringify(mock.doStreamCalls[0].prompt);
     expect(prompt).toContain('data name=\\"guest_question\\"');
-    expect(prompt).toContain(COOKTOP);
+    expect(prompt).toContain(FRAME_WALL);
     expect(prompt).not.toContain('\\"position\\"');
 
     const actions = vi.mocked(logEvent).mock.calls.map((c) => c[0]);
@@ -192,12 +193,12 @@ describe("POST /api/ask-space", () => {
     expect(actions).toContainEqual(
       expect.objectContaining({
         action: "tool.fly_to",
-        summary: "Guest agent showed Nino the cooktop",
-        payload: expect.objectContaining({ input: { anchorId: COOKTOP } }),
+        summary: "Guest agent showed Nino the photo-frame wall",
+        payload: expect.objectContaining({ input: { anchorId: FRAME_WALL } }),
       }),
     );
     // The guest's question never lands in the public feed.
-    expect(JSON.stringify(actions)).not.toContain("kitchen corner");
+    expect(JSON.stringify(actions)).not.toContain("by the photo frames");
   });
 
   it("refuses an anchor the home doesn't have", async () => {

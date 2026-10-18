@@ -10,7 +10,7 @@ export const SUGGESTED_QUESTIONS = [
   "Where would I work?",
   "Where's the washing machine?",
   "Show me the bed",
-  "What's in the kitchen?",
+  "What's on the kitchen wall by the photo frames?",
   "Is there a TV?",
 ];
 
