@@ -128,7 +128,8 @@ export function toTripBrief(draft: BriefDraft): {
 export function elsewhereNote(elsewhere: string[], searched: string[]): string | null {
   if (elsewhere.length === 0) return null;
   const where = searched.length > 0 ? searched.join(" and ") : "all of Georgia";
-  return `Glasshouse has no homes in ${elsewhere.join(" or ")} yet (only Tbilisi, Kazbegi, Batumi and Sighnaghi), so I searched ${where}.`;
+  const cities = `${SEARCH_CITIES.slice(0, -1).join(", ")} and ${SEARCH_CITIES.at(-1)}`;
+  return `Glasshouse has no homes in ${elsewhere.join(" or ")} yet (only ${cities}), so I searched ${where}.`;
 }
 
 /** The whole group's budget per night in cents, or null when the brief has none. */
