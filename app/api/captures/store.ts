@@ -83,6 +83,22 @@ export async function listCaptureFiles(folder: string): Promise<StoredFile[]> {
     });
 }
 
+/**
+ * Moves a gap to `requested` when its fill-in capture starts (GH-19 Record now), only while it is
+ * still `open` (a filled or dismissed gap keeps its status; a second capture changes nothing).
+ * Resolves the gap's room when this call changed the row, else null.
+ */
+export async function requestGapFill(gapId: string): Promise<{ room: string | null } | null> {
+  const { data, error } = await supabaseAdmin()
+    .from("gaps")
+    .update({ status: "requested" })
+    .eq("id", gapId)
+    .eq("status", "open")
+    .select("room");
+  if (error) throw new Error(`Could not update gap ${gapId}: ${error.message}`);
+  return data?.[0] ? { room: data[0].room } : null;
+}
+
 /** The listing a gap belongs to (through its world), or null when the gap does not exist. */
 export async function gapListingId(gapId: string): Promise<string | null> {
   const db = supabaseAdmin();

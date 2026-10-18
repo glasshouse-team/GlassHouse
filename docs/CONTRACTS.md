@@ -16,7 +16,7 @@ Applied in GH-5. Generated types: `lib/database.types.ts` (rerun `pnpm db:types`
 | ------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `core.ts`     | Beka   | `Cents`, `IsoDate`, `EventInputSchema`, `ListingSchema`, `HostPolicySchema`, `TripBriefSchema`, `QuoteSchema`, `DealSchema`, `DealMessageSchema` (types include `rejected`), `OfferTermsSchema`, `Amenity`, `ReviewSubRatingsSchema`, `ReviewSchema` |
 | `world.ts`    | Temuri | `Vec3Schema`, `WorldSchema`, `AnchorSchema`, `GapSchema`, `FloorPlanSchema`, `CaptureSchema` (meters, floor at y = 0)                                                                                                                                |
-| `verifier.ts` | Temuri | `XrayResultSchema`, `GapCheckResultSchema`, `RoomLabelsSchema`, `KNOWN_FACT_KEYS`, `ReviewClaimsResultSchema` and `ClaimSentiment` (GH-24)                                                                                                           |
+| `verifier.ts` | Temuri | `XrayResultSchema`, `GapCheckResultSchema` (+ `ViewCheckSchema`, `GapConfirmSchema`, D-047), `RoomLabelsSchema`, `KNOWN_FACT_KEYS`, `ReviewClaimsResultSchema` and `ClaimSentiment` (GH-24)                                                          |
 
 ## 3. Activity feed: `lib/events.ts` (Beka)
 

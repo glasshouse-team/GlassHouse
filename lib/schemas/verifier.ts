@@ -80,6 +80,26 @@ export const GapCheckResultSchema = z.object({
 });
 export type GapCheckResult = z.infer<typeof GapCheckResultSchema>;
 
+/**
+ * One view checked on its own against the real photos facing the same way (D-047). The code
+ * adds the view id and assembles a GapCheckResult from the six answers.
+ */
+export const ViewCheckSchema = z.object({
+  issue: z.union([GapIssue, z.literal("none")]),
+  description: z.string(),
+  bbox: BBoxSchema.nullable(),
+  severity: z.number().int().min(1).max(3).nullable(),
+  objects: z.array(z.object({ label: z.string(), bbox: BBoxSchema })),
+});
+export type ViewCheck = z.infer<typeof ViewCheckSchema>;
+
+/** Second look at one suspected gap (the red box): do the real photos show that content? */
+export const GapConfirmSchema = z.object({
+  shown_in_photos: z.boolean(),
+  reason: z.string(),
+});
+export type GapConfirm = z.infer<typeof GapConfirmSchema>;
+
 // ---------- GH-18 Room names on the top-down render ----------
 
 export const RoomLabelsSchema = z.object({

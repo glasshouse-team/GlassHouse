@@ -1,8 +1,9 @@
 import { getListing } from "@/lib/data/listings";
 import { errorResponse, jsonError, parseJson } from "@/lib/http";
+import { logEvent } from "@/lib/events";
 import { getViewer } from "@/lib/viewer";
-import { CreateCaptureSchema, captureObjectPaths, rawUrlFor } from "./schema";
-import { gapListingId, insertCapture, signUploads } from "./store";
+import { CreateCaptureSchema, captureObjectPaths, fillInSummary, rawUrlFor } from "./schema";
+import { gapListingId, insertCapture, requestGapFill, signUploads } from "./store";
 
 /**
  * POST /api/captures: register a phone capture and get signed upload URLs (GH-22, Temuri).
@@ -47,6 +48,19 @@ export async function POST(request: Request) {
       gap_id: body.kind === "fill_in" ? (body.gapId ?? null) : null,
     });
     const uploads = await signUploads(paths);
+    // Record now (GH-19): the gap is being re-shot, so it moves from open to requested.
+    if (body.kind === "fill_in" && body.gapId) {
+      const requested = await requestGapFill(body.gapId);
+      if (requested)
+        await logEvent({
+          actor_type: "human",
+          actor_name: `${viewer.name} (host)`,
+          action: "gap.requested",
+          summary: fillInSummary(viewer.name, requested.room),
+          listing_id: listing.id,
+          payload: { gap_id: body.gapId, capture_id: id },
+        });
+    }
     return Response.json({ captureId: id, uploads }, { status: 201 });
   } catch (error) {
     return errorResponse(error);
