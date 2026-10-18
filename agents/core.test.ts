@@ -79,6 +79,24 @@ describe("createAgent", () => {
     );
   });
 
+  it("keeps tool inputs out of the public feed unless their fields are listed (D-024)", async () => {
+    twoStepModel();
+    await createAgent({ name: "host", system: "Test agent", tools: { echo } }).generate({
+      prompt: "Say hi",
+    });
+    expect(vi.mocked(logEvent).mock.calls[0][0].payload).toMatchObject({ input: undefined });
+
+    vi.mocked(logEvent).mockClear();
+    twoStepModel();
+    await createAgent({
+      name: "host",
+      system: "Test agent",
+      tools: { echo },
+      logInputs: { echo: ["text", "missing"] },
+    }).generate({ prompt: "Say hi" });
+    expect(vi.mocked(logEvent).mock.calls[0][0].payload).toMatchObject({ input: { text: "hi" } });
+  });
+
   it("stops on a custom rule and passes effort to Claude", async () => {
     const mock = twoStepModel();
     const agent = createAgent({

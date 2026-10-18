@@ -4,6 +4,8 @@
  *
  * Every tool call is logged to the activity feed automatically. To control the feed
  * line, return `{ summary: "Host agent countered at $495", ...rest }` from the tool.
+ * Events are public, so tool inputs are logged only for the fields listed in `logInputs`
+ * (D-024): an input could carry a host floor or a guest maximum.
  *
  * Sonnet 5.5 ignores `temperature` and downgrades a forced `toolChoice` to "auto" (the
  * provider logs a warning), so check in code that the expected tool was called and retry.
@@ -53,6 +55,11 @@ export interface CreateAgentOptions<TOOLS extends ToolSet, OUTPUT extends Output
    * keyed by tool name, e.g. `{ make_offer: { policy } }`. Never visible to the model.
    */
   toolsContext?: Record<string, unknown>;
+  /**
+   * Input fields per tool that may go into the public feed payload, e.g.
+   * `{ search_listings: ["city", "guests"] }`. Tools not listed log no input (D-024).
+   */
+  logInputs?: { [K in keyof TOOLS]?: string[] };
 }
 
 /** The AI SDK's default runtime context type (not exported by "ai" itself). */
@@ -63,6 +70,13 @@ type Settings<TOOLS extends ToolSet, OUTPUT extends OutputInterface> = ToolLoopA
   AgentContext,
   OUTPUT
 >;
+
+/** Only the listed fields of a tool input, or undefined when none may be logged. */
+export function loggableInput(input: unknown, fields: string[] | undefined) {
+  if (!fields?.length || !input || typeof input !== "object") return undefined;
+  const source = input as Record<string, unknown>;
+  return Object.fromEntries(fields.filter((f) => f in source).map((f) => [f, source[f]]));
+}
 
 function summaryFrom(output: unknown): string | null {
   if (output && typeof output === "object" && "summary" in output) {
@@ -94,7 +108,11 @@ export function createAgent<TOOLS extends ToolSet, OUTPUT extends OutputInterfac
       summary,
       listing_id: options.listingId,
       deal_id: options.dealId,
-      payload: { input: toolCall.input, ok, ms: toolExecutionMs },
+      payload: {
+        ok,
+        ms: toolExecutionMs,
+        input: loggableInput(toolCall.input, options.logInputs?.[toolCall.toolName]),
+      },
     });
   };
 
