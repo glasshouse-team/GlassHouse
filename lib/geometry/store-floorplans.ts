@@ -134,7 +134,9 @@ export async function buildFloorPlans(
       .in("status", ["open", "requested"]);
     const gaps = (gapRows ?? []).flatMap((g) => {
       const p = Vec3Schema.safeParse(g.position);
-      return p.success ? [{ at: [p.data.x, p.data.z] as [number, number], radius_m: g.radius_m }] : [];
+      return p.success
+        ? [{ at: [p.data.x, p.data.z] as [number, number], radius_m: g.radius_m }]
+        : [];
     });
     const svg = renderPlanSvg(plan, { highlight: name, gaps });
     svgs.set(plan.spot, svg);

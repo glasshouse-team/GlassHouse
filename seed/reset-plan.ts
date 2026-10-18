@@ -14,6 +14,17 @@
 export const DEMO_TABLES = ["reservations", "deals", "conversations", "trip_briefs"] as const;
 export type DemoTable = (typeof DEMO_TABLES)[number];
 
+/**
+ * The seed's slugs as a PostgREST `in` list, for deleting homes added in the app (D-043).
+ * Refuses an empty list or an odd slug: `not in ()` would match, and delete, every listing.
+ */
+export function seedSlugList(slugs: readonly string[]): string {
+  if (slugs.length === 0) throw new Error("No seed slugs: refusing to delete listings");
+  const bad = slugs.find((s) => !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(s));
+  if (bad !== undefined) throw new Error(`Seed slug "${bad}" can't go in a PostgREST list`);
+  return `(${slugs.join(",")})`;
+}
+
 /** Spot keys that count as the way in; the tour starts at the entry spot (D-009). */
 const ENTRY_SPOTS = ["entrance", "entry", "hall", "hallway", "corridor"];
 

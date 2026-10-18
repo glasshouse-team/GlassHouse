@@ -12,10 +12,10 @@ import { getViewer } from "@/lib/viewer";
  */
 export async function POST(request: Request) {
   try {
-    const home = await parseJson(request, NewHomeSchema);
     const viewer = await getViewer();
     if (viewer.role !== "host")
       return jsonError(403, "hosts_only", "Switch to the host view to list a home.");
+    const home = await parseJson(request, NewHomeSchema);
 
     const listing = await createHostListing(viewer.profileId, home);
     await logEvent({

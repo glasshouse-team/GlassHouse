@@ -6,8 +6,10 @@ import {
   eventWatermark,
   pickEntrySpot,
   planWorldPublish,
+  seedSlugList,
   type ResetWorld,
 } from "./reset-plan";
+import { SEED_LISTINGS } from "./data/listings";
 
 const world = (over: Partial<ResetWorld> & Pick<ResetWorld, "id">): ResetWorld => ({
   version: 1,
@@ -155,5 +157,18 @@ describe("homes added in the app (D-043)", () => {
     });
     expect(plan.addedHomes).toEqual([]);
     expect(describePlan(plan, "hero-2")).toContain("keep listings: no homes were added in the app");
+  });
+});
+
+describe("seedSlugList", () => {
+  it("lists every seed slug for PostgREST", () => {
+    const list = seedSlugList(SEED_LISTINGS.map((l) => l.slug));
+    expect(list.startsWith("(hero-1,hero-2,")).toBe(true);
+    expect(list.split(",")).toHaveLength(SEED_LISTINGS.length);
+  });
+  it("refuses an empty list and slugs that would break it", () => {
+    expect(() => seedSlugList([])).toThrow(/refusing/);
+    expect(() => seedSlugList(["hero-1", "a,b"])).toThrow(/a,b/);
+    expect(() => seedSlugList(["hero-1", "x)"])).toThrow();
   });
 });

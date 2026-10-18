@@ -32,6 +32,13 @@ describe("NewHomeSchema", () => {
     expect(NewHomeSchema.safeParse({ ...home, title: "Flat" }).success).toBe(false);
     expect(NewHomeSchema.safeParse({ ...home, max_guests: 0 }).success).toBe(false);
   });
+
+  it("says which field is missing when a number is left blank", () => {
+    const blank = NewHomeSchema.safeParse({ ...home, beds: Number.NaN });
+    expect(blank.error?.issues[0]?.message).toBe("Add the number of beds");
+    const noPrice = NewHomeSchema.safeParse({ ...home, base_price_cents: Number.NaN });
+    expect(noPrice.error?.issues[0]?.message).toBe("Add a nightly price in dollars");
+  });
 });
 
 describe("slugs", () => {

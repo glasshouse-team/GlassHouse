@@ -12,6 +12,7 @@ import {
   eventWatermark,
   type DemoTable,
   type ResetPlan,
+  seedSlugList,
   type WorldPublishPlan,
 } from "./reset-plan";
 import { restoreHeroManual, restoreHeroPolicy } from "./seed";
@@ -20,7 +21,7 @@ import { restoreHeroManual, restoreHeroPolicy } from "./seed";
 export const DEMO_WORLD = { listing: HERO_LISTINGS.hero2, version: 1 } as const;
 
 /** The seed's slugs, as a PostgREST list: listings outside it were added in the app. */
-const SEED_SLUGS = `(${SEED_LISTINGS.map((l) => l.slug).join(",")})`;
+const SEED_SLUGS = seedSlugList(SEED_LISTINGS.map((l) => l.slug));
 
 function check(error: { message: string } | null, what: string): void {
   if (error) throw new Error(`Demo reset failed at ${what}: ${error.message}`);

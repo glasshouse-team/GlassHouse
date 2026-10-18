@@ -28,11 +28,15 @@ export const NewHomeSchema = z.object({
     .nullable()
     .default(null),
   property_type: z.enum(PROPERTY_TYPES),
-  max_guests: z.number().int().min(1).max(16),
-  bedrooms: z.number().int().min(0).max(20),
-  beds: z.number().int().min(1).max(30),
-  baths: z.number().min(0).max(10).multipleOf(0.5),
-  base_price_cents: Cents.min(1_000, "The nightly price must be at least $10").max(1_000_000),
+  max_guests: z.number("Add how many guests can stay").int().min(1, "At least 1 guest").max(16),
+  bedrooms: z.number("Add the number of bedrooms").int().min(0).max(20),
+  beds: z.number("Add the number of beds").int().min(1, "At least 1 bed").max(30),
+  baths: z.number("Add the number of baths").min(0).max(10).multipleOf(0.5, "Baths go in halves"),
+  base_price_cents: z
+    .number("Add a nightly price in dollars")
+    .int()
+    .min(1_000, "The nightly price must be at least $10")
+    .max(1_000_000),
   cleaning_fee_cents: Cents.max(100_000),
   amenities: z.array(Amenity).max(30).default([]),
 });

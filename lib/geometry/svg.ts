@@ -148,7 +148,10 @@ export function renderPlanSvg(plan: PlanShape, options: RenderOptions = {}): str
   out.push(
     `<g stroke="${c.wall}" stroke-width="0.1" stroke-linecap="square" fill="none">` +
       plan.walls
-        .map(([x1, z1, x2, z2]) => `<line x1="${fmt(x1)}" y1="${fmt(z1)}" x2="${fmt(x2)}" y2="${fmt(z2)}"/>`)
+        .map(
+          ([x1, z1, x2, z2]) =>
+            `<line x1="${fmt(x1)}" y1="${fmt(z1)}" x2="${fmt(x2)}" y2="${fmt(z2)}"/>`,
+        )
         .join("") +
       `</g>`,
   );

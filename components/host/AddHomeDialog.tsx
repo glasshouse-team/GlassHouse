@@ -48,6 +48,9 @@ const COUNTS = [
 ] as const;
 type CountKey = (typeof COUNTS)[number]["key"];
 
+/** A typed count as a number; blank is NaN, so the form says what is missing instead of 0. */
+const count = (value: string) => (value.trim() === "" ? Number.NaN : Number(value));
+
 /**
  * "Add a home" on the host dashboard (D-043): the basics a guest needs to find and price the
  * home. POST /api/listings publishes it with default agent rules, then the host goes to the
@@ -77,19 +80,18 @@ export function AddHomeDialog() {
       neighborhood,
       description,
       property_type: type,
-      max_guests: Number(counts.max_guests),
-      bedrooms: Number(counts.bedrooms),
-      beds: Number(counts.beds),
-      baths: Number(counts.baths),
-      base_price_cents: dollarsToCents(price),
+      max_guests: count(counts.max_guests),
+      bedrooms: count(counts.bedrooms),
+      beds: count(counts.beds),
+      baths: count(counts.baths),
+      base_price_cents: dollarsToCents(price) ?? Number.NaN,
       cleaning_fee_cents: dollarsToCents(cleaning) ?? 0,
       amenities,
     });
     if (!parsed.success) {
       toast.error(
-        parsed.error.issues[0]?.message.startsWith("Invalid")
-          ? "Check the fields: whole numbers for rooms, prices in dollars."
-          : (parsed.error.issues[0]?.message ?? "Check the fields."),
+        parsed.error.issues[0]?.message ??
+          "Check the fields: whole numbers for rooms, prices in dollars.",
       );
       return;
     }
