@@ -5,9 +5,10 @@
  * answers GapCheckResultSchema; code casts a ray per finding into the collider, merges gaps
  * within 1 m and scores coverage. No World Labs calls.
  *
- * `checkSpotWorld` only reads. `saveSpotCheck` writes: it replaces this check's own earlier open
- * gaps of the world, never a known gap (tools/verifier/known-gap.ts, D-041) and never a gap a host
- * already acted on, and skips findings within 1 m of a gap it keeps.
+ * `checkSpotWorld` only reads. `saveSpotCheck` writes: it replaces the world's open gaps (gaps has
+ * no source column, so every open gap counts as an earlier automatic one) except a known gap
+ * (tools/verifier/known-gap.ts, D-041); gaps a host acted on stay. Findings within 1 m of a kept
+ * gap, and in a known-gap world findings with that gap's (issue, room), are not stored.
  */
 import { generateText, NoObjectGeneratedError, Output, type LanguageModel } from "ai";
 import sharp from "sharp";
@@ -23,6 +24,7 @@ import {
   GAP_RADIUS_M,
   gapCandidates,
   mergeGaps,
+  missingViews,
   nearAny,
   placeAlongRay,
   viewCoverage,
@@ -121,16 +123,32 @@ async function askVerifier(
       const { output, usage: used } = await generateText({
         model,
         output: Output.object({ schema: GapCheckResultSchema }),
-        system: loadPrompt("verifier-gaps", { room }),
+        system: loadPrompt("verifier-gaps", { room: promptRoom(room) }),
         messages: [{ role: "user", content }],
       });
       usage.inputTokens += used.inputTokens ?? 0;
       usage.outputTokens += used.outputTokens ?? 0;
-      return { result: output, usage };
+      // Every view needs a finding, or the coverage would be guessed: retry once, then fail.
+      const missing = missingViews(output, views);
+      if (missing.length === 0) return { result: output, usage };
+      if (attempt >= 2) throw new Error(`The Verifier left out views ${missing.join(", ")}`);
     } catch (error) {
       if (!NoObjectGeneratedError.isInstance(error) || attempt >= 2) throw error;
+      usage.inputTokens += error.usage?.inputTokens ?? 0;
+      usage.outputTokens += error.usage?.outputTokens ?? 0;
     }
   }
+}
+
+/** The room name as it goes into the prompt: host text, so letters, digits and spaces only. */
+export function promptRoom(room: string): string {
+  return (
+    room
+      .replace(/[^\p{L}\p{N} ]+/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 40) || "room"
+  );
 }
 
 /** Runs the check on one spot world. Reads only. */
@@ -162,6 +180,7 @@ export async function checkSpotWorld(
   const [pano, colliderBytes, frames] = await Promise.all([
     download(world.pano_url, "panorama").then(decodeRgb),
     download(world.collider_mesh_url, "collider"),
+    // Listing photos may be seed URLs outside our storage (as in the X-ray); they are images only.
     Promise.all(realPhotos.map((p) => prepareImage(p.url))),
   ]);
 
@@ -203,7 +222,7 @@ export async function checkSpotWorld(
     realFrames: frames.length,
     result,
     gaps: placed,
-    coverage: viewCoverage(result, views.length),
+    coverage: viewCoverage(result, views),
     usage,
   };
 }
@@ -280,10 +299,7 @@ export async function saveSpotCheck(
   const world = { listing_id: check.listingId, version: check.version, spot: check.spot };
   const known = knownGapsFor(world);
   const plan = planGapWrite(existing ?? [], check.gaps, check.room, known);
-  if (plan.deleteIds.length) {
-    const { error: delError } = await db.from("gaps").delete().in("id", plan.deleteIds);
-    if (delError) throw new Error(`Could not clear old gaps: ${delError.message}`);
-  }
+  // Insert first, then delete the old rows by id: a failed insert leaves the old gaps in place.
   if (plan.insert.length) {
     const { error: insError } = await db.from("gaps").insert(
       plan.insert.map((g) => ({
@@ -300,6 +316,10 @@ export async function saveSpotCheck(
       })),
     );
     if (insError) throw new Error(`Could not save gaps: ${insError.message}`);
+  }
+  if (plan.deleteIds.length) {
+    const { error: delError } = await db.from("gaps").delete().in("id", plan.deleteIds);
+    if (delError) throw new Error(`Could not clear old gaps: ${delError.message}`);
   }
   // A known-gap world's score comes from its ring photo count (D-041).
   const ringScored = known.length > 0;

@@ -195,7 +195,7 @@ async function check(listing: string) {
   if (!row) fail(`No listing "${listing}"`);
   let query = db
     .from("worlds")
-    .select("id, version, spot, pano_url")
+    .select("id, version, spot, pano_url, collider_mesh_url, metric_scale_factor")
     .eq("listing_id", row.id)
     .in("status", ["ready", "published"]);
   if (values.version) query = query.eq("version", Number(values.version));
@@ -209,14 +209,18 @@ async function check(listing: string) {
   const byPano = new Map<string, Awaited<ReturnType<typeof checkSpotWorld>>>();
   for (const w of worlds) {
     const started = Date.now();
-    const shared = w.pano_url ? byPano.get(w.pano_url) : undefined;
+    // Same panorama, collider and scale = the same world files (positions depend on all three).
+    const filesKey = w.pano_url
+      ? `${w.pano_url}|${w.collider_mesh_url}|${w.metric_scale_factor}`
+      : null;
+    const shared = filesKey ? byPano.get(filesKey) : undefined;
     const result = shared
       ? { ...shared, worldId: w.id, version: w.version }
       : await checkSpotWorld(w.id);
-    if (w.pano_url && !shared) byPano.set(w.pano_url, result);
+    if (filesKey && !shared) byPano.set(filesKey, result);
     if (shared)
       console.log(
-        `\n(${w.spot} v${w.version} shares its panorama with v${shared.version}: same findings)`,
+        `\n(${w.spot} v${w.version} shares its files with v${shared.version}: same findings)`,
       );
     console.log(
       `\n${row.slug} v${w.version} ${w.spot} (world ${w.id}): ${result.realFrames} real frames, ` +

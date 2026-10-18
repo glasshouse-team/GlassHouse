@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { GapCheckResult } from "@/lib/schemas/verifier";
-import { gapCandidates, mergeGaps, placeAlongRay, viewCoverage } from "./gap-findings";
+import {
+  gapCandidates,
+  mergeGaps,
+  missingViews,
+  placeAlongRay,
+  viewCoverage,
+} from "./gap-findings";
 import { directionAzimuth, viewSpecs } from "./gap-views";
 
 const views = viewSpecs();
@@ -65,8 +71,21 @@ describe("mergeGaps", () => {
 
 describe("viewCoverage", () => {
   it("is the share of views without an issue", () => {
-    expect(viewCoverage(result, 6)).toBeCloseTo(3 / 6, 9);
-    expect(viewCoverage({ views: [], objects: [] }, 6)).toBe(1);
-    expect(viewCoverage(result, 0)).toBeNull();
+    // Only v0 is answered and clean; v1-v3 are missing, v4 and v5 flagged, v9 is ignored.
+    expect(viewCoverage(result, views)).toBeCloseTo(1 / 6, 9);
+    const allClean = views.map((v) => ({
+      view_id: v.id,
+      issue: "none" as const,
+      description: "ok",
+      bbox: null,
+      severity: null,
+    }));
+    expect(viewCoverage({ views: allClean, objects: [] }, views)).toBe(1);
+    expect(viewCoverage({ views: [], objects: [] }, views)).toBe(0);
+    expect(viewCoverage(result, [])).toBeNull();
+  });
+
+  it("lists the views the model did not answer", () => {
+    expect(missingViews(result, views)).toEqual(["v1", "v2", "v3"]);
   });
 });

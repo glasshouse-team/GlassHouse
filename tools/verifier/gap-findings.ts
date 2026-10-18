@@ -11,6 +11,8 @@ import { viewRay, type ViewSpec } from "./gap-views";
 export const MISS_DISTANCE_M = 2;
 export const MERGE_DISTANCE_M = 1;
 export const GAP_RADIUS_M = 1;
+/** Longest stored gap description (model text). */
+export const MAX_DESCRIPTION = 300;
 
 export interface GapCandidate {
   viewId: string;
@@ -39,7 +41,7 @@ export function gapCandidates(result: GapCheckResult, views: readonly ViewSpec[]
     out.push({
       viewId: f.view_id,
       issue: f.issue,
-      description: f.description.trim(),
+      description: f.description.trim().slice(0, MAX_DESCRIPTION),
       severity: f.severity ?? 1,
       dir: viewRay(view.yaw, u, v),
     });
@@ -81,11 +83,23 @@ export function mergeGaps(
   return kept;
 }
 
-/** Share of views with no issue, 0..1 (null without views). */
-export function viewCoverage(result: GapCheckResult, viewCount: number): number | null {
-  if (viewCount <= 0) return null;
-  const flagged = new Set(result.views.filter((f) => f.issue !== "none").map((f) => f.view_id));
-  return Math.max(0, (viewCount - flagged.size) / viewCount);
+/** View ids the result has no finding for (the model must answer every view once). */
+export function missingViews(result: GapCheckResult, views: readonly ViewSpec[]): string[] {
+  const seen = new Set(result.views.map((f) => f.view_id));
+  return views.map((v) => v.id).filter((id) => !seen.has(id));
+}
+
+/**
+ * Share of the views whose findings are all "none", 0..1 (null without views). A view the model
+ * left out does not count as clean; findings for unknown view ids are ignored.
+ */
+export function viewCoverage(result: GapCheckResult, views: readonly ViewSpec[]): number | null {
+  if (views.length === 0) return null;
+  const clean = views.filter((v) => {
+    const findings = result.views.filter((f) => f.view_id === v.id);
+    return findings.length > 0 && findings.every((f) => f.issue === "none");
+  });
+  return clean.length / views.length;
 }
 
 /** True when a stored gap lies within `within` meters of a known gap (so it is not added again). */
