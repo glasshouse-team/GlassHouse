@@ -87,3 +87,4 @@ Commit them as `docs/teardown.md`.
 ## Decision updates
 
 - 2026-10-18 D-022: brand kit picked: Inter bundled with `next/font/local`, `--brand` #1f6f5c, `--brand-accent` #2f6fde, logo mark `public/logo-mark.svg` (was: system fonts and placeholder colors, D-008). Jira: no change needed (the ticket already asks for "1 font (e.g. Inter)")
+- 2026-10-18 D-009: The 3D is a per-spot tour: one world per room spot from an 8-photo ring, linked by our doorway arrows; capture is a photo ring per room, not a 60-90 s walkthrough. docs/teardown.md is updated to match (was: walkable whole-house 3D from a walkthrough video). Jira: pending
