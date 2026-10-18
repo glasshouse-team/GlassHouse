@@ -6,6 +6,7 @@ import {
   HeroHomeSchema,
   heroImportPlan,
   isOurStorageUrl,
+  operationProgress,
   urlExtension,
   worldAssetPath,
   worldAssetPlan,
@@ -146,5 +147,19 @@ describe("heroImportPlan", () => {
       (s, i) => s.marbleWorldId === plan[1].spots[i].marbleWorldId,
     );
     expect(shared.map((s) => s.spot)).toEqual(["entrance", "bathroom", "bedroom", "living"]);
+  });
+});
+
+describe("operationProgress", () => {
+  it("reads a progress number wherever the metadata puts it", () => {
+    expect(operationProgress({ done: false, metadata: { progress_percentage: 40 } })).toBe(0.4);
+    expect(operationProgress({ done: false, metadata: { status: { progress: 0.25 } } })).toBe(0.25);
+    expect(operationProgress({ done: false, metadata: { percent: 140 } })).toBe(1);
+  });
+
+  it("is 1 when done and null when the metadata has no number", () => {
+    expect(operationProgress({ done: true, metadata: null })).toBe(1);
+    expect(operationProgress({ done: false, metadata: { stage: "splatting" } })).toBeNull();
+    expect(operationProgress({ done: false, metadata: null })).toBeNull();
   });
 });

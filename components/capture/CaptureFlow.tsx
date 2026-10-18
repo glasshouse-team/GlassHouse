@@ -94,8 +94,8 @@ export function CaptureFlow({
     const run = () => {
       updateJob(key, { status: "uploading", progress: 0, error: undefined });
       uploadCapture(request, files, (p) => updateJob(key, { progress: p }))
-        .then(() => {
-          updateJob(key, { status: "done", progress: 1 });
+        .then((captureId) => {
+          updateJob(key, { status: "done", progress: 1, captureId });
           setDone((prev) => new Set([...prev, ...roomIdx]));
         })
         .catch((e: Error) => updateJob(key, { status: "failed", error: e.message }));
@@ -339,9 +339,13 @@ export function CaptureFlow({
 
       {step === "hub" && (
         <GenerateStep
+          listingId={listingId}
           demoMode={demoMode}
           ready={allDone && uploaded > 0 && !uploading}
           uploaded={uploaded}
+          captureIds={jobs.flatMap((j) =>
+            j.status === "done" && j.captureId ? [j.captureId] : [],
+          )}
         />
       )}
     </div>
@@ -376,19 +380,52 @@ function ModeCard({
 }
 
 /**
- * "Generate my 3D home". TODO(GH-10): POST /api/worlds is still a 501 stub on main, so this step
- * does not start a generation yet. When GH-10 lands, call it here with the uploaded capture ids
- * (never in DEMO_MODE, and never on a page view: only from this button).
+ * "Generate my 3D home" (GH-10): POST /api/worlds with the uploaded capture ids, one Marble
+ * generation per room spot. Only this button starts one, never a page view; in DEMO_MODE the
+ * route returns the saved version and calls nothing. Progress shows on the host dashboard.
  */
 function GenerateStep({
+  listingId,
   demoMode,
   ready,
   uploaded,
+  captureIds,
 }: {
+  listingId: string;
   demoMode: boolean;
   ready: boolean;
   uploaded: number;
+  captureIds: string[];
 }) {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+
+  async function generate() {
+    setBusy(true);
+    setResult(null);
+    try {
+      const res = await fetch("/api/worlds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingId, captureIds }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        message?: string;
+        demo?: boolean;
+        version?: number;
+        failed?: Array<{ error: string }>;
+      };
+      if (!res.ok) setResult(body.message ?? `Could not start the generation (HTTP ${res.status})`);
+      else if (body.demo)
+        setResult(`Demo mode: nothing was generated; guests keep v${body.version}.`);
+      else if (body.failed?.length) setResult(`v${body.version}: ${body.failed[0].error}`);
+      else
+        setResult(`v${body.version} is generating, about 6-9 minutes. Follow it on the dashboard.`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="space-y-2 rounded-xl border p-4">
       <h2 className="font-semibold">Generate my 3D home</h2>
@@ -400,13 +437,25 @@ function GenerateStep({
       ) : (
         <p className="text-sm text-muted-foreground">
           {ready
-            ? "All rooms are uploaded. 3D generation starts from the host dashboard once it is switched on (GH-10)."
+            ? `All rooms are uploaded. Each room spot costs about 1,600 World Labs credits.`
             : "Capture and upload every room first."}
         </p>
       )}
-      <Button disabled className="w-full">
-        Generate my 3D home
+      <Button
+        disabled={demoMode || !ready || busy || captureIds.length === 0}
+        className="w-full"
+        onClick={generate}
+      >
+        {busy ? "Starting…" : "Generate my 3D home"}
       </Button>
+      {result && (
+        <p className="text-sm">
+          {result}{" "}
+          <Link href="/host/dashboard" className="underline underline-offset-4">
+            Host dashboard
+          </Link>
+        </p>
+      )}
     </section>
   );
 }

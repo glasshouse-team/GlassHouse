@@ -45,7 +45,7 @@ flowchart TB
 | `/api/xray/[listingId]`          | POST          | Verifier facts and contradictions              | GH-9   |
 | `/api/captures`                  | POST          | Register a ring or clip and get signed uploads | GH-22  |
 | `/api/captures/[id]`             | PATCH         | Confirm the upload, log it                     | GH-22  |
-| `/api/worlds`                    | POST          | Start a Marble generation (new version)        | GH-10  |
+| `/api/worlds`                    | GET, POST     | List versions (host); start a generation       | GH-10  |
 | `/api/worlds/[id]/status`        | GET           | Poll; download and store assets when done      | GH-10  |
 | `/api/worlds/[id]/publish`       | POST          | Publish a version                              | GH-10  |
 | `/api/worlds/[id]/gaps`          | POST          | Gap check on rig screenshots                   | GH-19  |
