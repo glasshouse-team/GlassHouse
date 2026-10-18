@@ -48,12 +48,12 @@ Agents negotiate over `hostSubtotalCents` (nights + cleaning). The 10% service f
 createAgent({ name: "guest" | "host" | "verifier", system, tools, model?: "agent" | "bulk",
               maxSteps?, stopWhen?, output?, effort?: "low" | "medium" | "high",
               listingId?, dealId?, toolsContext?, logInputs? }): ToolLoopAgent  // .generate() and .stream()
-buildHostContext(listingId, mode: "qa" | "negotiate"): Promise<HostContext>  // policy only in "negotiate"
+buildHostContext(listingId, mode: "qa" | "negotiate"): Promise<HostContext>  // policy only in "negotiate"; manual only in "qa" (D-025)
 buildGuestContext(dealId): Promise<GuestContext>                              // includes the guest's limits; house_manual blank
 loadPrompt(name, vars): string                                                // agents/prompts/<name>.md
 ```
 
-Tool results may include `summary` to set the feed line. Feed payloads are public: a tool's input is logged only for the fields listed in `logInputs` (`{ search_listings: ["city", "guests"] }`), otherwise not at all (D-024). `asData(label, value)` (agents/data.ts) wraps guest, host and listing text for the user message. `toolsContext` is keyed by tool name (`{ make_offer: { policy } }`). `stopWhen` adds to the `maxSteps` cap; `output` is `Output.object({ schema })`. Prompts carry no policy numbers; listing text and facts go in the user message as quoted JSON.
+Also exported: `toHostContext(rows, mode)` and `toGuestContext(rows)` (the pure halves of the builders), `hostPrompt(context, hostName)` and `guestPrompt(context, guestName)` (system prompts from a context; the host one carries no policy numbers), `loggableInput(input, fields)` (agents/core.ts). Tool results may include `summary` to set the feed line; it is public like the payload, so it never names a policy value or a guest limit. Feed payloads are public: a tool's input is logged only for the fields listed in `logInputs` (`{ search_listings: ["city", "guests"] }`), otherwise not at all (D-024). `asData(label, value)` (agents/data.ts) wraps guest, host and listing text for the user message. `toolsContext` is keyed by tool name (`{ make_offer: { policy } }`). `stopWhen` adds to the `maxSteps` cap; `output` is `Output.object({ schema })`. Prompts carry no policy numbers; listing text and facts go in the user message as quoted JSON.
 
 ## 6. Page slots (Temuri's components rendered in Beka's pages)
 
