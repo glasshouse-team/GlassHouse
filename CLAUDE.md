@@ -15,7 +15,7 @@ The session context says which developer this session works for (`GLASSHOUSE_DEV
 1. Start with the `start-ticket` skill (`/start-ticket GH-<n>`): it reads the ticket, checks owner and dependencies, creates the `GH-<n>-<slug>` branch and loads the domain skills.
 2. Build in small steps; run `pnpm typecheck` and the relevant tests after each.
 3. Finish with the `finish-ticket` skill: checks, `pr-reviewer` subagent, PR, Jira.
-4. Ask before any write to Jira or GitHub (status changes, comments, pushes, PRs).
+4. Ask before any write to Jira or GitHub (status changes, comments, pushes, PRs), except under /autopilot, which writes and merges under the rules in .claude/skills/autopilot/SKILL.md (D-029).
 5. When you or the user change a decision (logic, a contract, the architecture, a rule or number a ticket states, the scope), use the `record-decision` skill right away: it logs it in docs/DECISIONS.md, fixes the docs and skills that now say the wrong thing, and updates every affected Jira ticket after one yes.
 
 ## Commands
