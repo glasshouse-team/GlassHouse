@@ -9,6 +9,7 @@ const h = vi.hoisted(() => ({
   policy: {} as Record<string, unknown>,
   secrets: { target: null as number | null, max: 0 },
   model: { current: undefined as unknown },
+  overlap: false,
 }));
 
 vi.mock("@/lib/claude", () => ({
@@ -17,7 +18,7 @@ vi.mock("@/lib/claude", () => ({
 }));
 vi.mock("@/lib/events", () => ({ logEvent: vi.fn(async () => {}) }));
 vi.mock("@/lib/data/reservations", () => ({
-  hasOverlappingReservation: async () => false,
+  hasOverlappingReservation: async () => h.overlap,
   createReservation: vi.fn(async () => "reservation-1"),
 }));
 vi.mock("@/lib/data/listings", () => ({
@@ -61,6 +62,7 @@ vi.mock("@/agents/context", async (importOriginal) => {
 });
 
 import { createReservation } from "@/lib/data/reservations";
+import { logEvent } from "@/lib/events";
 import { DEMO_DEAL, DEMO_PROFILES, HERO_1_POLICY, HERO_LISTINGS } from "@/seed/fixtures";
 import { runNegotiation } from "./flow";
 
@@ -115,6 +117,7 @@ function setUp(target: number | null, max: number, policy: Record<string, unknow
     ...policy,
   };
   h.secrets = { target, max };
+  h.overlap = false;
   return idleModel();
 }
 
@@ -123,7 +126,10 @@ const moves = () =>
     .filter((m) => m.type !== "rejected")
     .map((m) => `${m.actor}:${m.type}:${m.amount_cents ?? ""}`);
 
-beforeEach(() => vi.mocked(createReservation).mockClear());
+beforeEach(() => {
+  vi.mocked(createReservation).mockClear();
+  vi.mocked(logEvent).mockClear();
+});
 
 describe("runNegotiation", () => {
   it("plays the demo: $470, $495, $480, accept, then waits for the host", async () => {
@@ -147,6 +153,36 @@ describe("runNegotiation", () => {
       discount_cents: 3_000,
       total_cents: 53_900,
     });
+  });
+
+  it("logs every move code played to the feed, like an agent tool call", async () => {
+    setUp(DEMO_DEAL.guestTargetCents, DEMO_DEAL.guestMaxCents);
+    await runNegotiation("d", { pauseMs: 0 });
+    const toolEvents = vi
+      .mocked(logEvent)
+      .mock.calls.map(([e]) => e)
+      .filter((e) => e.action.startsWith("tool."));
+    expect(toolEvents.map((e) => e.summary)).toEqual([
+      "Guest agent offered $470 (-$50) for Nov 9 to Nov 13",
+      "Host agent countered at $495 (-$25)",
+      "Guest agent countered at $480 (-$40)",
+      "Host agent accepted $480 (-$40) for Nov 9 to Nov 13",
+    ]);
+    expect(toolEvents[0]).toMatchObject({
+      actor_type: "agent",
+      agent: "guest",
+      action: "tool.make_offer",
+      payload: { ok: true, fallback: true, input: { amountCents: 47_000, terms: [] } },
+    });
+    expect(JSON.stringify(toolEvents)).not.toMatch(/50000|500\.00|reason/);
+  });
+
+  it("ends declined, not approved, when the auto-booking fails", async () => {
+    setUp(49_000, 50_000);
+    h.overlap = true;
+    expect(await runNegotiation("d", { pauseMs: 0 })).toBe("declined");
+    expect(createReservation).not.toHaveBeenCalled();
+    expect(vi.mocked(logEvent).mock.calls.map(([e]) => e.action)).toContain("deal.booking_failed");
   });
 
   it("never lets the host go below the $442 floor after a lowball", async () => {
@@ -188,7 +224,7 @@ describe("secrets in prompts", () => {
       const text = JSON.stringify(call.prompt);
       const isGuest = text.includes("guest agent for Nino");
       const forbidden = isGuest
-        ? ["10130", "101.30", "48770", "487.70"]
+        ? ["10130", "101.30", "48770", "487.70", "44520", "445.20"]
         : ["50110", "501.10", "46990", "469.90"];
       for (const secret of forbidden) expect(text).not.toContain(secret);
     }
