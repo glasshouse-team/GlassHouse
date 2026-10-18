@@ -23,11 +23,18 @@ export interface HomeTabsProps {
 /**
  * The host's homes as tabs (GH-8): one home's tools at a time, picked from a tab row that
  * scrolls sideways, or with the arrows (keyboard: left and right). The open home goes in
- * `?home=<slug>` so a reload or a shared link opens it again. Every panel stays mounted, so
+ * `?home=<slug>` so a reload or a shared link opens it again; Home and End jump to the ends. Every panel stays mounted, so
  * unsaved form edits survive switching tabs.
  */
 export function HomeTabs({ homes, initial, children }: HomeTabsProps) {
   const [active, setActive] = useState(initial);
+  // A client-side visit to another ?home= keeps this component mounted: follow the new value
+  // (adjusted while rendering, as React recommends, instead of in an effect).
+  const [seenInitial, setSeenInitial] = useState(initial);
+  if (initial !== seenInitial) {
+    setSeenInitial(initial);
+    setActive(initial);
+  }
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   const panels = Children.toArray(children);
 
@@ -50,10 +57,19 @@ export function HomeTabs({ homes, initial, children }: HomeTabsProps) {
   }
 
   function onKeyDown(event: React.KeyboardEvent) {
-    const delta = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
-    if (delta === 0) return;
+    const target =
+      event.key === "ArrowRight"
+        ? stepHome(active, 1, homes.length)
+        : event.key === "ArrowLeft"
+          ? stepHome(active, -1, homes.length)
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? homes.length - 1
+              : null;
+    if (target === null) return;
     event.preventDefault();
-    open(stepHome(active, delta, homes.length), true);
+    open(target, true);
   }
 
   if (homes.length === 0) return null;
@@ -75,7 +91,7 @@ export function HomeTabs({ homes, initial, children }: HomeTabsProps) {
           role="tablist"
           aria-label="Your homes"
           onKeyDown={onKeyDown}
-          className="flex min-w-0 flex-1 gap-2 overflow-x-auto [scrollbar-width:thin]"
+          className="thin-scrollbar flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1.5"
         >
           {homes.map((home, i) => (
             <button
