@@ -30,7 +30,10 @@ export interface RunScore {
 export function scoreRun(result: XrayResult, expected: Expected[string] | undefined): RunScore {
   const lies = expected?.lies ?? [];
   const texts = result.contradictions.map((c) => `${c.claim} ${c.finding}`.toLowerCase());
-  const hits = (match: string[], text: string) => match.some((m) => text.includes(m.toLowerCase()));
+  // Whole words only: "sea" must not match "seat" or "season".
+  const escape = (m: string) => m.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const hits = (match: string[], text: string) =>
+    match.some((m) => new RegExp(`\\b${escape(m)}\\b`).test(text));
 
   const caught = lies.filter((lie) => texts.some((t) => hits(lie.match, t))).map((l) => l.name);
   const invented = result.contradictions

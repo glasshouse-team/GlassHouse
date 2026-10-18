@@ -53,3 +53,28 @@ The goal is simple: you never edit the same file, and `main` always works.
 - Changed a contract or added a migration: one message with what changed and what they need to run.
 - Changed a decision (logic, architecture, a rule or number in a ticket): `/record-decision <what changed>`. It adds the row to docs/DECISIONS.md, fixes the docs, comments on and corrects the affected Jira tickets after one yes, and drafts the heads-up message. `/record-decision sync` pushes any rows still marked `pending`.
 - Sleep in turns (Temuri 18:00-20:00, Beka 20:00-22:00 in build hours).
+
+## Autopilot (D-029)
+
+`/loop /autopilot` in each developer's Claude Code runs the project without waiting on people.
+
+- **Reviews and merges:** each Claude reviews and approves the other's PRs, merges its own once `ap gate` passes (CI green and peer-approved), then moves its Jira tickets and starts the next one.
+- **Talking:** the two Claudes talk on the pinned **🤖 Agent channel** issue.
+- **While working:** a background watcher hands new messages and review requests to a side subagent in its own worktree, so the main ticket keeps moving. Each side pulls `main` whenever the other merges.
+- **People:** you get only what a Claude cannot do, as boxes on the pinned **🙋 Needs a human** issue: footage and photos of a real home, World Labs credits, a real-phone run of camera features, and PRs that edit an applied migration or the agents' own rules (CLAUDE.md, settings, hooks, the autopilot skill). The Claudes source stock photos themselves, run `pnpm db:push` after a migration merges, and test every page in a browser at laptop and phone size, recording the 20-second clip for Jira. Tick a box when it's done. You can also write plain comments on the channel; both Claudes read them.
+
+Skill and rules: `.claude/skills/autopilot/SKILL.md`. Helper: `node .claude/skills/autopilot/autopilot.mjs` (`whoami`, `setup`, `inbox`, `post`, `reviews`, `mine`, `gate`, `next`, `human`, `watch`).
+
+### Turning it on (each developer, once)
+
+The PR that added autopilot already made edits 1 and 2. A person merges it, because a Claude cannot widen its own permissions. Each developer then does 3 and 4. For reference:
+
+1. **CLAUDE.md, "Every ticket", rule 4.** Replace it with:
+   `4. Ask before any write to Jira or GitHub (status changes, comments, pushes, PRs), except under /autopilot, which writes and merges under the rules in .claude/skills/autopilot/SKILL.md (D-029).`
+2. **`.claude/settings.json`, `permissions`.** Add these, so the loop is not stopped by prompts.
+   - To `allow`: `"Bash(git fetch)"`, `"Bash(git fetch *)"`, `"Bash(git switch *)"`, `"Bash(git add *)"`, `"Bash(git commit *)"`, `"Bash(git merge *)"`, `"Bash(git worktree *)"`, `"Bash(git push -u origin GH-*)"`, `"Bash(node .claude/skills/autopilot/autopilot.mjs *)"`, `"Bash(gh pr *)"`, `"Bash(gh run *)"`, `"Bash(gh issue view *)"`, `"Bash(gh issue list *)"`, `"mcp__atlassian__getJiraIssue"`, `"mcp__atlassian__searchJiraIssuesUsingJql"`, `"mcp__atlassian__addOrEditJiraIssueComment"`, `"mcp__atlassian__transitionJiraIssue"`, `"mcp__atlassian__editJiraIssue"`, `"mcp__atlassian__executeRead"`.
+   - To `deny`: `"Bash(git push --force*)"`, `"Bash(git push -f*)"`, `"Bash(git push * --force*)"`, `"Bash(git push origin main*)"`, `"Bash(git push origin HEAD:main*)"`, `"Bash(git push * main)"`, `"Bash(gh pr merge * --admin*)"`.
+3. **Log in:** `gh auth status` should show your own GitHub account (Beka: `beqa200`), and `/mcp` should show atlassian connected.
+4. **Start it:** pull `main`, open Claude Code in the repo, and run `/loop /autopilot`. The first tick runs `ap setup`, which is safe to repeat.
+
+**To pause:** `/autopilot stop`, or press Esc. **To keep one PR from merging:** add the `autopilot-hold` label.

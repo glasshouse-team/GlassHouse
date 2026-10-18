@@ -46,6 +46,15 @@ describe("scoreRun", () => {
     expect(score.invented).toEqual(["fast elevator"]);
   });
 
+  it("matches whole words only", () => {
+    const score = scoreRun(
+      result({ contradictions: [contradiction("seats for six", "only four seats at the table")] }),
+      expected[LIE_LISTING_SLUGS.seaView],
+    );
+    expect(score.caught).toEqual([]);
+    expect(score.invented).toEqual(["seats for six"]);
+  });
+
   it("reports a missed lie and wrong facts", () => {
     const score = scoreRun(
       result({ facts: [{ key: "beds_counted", value: 6, evidence: ["p1"], confidence: 0.8 }] }),
