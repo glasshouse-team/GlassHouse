@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { runDemoChecks } from "./checks";
 import { type CheckResult, type CheckState, overallState } from "./status";
 
-export const metadata = { title: "Demo pre-flight · Glasshouse" };
+export const metadata = { title: "Demo pre-flight · Glasshouse", robots: { index: false } };
 
 const STATE_STYLE: Record<CheckState, { dot: string; text: string; word: string }> = {
   ok: { dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-400", word: "OK" },

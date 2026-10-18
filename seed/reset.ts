@@ -52,7 +52,7 @@ export async function planReset(): Promise<ResetPlan> {
 
   const worlds = await db
     .from("worlds")
-    .select("id, version, spot, status, spz_url, created_at")
+    .select("id, version, spot, status, spz_url, collider_mesh_url, created_at")
     .eq("listing_id", DEMO_WORLD.listing.id);
   check(worlds.error, "read hero-2 worlds");
   const worldIds = (worlds.data ?? []).map((w) => w.id);
@@ -102,8 +102,8 @@ async function publishWorlds(plan: WorldPublishPlan): Promise<void> {
 export async function applyReset(plan: ResetPlan): Promise<void> {
   const db = supabaseAdmin();
   // Reservations first (checkins cascade), then deals (messages, secrets, deal events).
+  // Always delete, even at a planned 0, so rows made since planning go too.
   for (const table of DEMO_TABLES) {
-    if (plan.deletions[table] === 0) continue;
     const { error } = await db.from(table).delete().not("id", "is", null);
     check(error, `delete ${table}`);
   }

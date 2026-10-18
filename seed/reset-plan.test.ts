@@ -14,6 +14,7 @@ const world = (over: Partial<ResetWorld> & Pick<ResetWorld, "id">): ResetWorld =
   spot: "main",
   status: "ready",
   spz_url: `https://cdn.example/${over.id}.spz`,
+  collider_mesh_url: `https://cdn.example/${over.id}.glb`,
   created_at: "2026-10-18T10:00:00Z",
   ...over,
 });
@@ -62,7 +63,11 @@ describe("planWorldPublish", () => {
 
   it("skips when v1 has no showable spot", () => {
     const step = planWorldPublish(
-      [world({ id: "a", status: "generating" }), world({ id: "b", spz_url: null })],
+      [
+        world({ id: "a", status: "generating" }),
+        world({ id: "b", spz_url: null }),
+        world({ id: "c", collider_mesh_url: null }),
+      ],
       [],
       1,
     );

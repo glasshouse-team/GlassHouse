@@ -25,6 +25,7 @@ export interface ResetWorld {
   spot: string;
   status: string;
   spz_url: string | null;
+  collider_mesh_url: string | null;
   created_at: string;
 }
 
@@ -84,10 +85,17 @@ export function planWorldPublish(
 ): WorldStep {
   if (worlds.length === 0) return { kind: "skip", reason: "no worlds exist yet" };
   const spots = worlds.filter(
-    (w) => w.version === version && SHOWABLE.has(w.status) && Boolean(w.spz_url),
+    (w) =>
+      w.version === version &&
+      SHOWABLE.has(w.status) &&
+      Boolean(w.spz_url) &&
+      Boolean(w.collider_mesh_url),
   );
   if (spots.length === 0) {
-    return { kind: "skip", reason: `v${version} has no ready spot world with a splat yet` };
+    return {
+      kind: "skip",
+      reason: `v${version} has no ready spot world with a splat and collider yet`,
+    };
   }
   const entry = pickEntrySpot(spots);
   const ids = new Set(spots.map((w) => w.id));

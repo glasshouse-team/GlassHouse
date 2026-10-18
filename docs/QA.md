@@ -7,7 +7,9 @@ Tick each line on the **deployed URL** with `DEMO_MODE=true`, after `pnpm demo:r
 1. `pnpm demo:reset --dry-run` shows what will go (deals, reservations, Q&A conversations, trip briefs, events after the latest `seed.completed`). Then `pnpm demo:reset`; it ends with a table of seed rows kept and **Demo ready**.
 2. Open `/demo/check` on the deployed URL. Every row green (amber rows are explained on the row). Reload to re-run; each check has a 5 s limit.
 
-`pnpm demo:reset` never deletes seed rows (listings, photos, reviews, policies, availability) or 3D, capture and X-ray rows. It restores hero-1's host policy (`HERO_1_POLICY`) and house manual (drops answers saved from Q&A, GH-16) and publishes hero 2 v1, the gap version (D-026): v1's spot worlds become `published`, other published versions go back to `ready`, v1's requested or filled gaps go back to `open`, and `listings.published_world_id` points at v1's entry spot. With no hero 2 worlds yet it says so and skips that step.
+`pnpm demo:reset` never deletes seed rows (listings, photos, reviews, policies, availability) or 3D, capture and X-ray rows. It restores hero-1's host policy (`HERO_1_POLICY`) and house manual (drops answers saved from Q&A, GH-16) and publishes hero 2 v1, the gap version (D-026): v1's spot worlds become `published`, other published versions go back to `ready`, v1's requested or filled gaps go back to `open`, and `listings.published_world_id` points at v1's entry spot. With no hero 2 worlds yet it says so and skips that step. Only hero 2 has 3D (D-026).
+
+The feed is cleared down to the latest `seed.completed` event, so feed lines logged after the seed (X-ray runs, world imports) go too. That is intended for a clean demo; if you want them kept, run `pnpm seed` after importing the 3D and running the X-ray, which moves the watermark.
 
 ## Checklist
 
