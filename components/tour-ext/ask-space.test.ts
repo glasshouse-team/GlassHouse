@@ -78,3 +78,15 @@ describe("answerText", () => {
     expect(answerText([{ type: "text", text: "Here it is." }, flyPart])).toBe("Here it is.");
   });
 });
+
+describe("answerText with dynamic tools", () => {
+  it("treats a dynamic-tool part as a tool call", () => {
+    expect(
+      answerText([
+        { type: "text", text: "Let me look." },
+        { type: "dynamic-tool", toolCallId: "d1" },
+        { type: "text", text: "The desk is in the living room." },
+      ]),
+    ).toBe("The desk is in the living room.");
+  });
+});
