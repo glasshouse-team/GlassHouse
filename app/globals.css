@@ -142,3 +142,30 @@ body {
     scroll-padding-bottom: 7rem;
   }
 }
+
+/* A slim, quiet scrollbar for rows that scroll sideways (the dashboard's home tabs). Chrome
+   ignores ::-webkit-scrollbar while scrollbar-width is set, so WebKit/Blink get the pseudo
+   elements and Firefox gets scrollbar-width: thin. */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+@supports selector(::-webkit-scrollbar) {
+  .thin-scrollbar {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+  .thin-scrollbar::-webkit-scrollbar {
+    height: 3px;
+  }
+  .thin-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .thin-scrollbar::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: var(--border);
+  }
+  .thin-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: var(--muted-foreground);
+  }
+}

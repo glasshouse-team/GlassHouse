@@ -163,7 +163,8 @@ export async function getListingCoverage(
 }
 
 /**
- * A host lists a new home (D-043): published at once so the capture page and search find it,
+ * A host lists a new home (D-043): published at once so the capture page finds it (search
+ * shows it once it has photos),
  * with the default agent rules. A slug clash gets a new suffix; if the rules can't be saved
  * the home is removed again, so a listing never exists without its rules.
  */
@@ -190,6 +191,36 @@ export async function createHostListing(
     return data!;
   }
   throw new Error("Could not pick a free address for the new home. Try again.");
+}
+
+/** What stands in the way of deleting a home (D-044): live deals and stays not ended yet. */
+export async function getHomeDependants(
+  listingId: string,
+  today: string,
+): Promise<{ liveDeals: number; upcomingStays: number }> {
+  const db = supabaseAdmin();
+  const [deals, stays] = await Promise.all([
+    db
+      .from("deals")
+      .select("id", { count: "exact", head: true })
+      .eq("listing_id", listingId)
+      .in("status", ["open", "agreed_pending_host", "escalated"]),
+    db
+      .from("reservations")
+      .select("id", { count: "exact", head: true })
+      .eq("listing_id", listingId)
+      .eq("status", "confirmed")
+      .gte("check_out", today),
+  ]);
+  check(deals.error, "live deals");
+  check(stays.error, "upcoming stays");
+  return { liveDeals: deals.count ?? 0, upcomingStays: stays.count ?? 0 };
+}
+
+/** Deletes a home and, by cascade, everything under it (D-044). Check deleteBlocker first. */
+export async function deleteHostListing(listingId: string): Promise<void> {
+  const { error } = await supabaseAdmin().from("listings").delete().eq("id", listingId);
+  if (error) throw new Error(`Could not delete the home: ${error.message}`);
 }
 
 /** The host's listings for the dashboard: seeded homes first (hero-1 first), new ones last. */
