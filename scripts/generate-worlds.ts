@@ -3,6 +3,7 @@
  *
  *   pnpm worlds generate --video <walk-720.mp4 | public-url> [--name "Hero 1 v1"] [--prompt "..."] [--model marble-1.1-plus] [--wait]
  *   pnpm worlds generate --images <file-or-url,...> [--azimuths 0,90,180,270] [--reconstruct] [--wait]
+ *   (both: --no-recaption sends --prompt as written; by default World Labs rewrites it from the input)
  *   pnpm worlds upload <file>             (prints a media_asset_id)
  *   pnpm worlds status <operation_id>
  *   pnpm worlds wait <operation_id> [--timeout <minutes>]   (default 60; also for generate --wait)
@@ -272,6 +273,7 @@ async function main() {
       images: { type: "string" },
       azimuths: { type: "string" },
       reconstruct: { type: "boolean", default: false },
+      "no-recaption": { type: "boolean", default: false },
       name: { type: "string" },
       prompt: { type: "string" },
       model: { type: "string" },
@@ -313,6 +315,7 @@ async function main() {
           type: "video",
           video_prompt: await sourceFor(values.video, "video"),
           text_prompt: values.prompt,
+          disable_recaption: values["no-recaption"] || undefined,
         },
       };
     } else if (values.images) {
@@ -340,6 +343,7 @@ async function main() {
             content,
           })),
           text_prompt: values.prompt,
+          disable_recaption: values["no-recaption"] || undefined,
         },
       };
     } else {
