@@ -156,7 +156,12 @@ async function search(
   const [saved, first] = await Promise.all([
     db
       .from("trip_briefs")
-      .insert({ guest_id: guest.id, body: text, parsed: brief as unknown as Json })
+      .insert({
+        guest_id: guest.id,
+        body: text,
+        // A guessed group size is marked, so later agents don't read it as stated.
+        parsed: { ...brief, guests_assumed: !guestsStated } as unknown as Json,
+      })
       .select("id")
       .single(),
     findCandidates(filters),

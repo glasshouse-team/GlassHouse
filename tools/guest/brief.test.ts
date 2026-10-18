@@ -103,6 +103,32 @@ describe("matchCities", () => {
   });
 });
 
+describe("places we have no homes in", () => {
+  it("searches the seeded cities instead and says so; the label and saved brief never say Paris", () => {
+    const paris = toTripBrief({ ...demo, destinations: ["Paris"], fitting_cities: [] });
+    expect(paris.brief.destinations).toEqual([ANYWHERE]);
+    expect(paris.assumptions[0]).toBe(
+      "Glasshouse has no homes in Paris yet, only in Tbilisi, Kazbegi, Batumi, Sighnaghi, so I searched those.",
+    );
+    const both = toTripBrief({ ...demo, destinations: ["Paris", "Tbilisi"], fitting_cities: [] });
+    expect(both.brief.destinations).toEqual(["Tbilisi"]);
+    expect(both.assumptions[0]).toMatch(/no homes in Paris yet.*so I searched Tbilisi\.$/);
+  });
+
+  it("treats vibe words as hints, not unknown places, and drops unknown fitting cities", () => {
+    const hills = toTripBrief({
+      ...demo,
+      destinations: ["the mountains"],
+      fitting_cities: ["Kazbegi", "Rome"],
+    });
+    expect(hills.assumptions).toEqual([]);
+    expect(hills.brief.destinations).toEqual(["Kazbegi"]);
+    expect(toTripBrief({ ...demo, destinations: ["Georgia"] }).brief.destinations).toEqual([
+      "Georgia",
+    ]);
+  });
+});
+
 describe("vague places", () => {
   it("reads the vibe: mountains, sea, wine, city", () => {
     expect(vibeCities("somewhere quiet in the mountains")).toEqual(["Kazbegi"]);
