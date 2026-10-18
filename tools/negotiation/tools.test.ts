@@ -132,6 +132,19 @@ describe("host tools", () => {
     expect(state.outcome).toBeNull();
   });
 
+  it("accepts instead of countering once the code suggests it, unless accepting breaks the rules", async () => {
+    const close = side({ theirLastCents: 48_000, closeEnough: true });
+    expect(
+      await run(close.tools.make_offer, { amountCents: 49_000, terms: [], reason: "x" }),
+    ).toMatchObject({ ok: false, code: "accept_instead" });
+    expect(close.saved).toEqual([]);
+    expect(await run(close.tools.accept_offer, { reason: "Deal" })).toMatchObject({ ok: true });
+    const lowball = side({ theirLastCents: 40_000, closeEnough: true });
+    expect(
+      (await run(lowball.tools.make_offer, { amountCents: 44_500, terms: [], reason: "x" })).ok,
+    ).toBe(true);
+  });
+
   it("refuses moves past the round limit", async () => {
     const { tools } = side({ round: 7 });
     expect(

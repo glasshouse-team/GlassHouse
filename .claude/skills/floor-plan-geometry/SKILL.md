@@ -10,7 +10,7 @@ The geometry comes from the world's collider mesh in **meters** (Marble's metric
 
 Already in the starter: `lib/geometry/slice.ts` (`sliceTriangle`, `sliceMesh`, `segmentLength`) with tests on a box room. Build the rest next to it: `walls.ts`, `rooms.ts` (v2), `svg.ts`, each with a small test on a synthetic mesh.
 
-## As built (GH-18, D-038)
+## As built (GH-18, D-040)
 
 `lib/geometry/walls.ts` (slices + vote grid + straighten), `plan.ts` (footprints, poses, spot-graph placement), `home-plan.ts` (one plan per spot in its own frame), `svg.ts` (SVG + `planLayout` shared with the UI), `store-floorplans.ts` (storage, rows, anchors). `pnpm floorplans [--listing hero-2] [--version 2] [--dry-run --out dir]`. Room names come from `spot_label`; the top-down labeling step below is optional and unused in v1. UI: `components/floorplan/FloorPlanCard.tsx`, `FloorPlanView.tsx`, `Minimap.tsx` (`getPose={() => cameraPose(camera)}`), `data.ts` (`getListingFloorPlans`, `getWorldFloorPlan`).
 
