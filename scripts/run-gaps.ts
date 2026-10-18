@@ -18,8 +18,8 @@ import {
   RING_SIZE,
   azimuthToDirection,
   coverageUpdates,
-  gapToInsert,
   knownGapRow,
+  planKnownGap,
   rayOrigin,
   ringCoverage,
   type KnownGap,
@@ -84,13 +84,13 @@ async function markKnown(dryRun: boolean) {
 
     const { data: existing, error: gapsError } = await db
       .from("gaps")
-      .select("id, world_id, issue, description, status, position")
+      .select("id, world_id, issue, room, description, severity, radius_m, position, view_dir")
       .eq("world_id", world.id);
     if (gapsError) fail(`Could not load gaps: ${gapsError.message}`);
 
     const distance = await rayDistance(known, world);
     const row = knownGapRow(known, world.id, distance ?? MISS_DISTANCE_M);
-    const insert = gapToInsert(row, existing ?? []);
+    const write = planKnownGap(row, existing ?? []);
     const hitText =
       distance === null
         ? `missed, placed ${MISS_DISTANCE_M} m out`
@@ -107,7 +107,9 @@ async function markKnown(dryRun: boolean) {
     if (worldsError) fail(`Could not load worlds: ${worldsError.message}`);
     const updates = coverageUpdates(worlds ?? [], [known]);
 
-    if (!insert) console.log(`  gap already stored, left as it is`);
+    if (write.kind === "none") console.log(`  gap ${write.id} already stored as it should be`);
+    else if (write.kind === "update")
+      console.log(`  update gap ${write.id}: ${Object.keys(write.changes).join(", ")}${tag}`);
     else
       console.log(
         `  insert gap: ${row.issue}, severity ${row.severity}, radius ${row.radius_m} m${tag}`,
@@ -115,17 +117,20 @@ async function markKnown(dryRun: boolean) {
     for (const u of updates)
       console.log(`  coverage ${u.spot} v${u.version} -> ${u.coverage_score}${tag}`);
     if (updates.length === 0) console.log(`  coverage scores already set`);
-    if (dryRun || (!insert && updates.length === 0)) continue;
+    if (dryRun || (write.kind === "none" && updates.length === 0)) continue;
 
-    let gapId: string | null = null;
-    if (insert) {
+    let gapId: string = write.kind === "insert" ? "" : write.id;
+    if (write.kind === "insert") {
       const { data: inserted, error: insertError } = await db
         .from("gaps")
-        .insert(insert)
+        .insert(write.row)
         .select("id")
         .single();
       if (insertError) fail(`Could not insert the gap: ${insertError.message}`);
       gapId = inserted.id;
+    } else if (write.kind === "update") {
+      const { error: updateError } = await db.from("gaps").update(write.changes).eq("id", write.id);
+      if (updateError) fail(`Could not update the gap: ${updateError.message}`);
     }
     for (const u of updates) {
       const { error: updateError } = await db
@@ -142,9 +147,12 @@ async function markKnown(dryRun: boolean) {
       actor_name: "Verifier",
       agent: "verifier",
       action: "gap.marked",
-      summary: insert
-        ? `Flagged an AI-invented wall in the ${known.room.toLowerCase()} 3D (v${known.version}): photos ${known.missingPhotos.join(" and ")} were skipped`
-        : `Set the 3D coverage scores from the ring photos (${known.room.toLowerCase()} v${known.version}: ${Math.round(knownScore * 100)}%)`,
+      summary:
+        write.kind === "update"
+          ? `Updated the AI-invented wall marker in the ${known.room.toLowerCase()} 3D (v${known.version}): ${Object.keys(write.changes).join(", ")}`
+          : write.kind === "insert"
+            ? `Flagged an AI-invented wall in the ${known.room.toLowerCase()} 3D (v${known.version}): photos ${known.missingPhotos.join(" and ")} were skipped`
+            : `Set the 3D coverage scores from the ring photos (${known.room.toLowerCase()} v${known.version}: ${Math.round(knownScore * 100)}%)`,
       listing_id: known.listingId,
       payload: {
         world_id: world.id,

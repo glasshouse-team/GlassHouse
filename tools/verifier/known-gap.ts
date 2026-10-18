@@ -76,7 +76,9 @@ export const HERO2_KITCHEN_V1: KnownGap = {
   rayHeight: 1.2,
   issue: "invented",
   severity: 3,
-  radiusM: 1.0,
+  // 0.7 m: the hit is 1.02 m from the spot, so the camera stays well outside the sphere (a step
+  // west would put it inside a 1 m sphere, which then vanishes) and it tints a narrower cone.
+  radiusM: 0.7,
   description:
     "The wall with the photo frame was not photographed in this version; the door, air conditioner and cables you see there were invented by the 3D model. Re-shoot this wall.",
 };
@@ -102,15 +104,15 @@ export type KnownGapRow = Pick<
 export interface GapKeyFields {
   world_id: string;
   issue: string;
-  description: string;
+  room: string | null;
 }
 
 /**
- * Idempotency key: the same world, issue and description is the same known gap, whatever
- * its status (a host may have requested a fill-in since). No unique index exists on gaps.
+ * Idempotency key: the same world, issue and room is the same known gap, whatever its status
+ * (a host may have requested a fill-in since) or wording. No unique index exists on gaps.
  */
 export function knownGapKey(gap: GapKeyFields): string {
-  return `${gap.world_id}|${gap.issue}|${gap.description}`;
+  return `${gap.world_id}|${gap.issue}|${gap.room ?? ""}`;
 }
 
 const mm = (v: number) => Math.round(v * 1000) / 1000 + 0;
@@ -143,13 +145,55 @@ export function knownGapRow(known: KnownGap, worldId: string, distance: number):
   };
 }
 
-/** Only insert when no gap with the same key exists; never touch an existing one. */
-export function gapToInsert(
-  row: KnownGapRow,
-  existing: readonly GapKeyFields[],
-): KnownGapRow | null {
+/** A stored gap as the script reads it back. */
+export type StoredGap = GapKeyFields &
+  Pick<Gap, "description" | "severity" | "radius_m"> & {
+    id: string;
+    position: unknown;
+    view_dir: unknown;
+    status?: string;
+  };
+
+/** The columns `--mark-known` keeps in line with the code; never status or the screenshot. */
+type SyncedColumns = Pick<
+  KnownGapRow,
+  "description" | "severity" | "position" | "view_dir" | "radius_m"
+>;
+
+export type KnownGapWrite =
+  | { kind: "insert"; row: KnownGapRow }
+  | { kind: "update"; id: string; changes: Partial<SyncedColumns> }
+  | { kind: "none"; id: string };
+
+function sameVec(a: unknown, b: Vec3 | null): boolean {
+  if (a === null || b === null) return a === b;
+  const v = a as Partial<Vec3>;
+  return (
+    typeof v?.x === "number" &&
+    Math.abs(v.x - b.x) < 5e-4 &&
+    Math.abs((v.y ?? NaN) - b.y) < 5e-4 &&
+    Math.abs((v.z ?? NaN) - b.z) < 5e-4
+  );
+}
+
+/**
+ * Insert when no gap has the key; otherwise update only the synced columns that differ (so a
+ * re-run with unchanged code changes nothing, and a reworded description or new radius updates
+ * the one row instead of adding a second). Status is never touched.
+ */
+export function planKnownGap(row: KnownGapRow, existing: readonly StoredGap[]): KnownGapWrite {
   const key = knownGapKey(row);
-  return existing.some((g) => knownGapKey(g) === key) ? null : row;
+  const match = existing.find((g) => knownGapKey(g) === key);
+  if (!match) return { kind: "insert", row };
+  const changes: Partial<SyncedColumns> = {};
+  if (match.description !== row.description) changes.description = row.description;
+  if (match.severity !== row.severity) changes.severity = row.severity;
+  if (Math.abs(match.radius_m - row.radius_m) > 1e-9) changes.radius_m = row.radius_m;
+  if (!sameVec(match.position, row.position)) changes.position = row.position;
+  if (!sameVec(match.view_dir, row.view_dir)) changes.view_dir = row.view_dir;
+  return Object.keys(changes).length
+    ? { kind: "update", id: match.id, changes }
+    : { kind: "none", id: match.id };
 }
 
 export interface CoverageWorldRow {

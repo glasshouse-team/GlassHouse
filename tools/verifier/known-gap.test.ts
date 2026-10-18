@@ -3,13 +3,12 @@ import { GapSchema } from "@/lib/schemas/world";
 import {
   HERO2_KITCHEN_V1,
   HERO2_LISTING_ID,
-  type GapKeyFields,
   azimuthToDirection,
   coverageUpdates,
-  gapToInsert,
   hitPoint,
   knownGapKey,
   knownGapRow,
+  planKnownGap,
   ringAzimuth,
   ringCoverage,
 } from "./known-gap";
@@ -66,7 +65,7 @@ describe("knownGapRow", () => {
       room: "Kitchen",
       issue: "invented",
       severity: 3,
-      radius_m: 1,
+      radius_m: 0.7,
       status: "open",
       screenshot_url: null,
     });
@@ -89,19 +88,36 @@ describe("knownGapRow", () => {
 
 describe("idempotency", () => {
   const row = knownGapRow(HERO2_KITCHEN_V1, WORLD, 1);
+  const stored = { ...row, id: "g1" };
 
-  it("keys on world, issue and description", () => {
-    expect(knownGapKey(row)).toBe(`${WORLD}|invented|${HERO2_KITCHEN_V1.description}`);
+  it("keys on world, issue and room, not the wording", () => {
+    expect(knownGapKey(row)).toBe(`${WORLD}|invented|Kitchen`);
+    expect(knownGapKey({ ...row, description: "Reworded." } as typeof row)).toBe(knownGapKey(row));
   });
 
   it("inserts only when the key is new", () => {
-    expect(gapToInsert(row, [])).toEqual(row);
-    // Same gap, moved and requested since: still the same, left alone.
-    const requested: GapKeyFields & { status: string } = { ...row, status: "requested" };
-    expect(gapToInsert(row, [requested])).toBeNull();
-    // A gap of another world or with another description does not count.
-    expect(gapToInsert(row, [{ ...row, world_id: "other" }])).toEqual(row);
-    expect(gapToInsert(row, [{ ...row, description: "Blank corner." }])).toEqual(row);
+    expect(planKnownGap(row, [])).toEqual({ kind: "insert", row });
+    expect(planKnownGap(row, [{ ...stored, world_id: "other" }])).toEqual({ kind: "insert", row });
+    expect(planKnownGap(row, [{ ...stored, room: "Bedroom" }])).toEqual({ kind: "insert", row });
+  });
+
+  it("changes nothing when the stored row matches, whatever its status", () => {
+    expect(planKnownGap(row, [{ ...stored, status: "requested" }])).toEqual({
+      kind: "none",
+      id: "g1",
+    });
+    // Positions read back from jsonb within half a millimetre count as equal.
+    const nudged = { ...stored, position: { x: -1.0002, y: 1.2, z: 0 } };
+    expect(planKnownGap(row, [nudged]).kind).toBe("none");
+  });
+
+  it("updates the one row when the radius or wording changed", () => {
+    const old = { ...stored, radius_m: 1, description: "Old wording." };
+    expect(planKnownGap(row, [old])).toEqual({
+      kind: "update",
+      id: "g1",
+      changes: { radius_m: 0.7, description: HERO2_KITCHEN_V1.description },
+    });
   });
 });
 
