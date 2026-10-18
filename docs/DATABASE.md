@@ -8,7 +8,7 @@ Supabase Postgres. Schema: `supabase/migrations/0001_core.sql` (applied in GH-5:
 | ------------------ | --------------------------------------------------------------------------------------------------------------------------- |
 | People             | `profiles` (guest or host)                                                                                                  |
 | Listings           | `listings`, `listing_photos`, `availability` (per-date block and price), `listing_facts` (X-ray), `host_policies` (private) |
-| 3D                 | `captures`, `worlds` (one row per version), `anchors`, `gaps`, `floor_plans`                                                |
+| 3D                 | `captures`, `worlds` (one row per spot, D-009), `anchors`, `gaps`, `floor_plans`                                            |
 | Reviews            | `reviews` (six sub-ratings), `review_claims`                                                                                |
 | Deals and bookings | `deals`, `deal_secrets` (private), `deal_messages`, `reservations`                                                          |
 | Conversations      | `conversations`, `messages` (sources, needs_host)                                                                           |
@@ -29,7 +29,7 @@ Published tables: `events`, `deal_messages`, `deals`, `worlds`, `gaps`, `message
 ## Storage
 
 - `media` (public): photos, prepared videos (World Labs fetches them), splats, meshes, screenshots, floor plans.
-- `captures` (private): raw walkthroughs and check-in videos.
+- `captures` (private): photo rings (`ring`), raw walkthroughs and check-in videos.
   The migration creates both buckets when it runs on Supabase.
 
 ## Workflow
