@@ -3,6 +3,7 @@
  * jsonb columns are validated on the way out, so pages get typed amenities and rules.
  */
 import { cache } from "react";
+import sharp from "sharp";
 import { z } from "zod";
 import { type CoverageWorld, type ListingCoverage, publishedCoverage } from "@/lib/coverage";
 import type { Tables } from "@/lib/database.types";
@@ -10,7 +11,8 @@ import { stayNights } from "@/lib/pricing";
 import { defaultPolicy, homeSlug, type NewHome } from "@/lib/new-home";
 import { HouseRulesSchema } from "@/lib/schemas/core";
 import { XrayResultSchema, type XrayResult } from "@/lib/schemas/verifier";
-import { supabaseAdmin } from "@/lib/supabase";
+import { MAX_SIDE_PX, nextPhotoSlots } from "@/lib/listing-photos";
+import { BUCKETS, publicMediaUrl, supabaseAdmin } from "@/lib/supabase";
 import { saveHostPolicy } from "./policies";
 
 export type ListingRow = Tables<"listings">;
@@ -70,6 +72,53 @@ export async function getListingPhotos(listingId: string): Promise<PhotoRow[]> {
     .order("sort");
   check(error, "photos");
   return data ?? [];
+}
+
+/** Thrown when a listing has no room for more photos. */
+export class TooManyPhotosError extends Error {}
+
+/**
+ * Adds host photos to a listing's gallery (D-045): each image is re-encoded to a JPEG of at
+ * most MAX_SIDE_PX (which also drops EXIF, GPS included), stored as
+ * `listings/<id>/photos/NN-room.jpg` and given a `listing_photos` row after the last one.
+ * Throws on a file that isn't an image; earlier photos of the batch stay.
+ */
+export async function addListingPhotos(
+  listingId: string,
+  images: Buffer[],
+  room: string | null,
+): Promise<number> {
+  const db = supabaseAdmin();
+  const existing = await db.from("listing_photos").select("sort").eq("listing_id", listingId);
+  check(existing.error, "photos");
+  const slots = nextPhotoSlots(
+    (existing.data ?? []).map((p) => p.sort),
+    images.length,
+    room,
+  );
+  if (!slots) throw new TooManyPhotosError("This home has no room for that many more photos.");
+
+  for (const [i, image] of images.entries()) {
+    const jpeg = await sharp(image, { failOn: "error" })
+      .rotate()
+      .resize({ width: MAX_SIDE_PX, height: MAX_SIDE_PX, fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 82, mozjpeg: true })
+      .toBuffer();
+    const path = `listings/${listingId}/photos/${slots[i].name}`;
+    const upload = await db.storage
+      .from(BUCKETS.media)
+      .upload(path, jpeg, { contentType: "image/jpeg", upsert: true });
+    check(upload.error, `upload ${slots[i].name}`);
+    const { error } = await db.from("listing_photos").insert({
+      listing_id: listingId,
+      url: publicMediaUrl(path),
+      room_label: room?.trim() || null,
+      sort: slots[i].sort,
+      source: "upload",
+    });
+    check(error, `save ${slots[i].name}`);
+  }
+  return images.length;
 }
 
 export async function getListingReviews(listingId: string): Promise<ReviewRow[]> {

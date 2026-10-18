@@ -182,7 +182,6 @@ export function CheckinRecorder({ reservationId, photoUrls, saved }: Props) {
         ref={fileRef}
         type="file"
         accept="video/*,image/*"
-        capture="environment"
         multiple
         className="hidden"
         aria-label="Arrival video or photos"
