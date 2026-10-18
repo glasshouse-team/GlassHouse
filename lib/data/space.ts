@@ -118,6 +118,8 @@ export async function loadSpace(request: SpaceRequest): Promise<SpaceLookup> {
   check(gaps.error, "gaps");
   check(facts.error, "listing facts");
 
+  if ((anchors.data ?? []).length >= MAX_ANCHORS)
+    console.warn(`[space] ${listing.slug} v${version}: only the first ${MAX_ANCHORS} anchors used`);
   const anchorRows: Anchor[] = parseRows(AnchorSchema, anchors.data ?? [], "anchor");
   if (anchorRows.length === 0) return noSpace;
   const gapRows: Gap[] = parseRows(GapSchema, gaps.data ?? [], "gap");
