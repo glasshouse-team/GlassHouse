@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
-import Link from "next/link";
+import { SiteHeader } from "@/components/ui/site-header";
+import { getViewer } from "@/lib/viewer";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -23,35 +24,15 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-// GH-8 (Beka) replaces this header with the real one: logo (public/logo-mark.svg), search
-// entry and the "View as Guest / Host" role switcher. Brand kit: docs/teardown.md section 4.
-export default function RootLayout({ children }: LayoutProps<"/">) {
+// The header reads the role switcher's cookie, so every page renders per request (GH-8).
+// Brand kit: docs/teardown.md section 4.
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const viewer = await getViewer();
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <Providers>
-          <header className="border-b border-neutral-200 dark:border-neutral-800">
-            <nav className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 text-sm">
-              <Link href="/" className="font-semibold tracking-tight">
-                Glasshouse
-              </Link>
-              <Link
-                href="/search"
-                className="text-neutral-600 hover:underline dark:text-neutral-300"
-              >
-                Search
-              </Link>
-              <Link
-                href="/host/dashboard"
-                className="text-neutral-600 hover:underline dark:text-neutral-300"
-              >
-                Host
-              </Link>
-              <Link href="/feed" className="text-neutral-600 hover:underline dark:text-neutral-300">
-                Feed
-              </Link>
-            </nav>
-          </header>
+          <SiteHeader viewer={viewer} />
           <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
         </Providers>
       </body>
