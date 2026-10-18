@@ -36,24 +36,26 @@ flowchart TB
 
 ## API routes
 
-| Route                        | Method        | Does                                           | Ticket |
-| ---------------------------- | ------------- | ---------------------------------------------- | ------ |
-| `/api/health`                | GET           | Which keys are configured                      | GH-2   |
-| `/api/search`                | POST          | Trip brief to ranked shortlist                 | GH-14  |
-| `/api/xray/[listingId]`      | POST          | Verifier facts and contradictions              | GH-9   |
-| `/api/captures`              | POST          | Register upload, quality checks, prepare video | GH-10  |
-| `/api/worlds`                | POST          | Start a Marble generation (new version)        | GH-10  |
-| `/api/worlds/[id]/status`    | GET           | Poll; download and store assets when done      | GH-10  |
-| `/api/worlds/[id]/publish`   | POST          | Publish a version                              | GH-10  |
-| `/api/worlds/[id]/gaps`      | POST          | Gap check on rig screenshots                   | GH-19  |
-| `/api/worlds/[id]/floorplan` | POST          | Floor plan from the collider mesh              | GH-18  |
-| `/api/qa`                    | POST (stream) | Host agent answers or forwards                 | GH-16  |
-| `/api/ask-space`             | POST (stream) | Guest agent answers with camera actions        | GH-20  |
-| `/api/deals`                 | POST          | Open a deal                                    | GH-15  |
-| `/api/deals/[id]/run`        | POST          | Run negotiation rounds                         | GH-15  |
-| `/api/deals/[id]/approve`    | POST          | Host approves or declines                      | GH-15  |
-| `/api/checkin`               | POST          | Compare arrival footage with the listing       | GH-23  |
-| `/api/listing-draft`         | POST          | Draft a listing from narration                 | GH-25  |
+| Route                            | Method        | Does                                           | Ticket |
+| -------------------------------- | ------------- | ---------------------------------------------- | ------ |
+| `/api/health`                    | GET           | Which keys are configured                      | GH-2   |
+| `/api/reservations`              | POST          | Reserve at the list price (payment mocked)     | GH-8   |
+| `/api/host-policies/[listingId]` | PUT           | Host saves the agent rules form                | GH-8   |
+| `/api/search`                    | POST          | Trip brief to ranked shortlist                 | GH-14  |
+| `/api/xray/[listingId]`          | POST          | Verifier facts and contradictions              | GH-9   |
+| `/api/captures`                  | POST          | Register upload, quality checks, prepare video | GH-10  |
+| `/api/worlds`                    | POST          | Start a Marble generation (new version)        | GH-10  |
+| `/api/worlds/[id]/status`        | GET           | Poll; download and store assets when done      | GH-10  |
+| `/api/worlds/[id]/publish`       | POST          | Publish a version                              | GH-10  |
+| `/api/worlds/[id]/gaps`          | POST          | Gap check on rig screenshots                   | GH-19  |
+| `/api/worlds/[id]/floorplan`     | POST          | Floor plan from the collider mesh              | GH-18  |
+| `/api/qa`                        | POST (stream) | Host agent answers or forwards                 | GH-16  |
+| `/api/ask-space`                 | POST (stream) | Guest agent answers with camera actions        | GH-20  |
+| `/api/deals`                     | POST          | Open a deal                                    | GH-15  |
+| `/api/deals/[id]/run`            | POST          | Run negotiation rounds                         | GH-15  |
+| `/api/deals/[id]/approve`        | POST          | Host approves or declines                      | GH-15  |
+| `/api/checkin`                   | POST          | Compare arrival footage with the listing       | GH-23  |
+| `/api/listing-draft`             | POST          | Draft a listing from narration                 | GH-25  |
 
 ## Pages
 

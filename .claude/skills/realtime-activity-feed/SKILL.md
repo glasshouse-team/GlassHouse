@@ -29,7 +29,7 @@ when_to_use: The user mentions "activity feed", "log this action", "logEvent", "
 3. Each row: actor icon and color (guest agent, host agent, Verifier, person, system), the summary, relative time ("12s ago", date-fns `formatDistanceToNowStrict`). Click a row to open the payload in a drawer.
 4. Unsubscribe on unmount (`removeChannel`).
 
-Places: listing page sidebar (`filter="listing"`), deal room (`filter="deal"`), host dashboard (`filter="all"`), and `/feed`: full screen, large type, dark, readable from 5 meters on a projector.
+Places: listing page sidebar (`filter="listing"`), deal room (`filter="deal"`), host dashboard (`filter="all"`), and `/feed`: full screen, large type, dark, readable from 5 meters on a projector. The app is light only (D-023), so `/feed` sets a `.dark` class on its wrapper and adds `.dark` tokens to `app/globals.css`.
 
 ## Check
 
