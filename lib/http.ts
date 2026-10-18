@@ -1,6 +1,11 @@
 import { ZodError, type ZodType } from "zod";
 import { MissingEnvError, NotImplementedError } from "./errors";
 
+/** A 4xx JSON error with a short machine code and a message people can read. */
+export function jsonError(status: number, error: string, message: string): Response {
+  return Response.json({ error, message }, { status });
+}
+
 /** 501 response used by API stubs until their ticket is built. */
 export function notImplemented(ticket: string, what: string): Response {
   return Response.json(

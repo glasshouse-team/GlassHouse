@@ -1,13 +1,16 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+// Generated from the applied migrations: after a new migration, `pnpm db:push` then `pnpm db:types`.
+import type { Database } from "./database.types";
 import { MissingEnvError } from "./errors";
-// After GH-5 applies the migration, run `pnpm db:types` and type the clients:
-// import type { Database } from "./database.types";
 
 /** Storage buckets. `media` is public (World Labs must fetch inputs from it); `captures` is private. */
 export const BUCKETS = { media: "media", captures: "captures" } as const;
 
-let adminClient: SupabaseClient | undefined;
-let browserClient: SupabaseClient | undefined;
+/** A Supabase client typed with our tables. */
+export type Db = SupabaseClient<Database>;
+
+let adminClient: Db | undefined;
+let browserClient: Db | undefined;
 
 /** True when the public Supabase URL and anon key are configured. */
 export function hasSupabaseEnv(): boolean {
@@ -18,7 +21,7 @@ export function hasSupabaseEnv(): boolean {
  * Service-role client. Server only (API routes, server components, scripts):
  * it bypasses row level security and can read host policies and deal secrets.
  */
-export function supabaseAdmin(): SupabaseClient {
+export function supabaseAdmin(): Db {
   if (typeof window !== "undefined") {
     throw new Error("supabaseAdmin() is server-only: it uses the service-role key.");
   }
@@ -30,7 +33,7 @@ export function supabaseAdmin(): SupabaseClient {
       !key && "SUPABASE_SERVICE_ROLE_KEY",
     ].filter(Boolean) as string[];
     if (missing.length) throw new MissingEnvError(missing);
-    adminClient = createClient(url!, key!, {
+    adminClient = createClient<Database>(url!, key!, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
   }
@@ -38,7 +41,7 @@ export function supabaseAdmin(): SupabaseClient {
 }
 
 /** Anon client for the browser: public reads and Realtime subscriptions only. */
-export function supabaseBrowser(): SupabaseClient {
+export function supabaseBrowser(): Db {
   if (!browserClient) {
     // Literal access so Next.js inlines the NEXT_PUBLIC_ values into client bundles.
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -46,7 +49,7 @@ export function supabaseBrowser(): SupabaseClient {
     if (!url || !key) {
       throw new MissingEnvError(["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"]);
     }
-    browserClient = createClient(url, key);
+    browserClient = createClient<Database>(url, key);
   }
   return browserClient;
 }

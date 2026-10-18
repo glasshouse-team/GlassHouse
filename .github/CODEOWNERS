@@ -33,3 +33,13 @@
 /scripts/build-floorplans.ts  @TemuriTsutskiridze
 /scripts/split-reviews.ts     @TemuriTsutskiridze
 /supabase/migrations/      @beqa200 @TemuriTsutskiridze
+
+# Contract files (docs/CONTRACTS.md): both developers review every change.
+/docs/CONTRACTS.md                 @beqa200 @TemuriTsutskiridze
+/lib/schemas/                      @beqa200 @TemuriTsutskiridze
+/lib/events.ts                     @beqa200 @TemuriTsutskiridze
+/lib/supabase.ts                   @beqa200 @TemuriTsutskiridze
+/lib/database.types.ts             @beqa200 @TemuriTsutskiridze
+/agents/core.ts                    @beqa200 @TemuriTsutskiridze
+/agents/context.ts                 @beqa200 @TemuriTsutskiridze
+/components/tour/TourContext.tsx   @beqa200 @TemuriTsutskiridze

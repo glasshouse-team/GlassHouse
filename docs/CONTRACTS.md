@@ -8,13 +8,15 @@ The starter already contains drafts of everything below.
 
 22 tables, RLS on all, public read on non-secret tables, Realtime on events, deal_messages, deals, worlds, gaps, messages. Details: [DATABASE.md](DATABASE.md). New columns or tables go in `000N_<name>.sql`; never edit an applied migration.
 
+Applied in GH-5. Generated types: `lib/database.types.ts` (rerun `pnpm db:types` after every migration and commit it). `supabaseAdmin()` and `supabaseBrowser()` in `lib/supabase.ts` return `Db` (`SupabaseClient<Database>`), so queries are typed by table; use `Tables<"reviews">` and friends for rows read back.
+
 ## 2. Types: `lib/schemas/`
 
-| File          | Owner  | Defines                                                                                                                                                                                         |
-| ------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `core.ts`     | Beka   | `Cents`, `IsoDate`, `EventInputSchema`, `ListingSchema`, `HostPolicySchema`, `TripBriefSchema`, `QuoteSchema`, `DealSchema`, `DealMessageSchema` (types include `rejected`), `OfferTermsSchema` |
-| `world.ts`    | Temuri | `Vec3Schema`, `WorldSchema`, `AnchorSchema`, `GapSchema`, `FloorPlanSchema`, `CaptureSchema` (meters, floor at y = 0)                                                                           |
-| `verifier.ts` | Temuri | `XrayResultSchema`, `GapCheckResultSchema`, `RoomLabelsSchema`, `KNOWN_FACT_KEYS`                                                                                                               |
+| File          | Owner  | Defines                                                                                                                                                                                                                                              |
+| ------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `core.ts`     | Beka   | `Cents`, `IsoDate`, `EventInputSchema`, `ListingSchema`, `HostPolicySchema`, `TripBriefSchema`, `QuoteSchema`, `DealSchema`, `DealMessageSchema` (types include `rejected`), `OfferTermsSchema`, `Amenity`, `ReviewSubRatingsSchema`, `ReviewSchema` |
+| `world.ts`    | Temuri | `Vec3Schema`, `WorldSchema`, `AnchorSchema`, `GapSchema`, `FloorPlanSchema`, `CaptureSchema` (meters, floor at y = 0)                                                                                                                                |
+| `verifier.ts` | Temuri | `XrayResultSchema`, `GapCheckResultSchema`, `RoomLabelsSchema`, `KNOWN_FACT_KEYS`                                                                                                                                                                    |
 
 ## 3. Activity feed: `lib/events.ts` (Beka)
 
@@ -26,7 +28,7 @@ logEvent(e: {
 }): Promise<void>   // server only, never throws
 ```
 
-Plus `withEvent(options, fn)` in `tools/_withEvent.ts` for plain functions.
+Plus `withEvent(options, fn)` in `tools/_withEvent.ts` for plain functions (optional `payload(result, ...args)` since GH-12).
 
 ## 4. Money: `lib/pricing.ts`, `lib/validators.ts` (Beka)
 
@@ -84,7 +86,7 @@ Temuri implements `<TourProvider>` in GH-11. Beka's add-ons (Ask the space, hone
 
 ## 8. Activity feed component: `components/feed/ActivityFeed.tsx` (Beka)
 
-`<ActivityFeed filter="listing" | "deal" | "all" listingId? dealId? compact? />`, rendered in the listing page, deal room, host dashboard and `/feed`.
+`<ActivityFeed filter="listing" | "deal" | "all" listingId? dealId? compact? />`, rendered in the listing page, deal room, host dashboard and `/feed`. GH-12 added two optional props: `listingIds?` (with `filter="all"`, only those listings; the host dashboard passes the host's homes) and `projector?` (very large type for `/feed`). It is a client component that loads the last 50 events and subscribes to Realtime inserts.
 
 ## 9. Host Q&A: `tools/host-qa/askHome.ts` (Temuri, GH-16)
 
@@ -145,8 +147,10 @@ The only Marble-to-three transform; the viewer, floor plan and gap check all use
 
 ## Change log
 
-| Date       | Change                                                                                                                                                  | Agreed by        |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| 2026-10-17 | Starter drafts created                                                                                                                                  | (review in GH-5) |
-| 2026-10-17 | Sections 9-14 added after the ticket review (askHome, uploads, demo ids, viewer, tour add-ons, coordinates); createAgent gains stopWhen, output, effort | (review in GH-5) |
-| 2026-10-18 | Section 14: `floorHeight` takes the lowest large layer below the camera, so a big ceiling or a bed top is not the floor (D-009); signature unchanged    | Temuri (owner)   |
+| Date       | Change                                                                                                                                                  | Agreed by    |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| 2026-10-17 | Starter drafts created                                                                                                                                  | Beka, Temuri |
+| 2026-10-17 | Sections 9-14 added after the ticket review (askHome, uploads, demo ids, viewer, tour add-ons, coordinates); createAgent gains stopWhen, output, effort | Beka, Temuri |
+| 2026-10-18 | `core.ts` adds `Amenity` (the 26-word vocabulary from docs/teardown.md) and `ReviewSchema` with the six sub-ratings (additive)                          | Beka, Temuri |
+| 2026-10-18 | Frozen at `a6ba574` (PR #3): migration applied, `lib/database.types.ts` generated, clients typed as `Db` (new export, type-level only)                  | Beka, Temuri |
+| 2026-10-18 | Section 14: `floorHeight` takes the lowest large layer below the camera, so a big ceiling or a bed top is not the floor (D-009); signature unchanged    | Temuri       |

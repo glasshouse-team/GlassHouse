@@ -47,6 +47,40 @@ export const HouseRulesSchema = z
   })
   .catchall(z.unknown());
 
+/**
+ * The amenity words the seed, search filters and agents share (docs/teardown.md section 5).
+ * No `hair_dryer` (hero-1's unanswerable question) and no `sofa_bed` (lie 2), on purpose.
+ */
+export const Amenity = z.enum([
+  "wifi",
+  "dedicated_workspace",
+  "kitchen",
+  "washer",
+  "dryer",
+  "dishwasher",
+  "coffee_maker",
+  "heating",
+  "air_conditioning",
+  "fireplace",
+  "free_parking",
+  "street_parking",
+  "elevator",
+  "tv",
+  "balcony",
+  "terrace",
+  "garden",
+  "bbq_grill",
+  "hot_tub",
+  "sauna",
+  "mountain_view",
+  "sea_view",
+  "city_view",
+  "self_check_in",
+  "crib",
+  "high_chair",
+]);
+export type Amenity = z.infer<typeof Amenity>;
+
 export const ListingStatus = z.enum(["draft", "published", "archived"]);
 
 export const ListingSchema = z.object({
@@ -198,3 +232,28 @@ export const DealMessageSchema = z.object({
   body: z.string(),
 });
 export type DealMessage = z.infer<typeof DealMessageSchema>;
+
+// ---------- Reviews ----------
+
+const Stars = z.number().int().min(1).max(5);
+
+/** The six sub-ratings every review carries, 1-5 each. */
+export const ReviewSubRatingsSchema = z.object({
+  cleanliness: Stars,
+  accuracy: Stars,
+  check_in: Stars,
+  communication: Stars,
+  location: Stars,
+  value: Stars,
+});
+export type ReviewSubRatings = z.infer<typeof ReviewSubRatingsSchema>;
+
+export const ReviewSchema = z.object({
+  listing_id: z.uuid(),
+  guest_id: z.uuid().nullable(),
+  author_name: z.string().nullable(),
+  rating: Stars,
+  sub_ratings: ReviewSubRatingsSchema,
+  body: z.string().min(1),
+});
+export type Review = z.infer<typeof ReviewSchema>;
