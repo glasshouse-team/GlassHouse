@@ -27,31 +27,35 @@ export function withEvent<A extends unknown[], R>(
   const actorType = options.actorType ?? (options.agent ? "agent" : "system");
   return async (...args: A) => {
     const scope = options.scope?.(...args) ?? {};
+    const base = {
+      actor_type: actorType,
+      actor_name: options.actorName,
+      agent: options.agent,
+      listing_id: scope.listingId,
+      deal_id: scope.dealId,
+    };
+    let result: R;
     try {
-      const result = await fn(...args);
-      await logEvent({
-        actor_type: actorType,
-        actor_name: options.actorName,
-        agent: options.agent,
-        action: options.action,
-        summary: options.summarize(result, ...args),
-        listing_id: scope.listingId,
-        deal_id: scope.dealId,
-        payload: options.payload?.(result, ...args),
-      });
-      return result;
+      result = await fn(...args);
     } catch (error) {
       await logEvent({
-        actor_type: actorType,
-        actor_name: options.actorName,
-        agent: options.agent,
+        ...base,
         action: `${options.action}.failed`,
         summary: `${options.actorName}: ${options.action} failed`,
-        listing_id: scope.listingId,
-        deal_id: scope.dealId,
         payload: { error: error instanceof Error ? error.message : String(error) },
       });
       throw error;
     }
+    // The work is done: a broken summary must not turn it into a failure for the caller.
+    let summary = `${options.actorName}: ${options.action}`;
+    let payload: Record<string, unknown> | undefined;
+    try {
+      summary = options.summarize(result, ...args);
+      payload = options.payload?.(result, ...args);
+    } catch (error) {
+      console.warn(`[withEvent] could not describe ${options.action}:`, error);
+    }
+    await logEvent({ ...base, action: options.action, summary, payload });
+    return result;
   };
 }

@@ -58,6 +58,7 @@ export function ActivityFeed(props: ActivityFeedProps) {
   const [loaded, setLoaded] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [selected, setSelected] = useState<FeedEvent | null>(null);
+  const [announcement, setAnnouncement] = useState("");
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 5000);
@@ -69,6 +70,30 @@ export function ActivityFeed(props: ActivityFeedProps) {
     const db = supabaseBrowser();
     let cancelled = false;
     const filterString = realtimeFilter(scope);
+    // Load once the channel is joined (and again after a reconnect), so no insert falls in
+    // between; mergeEvents drops the rows already shown.
+    const load = () => {
+      let query = db.from("events").select("*").order("id", { ascending: false }).limit(FEED_LIMIT);
+      if (scope)
+        query =
+          scope.ids === "any"
+            ? query.not(scope.column, "is", null)
+            : query.in(scope.column, scope.ids);
+      query.then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          setStatus("offline");
+          return;
+        }
+        const rows = (data ?? []).flatMap((row) => {
+          const parsed = FeedEventSchema.safeParse(row);
+          return parsed.success ? [parsed.data] : [];
+        });
+        setNow(Date.now());
+        setEvents((current) => mergeEvents(current, rows));
+        setLoaded(true);
+      });
+    };
     const channel = db
       .channel(channelName)
       .on(
@@ -85,34 +110,17 @@ export function ActivityFeed(props: ActivityFeedProps) {
           setNow(Date.now());
           setEvents((current) => mergeEvents(current, [parsed.data]));
           setFresh((current) => new Set(current).add(parsed.data.id));
+          setAnnouncement(parsed.data.summary);
         },
       )
       .subscribe((state) => {
         if (cancelled) return;
-        if (state === "SUBSCRIBED") setStatus("live");
+        if (state === "SUBSCRIBED") {
+          setStatus("live");
+          load();
+        }
         if (state === "CHANNEL_ERROR" || state === "TIMED_OUT") setStatus("offline");
       });
-
-    let query = db.from("events").select("*").order("id", { ascending: false }).limit(FEED_LIMIT);
-    if (scope)
-      query =
-        scope.ids === "any"
-          ? query.not(scope.column, "is", null)
-          : query.in(scope.column, scope.ids);
-    query.then(({ data, error }) => {
-      if (cancelled) return;
-      if (error) {
-        setStatus("offline");
-        return;
-      }
-      const rows = (data ?? []).flatMap((row) => {
-        const parsed = FeedEventSchema.safeParse(row);
-        return parsed.success ? [parsed.data] : [];
-      });
-      setNow(Date.now());
-      setEvents((current) => mergeEvents(current, rows));
-      setLoaded(true);
-    });
 
     return () => {
       cancelled = true;
@@ -164,7 +172,7 @@ export function ActivityFeed(props: ActivityFeedProps) {
               Deal {group.dealId.slice(0, 8)}
             </p>
           )}
-          <ol className={cn("divide-y", big && "divide-y-0 space-y-4")} aria-live="polite">
+          <ol className={cn("divide-y", big && "divide-y-0 space-y-4")}>
             {group.events.map((event) => (
               <FeedRow
                 key={event.id}
@@ -180,8 +188,19 @@ export function ActivityFeed(props: ActivityFeedProps) {
         </div>
       ))}
 
+      {/* Screen readers hear new rows only, not the first 50. */}
+      <p className="sr-only" aria-live="polite">
+        {announcement}
+      </p>
+
       <Sheet open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+        {/* Portaled to <body>, outside the /feed .dark wrapper, so it carries .dark itself. */}
+        <SheetContent
+          className={cn(
+            "w-full overflow-y-auto bg-background text-foreground sm:max-w-lg",
+            big && "dark",
+          )}
+        >
           {selected && <EventDetails event={selected} />}
         </SheetContent>
       </Sheet>
