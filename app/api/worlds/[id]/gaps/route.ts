@@ -4,6 +4,7 @@ import { errorResponse, jsonError } from "@/lib/http";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getViewer } from "@/lib/viewer";
 import { VOTE_RUNS } from "@/tools/verifier/gap-vote";
+import { withEvent } from "@/tools/_withEvent";
 import { checkSpotWorld, checkSummary } from "@/tools/verifier/gaps";
 
 /** 18 view calls plus the second looks; the platform limit (GH-19 build notes). */
@@ -44,8 +45,28 @@ export async function POST(request: Request, ctx: RouteContext<"/api/worlds/[id]
     if (viewer.role !== "host" || listing.host_id !== viewer.profileId)
       return jsonError(403, "not_your_listing", "Only this home's host can check its 3D.");
 
-    const check = await checkSpotWorld(id.data, { runs: body.data.runs });
-    return Response.json(checkSummary(check));
+    // One Verifier line per run: the check makes ~20 vision calls, so it belongs in the feed.
+    const run = withEvent<[string], ReturnType<typeof checkSummary>>(
+      {
+        action: "gaps.checked",
+        actorName: "Verifier",
+        agent: "verifier",
+        scope: () => ({ listingId: listing.id }),
+        summarize: (s) =>
+          `Verifier checked the ${s.room ?? s.spot} 3D for AI-filled areas: ${s.gaps.length} found (dry run, nothing saved)`,
+        payload: (s) => ({
+          worldId: s.worldId,
+          version: s.version,
+          spot: s.spot,
+          runs: s.runs,
+          gaps: s.gaps.length,
+          dropped: s.dropped.length,
+          dryRun: true,
+        }),
+      },
+      async (worldId) => checkSummary(await checkSpotWorld(worldId, { runs: body.data.runs })),
+    );
+    return Response.json(await run(id.data));
   } catch (error) {
     return errorResponse(error);
   }
