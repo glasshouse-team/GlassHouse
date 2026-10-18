@@ -9,9 +9,17 @@
  * the files of the row that copied it first, so nothing is stored or downloaded twice.
  */
 import { z } from "zod";
-import type { Json } from "./database.types";
+import type { Json, Tables } from "./database.types";
 import { logEvent } from "./events";
-import { getWorld, pickSplatUrls, worldScale, type MarbleWorld } from "./marble";
+import {
+  MarbleError,
+  getOperation,
+  getWorld,
+  pickSplatUrls,
+  worldScale,
+  type MarbleOperation,
+  type MarbleWorld,
+} from "./marble";
 import { SpotLinkSchema, type SpotLink } from "./schemas/world";
 import { BUCKETS, publicMediaUrl, supabaseAdmin } from "./supabase";
 
@@ -19,6 +27,25 @@ import { BUCKETS, publicMediaUrl, supabaseAdmin } from "./supabase";
 export const STORAGE_FILE_LIMIT = 50 * 1024 * 1024;
 /** One marble-1.1-plus multi-image generation (D-009, GH-3). */
 export const SPOT_WORLD_CREDITS = 1600;
+
+/** A refusal a route returns as JSON (status, short code, message people can read). */
+export class WorldRequestError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "WorldRequestError";
+  }
+}
+
+/** Who a feed line names: the pipeline itself, or the host who clicked. */
+export interface EventActor {
+  type: "system" | "human";
+  name: string;
+}
+export const PIPELINE_ACTOR: EventActor = { type: "system", name: "3D pipeline" };
 
 // ---------- docs/hero-worlds.json ----------
 
@@ -216,6 +243,43 @@ async function downloadAndUpload(
 }
 
 /**
+ * Copies a world's assets (worldAssetPlan) into `media/worlds/{rowId}/` and returns OUR
+ * URLs per column. Files already stored there are not downloaded again, so a retried poll
+ * or a re-run import costs nothing. Shared by importWorld and finalizeWorld.
+ */
+export async function copyWorldAssets(
+  rowId: string,
+  world: MarbleWorld,
+  log: (line: string) => void = () => {},
+): Promise<{ urls: Partial<Record<AssetColumn, string | null>>; uploaded: string[] }> {
+  const plan = worldAssetPlan(world);
+  const { data: listing, error: listError } = await supabaseAdmin()
+    .storage.from(BUCKETS.media)
+    .list(`worlds/${rowId}`, { limit: 100 });
+  if (listError) throw new Error(`storage list failed: ${listError.message}`);
+  const stored = new Set(
+    (listing ?? []).filter((f) => Number(f.metadata?.size ?? 0) > 0).map((f) => f.name),
+  );
+
+  const urls: Partial<Record<AssetColumn, string | null>> = {};
+  const uploaded: string[] = [];
+  for (const asset of plan) {
+    const path = worldAssetPath(rowId, asset.file);
+    if (stored.has(asset.file)) {
+      urls[asset.column] = publicMediaUrl(path);
+      continue;
+    }
+    if (await downloadAndUpload(asset, path, log)) {
+      urls[asset.column] = publicMediaUrl(path);
+      uploaded.push(asset.file);
+    } else {
+      urls[asset.column] = null;
+    }
+  }
+  return { urls, uploaded };
+}
+
+/**
  * Imports one spot world into a `worlds` row (upsert on listing, version, spot) with OUR
  * storage URLs. Idempotent: an existing row keeps its id and status (a published row stays
  * published), files already in storage are not uploaded again, and a world another row has
@@ -290,30 +354,7 @@ export async function importWorld(input: ImportWorldInput): Promise<ImportedSpot
   }
 
   const world = await getWorld(input.marbleWorldId);
-  const plan = worldAssetPlan(world);
-  const { data: listing, error: listError } = await db.storage
-    .from(BUCKETS.media)
-    .list(`worlds/${row.id}`, { limit: 100 });
-  if (listError) throw new Error(`storage list failed: ${listError.message}`);
-  const stored = new Set(
-    (listing ?? []).filter((f) => Number(f.metadata?.size ?? 0) > 0).map((f) => f.name),
-  );
-
-  const urls: Partial<Record<AssetColumn, string | null>> = {};
-  const uploaded: string[] = [];
-  for (const asset of plan) {
-    const path = worldAssetPath(row.id, asset.file);
-    if (stored.has(asset.file)) {
-      urls[asset.column] = publicMediaUrl(path);
-      continue;
-    }
-    if (await downloadAndUpload(asset, path, log)) {
-      urls[asset.column] = publicMediaUrl(path);
-      uploaded.push(asset.file);
-    } else {
-      urls[asset.column] = null;
-    }
-  }
+  const { urls, uploaded } = await copyWorldAssets(row.id, world, log);
   if (!urls.spz_url || !urls.collider_mesh_url) {
     throw new Error(`World ${input.marbleWorldId} has no web splat or collider to import`);
   }
@@ -389,6 +430,7 @@ export async function publishVersion(
   listingId: string,
   version: number,
   entrySpot: string,
+  actor: EventActor = PIPELINE_ACTOR,
 ): Promise<{ entryWorldId: string; changed: boolean }> {
   const db = supabaseAdmin();
   const { data: rows, error } = await db
@@ -397,14 +439,20 @@ export async function publishVersion(
     .eq("listing_id", listingId)
     .eq("version", version);
   if (error) throw new Error(`worlds lookup failed: ${error.message}`);
-  if (!rows?.length) throw new Error(`No worlds for version ${version}`);
+  if (!rows?.length) throw new WorldRequestError(404, "not_found", `No worlds for version ${version}`);
   const entry = rows.find((r) => r.spot === entrySpot);
-  if (!entry) throw new Error(`Version ${version} has no "${entrySpot}" spot`);
+  if (!entry) {
+    throw new WorldRequestError(409, "no_entry_spot", `Version ${version} has no "${entrySpot}" spot`);
+  }
   const notReady = rows.filter(
     (r) => !r.spz_url || !["ready", "published", "archived"].includes(r.status),
   );
   if (notReady.length) {
-    throw new Error(`Version ${version} is not ready: ${notReady.map((r) => r.spot).join(", ")}`);
+    throw new WorldRequestError(
+      409,
+      "not_ready",
+      `Version ${version} is not ready: ${notReady.map((r) => r.spot).join(", ")}`,
+    );
   }
 
   const { data: listing } = await db
@@ -441,12 +489,207 @@ export async function publishVersion(
   if (point.error) throw new Error(`listing update failed: ${point.error.message}`);
 
   await logEvent({
-    actor_type: "system",
-    actor_name: "3D pipeline",
+    actor_type: actor.type,
+    actor_name: actor.name,
     action: "world.published",
     summary: `World v${version} published for ${listing?.title ?? "listing"}: guests now tour ${rows.length} room spots`,
     listing_id: listingId,
     payload: { version, entry_world_id: entry.id, spots: rows.map((r) => r.spot) },
   });
   return { entryWorldId: entry.id, changed };
+}
+
+// ---------- Finalize a generation (GET /api/worlds/[id]/status) ----------
+
+/**
+ * A 0..1 progress value from an operation's metadata, whose shape the API does not fix:
+ * the first number under a key that names progress or percent (0..100 is scaled down).
+ */
+export function operationProgress(op: Pick<MarbleOperation, "done" | "metadata">): number | null {
+  if (op.done) return 1;
+  const find = (value: unknown, depth: number): number | null => {
+    if (!value || typeof value !== "object" || depth > 2) return null;
+    for (const [key, v] of Object.entries(value)) {
+      if (/progress|percent/i.test(key) && typeof v === "number" && Number.isFinite(v)) {
+        return Math.min(1, Math.max(0, v > 1 ? v / 100 : v));
+      }
+      const nested = find(v, depth + 1);
+      if (nested !== null) return nested;
+    }
+    return null;
+  };
+  return find(op.metadata, 0);
+}
+
+export interface FinalizeResult {
+  row: Tables<"worlds">;
+  /** True when this call moved the row (ready or failed) and logged it. */
+  changed: boolean;
+  progress: number | null;
+  /** A poll that failed this time (network, 5xx, 401/402); the generation goes on. */
+  pollError: string | null;
+}
+
+/**
+ * Moves one generating spot row forward (only polling does, GH-10): checks the operation,
+ * saves `marble_world_id` as soon as it appears (operations expire; after that only
+ * getWorld is used), copies every asset into OUR storage like importWorld, then sets
+ * `ready` with `.eq("status", "generating")` and logs only when a row changed, so two
+ * pollers never log twice. A failed generation becomes `failed` with its message.
+ * Never calls World Labs for a row that is not generating, or in demo mode.
+ */
+export async function finalizeWorld(
+  rowId: string,
+  { demo = false, log = () => {} }: { demo?: boolean; log?: (line: string) => void } = {},
+): Promise<FinalizeResult | null> {
+  const db = supabaseAdmin();
+  const load = async () => {
+    const { data, error } = await db.from("worlds").select("*").eq("id", rowId).maybeSingle();
+    if (error) throw new Error(`worlds lookup failed: ${error.message}`);
+    return data;
+  };
+  const row = await load();
+  if (!row) return null;
+  const idle = { row, changed: false, progress: null, pollError: null };
+  if (demo || row.status !== "generating") return idle;
+  const spotName = row.spot_label ?? row.spot;
+
+  const fail = async (message: string) => {
+    const { data, error } = await db
+      .from("worlds")
+      .update({ status: "failed", error: message.slice(0, 500) })
+      .eq("id", row.id)
+      .eq("status", "generating")
+      .select("id");
+    if (error) throw new Error(`worlds update failed: ${error.message}`);
+    const changed = (data?.length ?? 0) > 0;
+    if (changed) {
+      await logEvent({
+        actor_type: "system",
+        actor_name: PIPELINE_ACTOR.name,
+        action: "world.failed",
+        summary: `World v${row.version} ${spotName} failed for ${await listingTitle(row.listing_id)}: ${message}`,
+        listing_id: row.listing_id,
+        payload: { version: row.version, world_id: row.id, spot: row.spot },
+      });
+    }
+    return { row: (await load()) ?? row, changed, progress: null, pollError: null };
+  };
+
+  let worldId = row.marble_world_id;
+  let credits = row.cost_credits;
+  try {
+    if (!worldId) {
+      if (!row.operation_id) return idle;
+      const op = await getOperation(row.operation_id);
+      if (!op.done) return { ...idle, progress: operationProgress(op) };
+      if (op.error) return fail(op.error.message ?? "World Labs reported an unknown error");
+      worldId = op.response?.world_id ?? null;
+      if (!worldId) return fail("The generation finished without a world");
+      credits = op.cost?.total_credits ?? SPOT_WORLD_CREDITS;
+      const saved = await db
+        .from("worlds")
+        .update({ marble_world_id: worldId, cost_credits: credits })
+        .eq("id", row.id);
+      if (saved.error) throw new Error(`worlds update failed: ${saved.error.message}`);
+    }
+    const world = await getWorld(worldId);
+    const { urls } = await copyWorldAssets(row.id, world, log);
+    if (!urls.spz_url || !urls.collider_mesh_url) {
+      return fail("The world has no web splat or collider mesh");
+    }
+    const scale = world.assets?.splats?.semantics_metadata;
+    const { data, error } = await db
+      .from("worlds")
+      .update({
+        ...Object.fromEntries(ASSET_COLUMNS.map((c) => [c, urls[c] ?? null])),
+        hq_mesh_url: null,
+        model: world.model ?? row.model,
+        caption: world.assets?.caption?.trim() || null,
+        metric_scale_factor: scale?.metric_scale_factor ?? worldScale(world).metricScaleFactor,
+        ground_plane_offset: scale?.ground_plane_offset ?? null,
+        cost_credits: credits ?? SPOT_WORLD_CREDITS,
+        status: "ready",
+        ready_at: new Date().toISOString(),
+        error: null,
+      })
+      .eq("id", row.id)
+      .eq("status", "generating")
+      .select("id");
+    if (error) throw new Error(`worlds update failed: ${error.message}`);
+    const changed = (data?.length ?? 0) > 0;
+    if (changed) {
+      const { data: siblings } = await db
+        .from("worlds")
+        .select("status")
+        .eq("listing_id", row.listing_id)
+        .eq("version", row.version);
+      const waiting = (siblings ?? []).filter(
+        (s) => s.status === "generating" || s.status === "queued",
+      ).length;
+      const title = await listingTitle(row.listing_id);
+      await logEvent({
+        actor_type: "system",
+        actor_name: PIPELINE_ACTOR.name,
+        action: "world.ready",
+        summary: waiting
+          ? `World v${row.version} ${spotName} ready for ${title}; ${waiting} room spot${waiting === 1 ? "" : "s"} still generating`
+          : `World v${row.version} ready for ${title}: preview it and publish`,
+        listing_id: row.listing_id,
+        payload: { version: row.version, world_id: row.id, spot: row.spot, credits },
+      });
+    }
+    return { row: (await load()) ?? row, changed, progress: 1, pollError: null };
+  } catch (error) {
+    if (error instanceof MarbleError) {
+      return { row: (await load()) ?? row, changed: false, progress: null, pollError: error.message };
+    }
+    throw error;
+  }
+}
+
+// ---------- Publish one version from a row (POST /api/worlds/[id]/publish) ----------
+
+/**
+ * Publishes the version a row belongs to. The entry spot stays the one guests enter now
+ * when the version has it, else it is the clicked row's spot.
+ */
+export async function publishWorldRow(
+  rowId: string,
+  actor: EventActor = PIPELINE_ACTOR,
+): Promise<{ listingId: string; version: number; entryWorldId: string; changed: boolean }> {
+  const db = supabaseAdmin();
+  const { data: row, error } = await db
+    .from("worlds")
+    .select("id,listing_id,version,spot")
+    .eq("id", rowId)
+    .maybeSingle();
+  if (error) throw new Error(`worlds lookup failed: ${error.message}`);
+  if (!row) throw new WorldRequestError(404, "not_found", "This 3D version does not exist.");
+
+  let entrySpot = row.spot;
+  const { data: listing } = await db
+    .from("listings")
+    .select("published_world_id")
+    .eq("id", row.listing_id)
+    .maybeSingle();
+  if (listing?.published_world_id) {
+    const { data: current } = await db
+      .from("worlds")
+      .select("spot")
+      .eq("id", listing.published_world_id)
+      .maybeSingle();
+    const { data: match } = current
+      ? await db
+          .from("worlds")
+          .select("id")
+          .eq("listing_id", row.listing_id)
+          .eq("version", row.version)
+          .eq("spot", current.spot)
+          .maybeSingle()
+      : { data: null };
+    if (current && match) entrySpot = current.spot;
+  }
+  const result = await publishVersion(row.listing_id, row.version, entrySpot, actor);
+  return { listingId: row.listing_id, version: row.version, ...result };
 }
