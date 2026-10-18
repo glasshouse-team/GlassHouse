@@ -33,22 +33,10 @@ describe("dominantAngle", () => {
 
   it("averages noisy angles around the peak, ignoring a short odd segment", () => {
     const segments: Segment2[] = [
-      [
-        [0, 0],
-        rotatePoint([3, 0], 31 * DEG),
-      ],
-      [
-        [0, 0],
-        rotatePoint([3, 0], 29 * DEG),
-      ],
-      [
-        [0, 0],
-        rotatePoint([0, 3], 30 * DEG),
-      ],
-      [
-        [0, 0],
-        rotatePoint([0.3, 0], 70 * DEG),
-      ],
+      [[0, 0], rotatePoint([3, 0], 31 * DEG)],
+      [[0, 0], rotatePoint([3, 0], 29 * DEG)],
+      [[0, 0], rotatePoint([0, 3], 30 * DEG)],
+      [[0, 0], rotatePoint([0.3, 0], 70 * DEG)],
     ];
     expect(dominantAngle(segments) / DEG).toBeCloseTo(30, 0);
   });

@@ -8,10 +8,22 @@
  * Tables the seed never writes, so every row in them was made by a demo run or a test
  * (D-032). Deleting them cascades to deal_messages, deal_secrets and deal events (deals),
  * checkins (reservations) and messages (conversations). Seed tables (listings, photos,
- * reviews, policies, availability) and 3D, capture and X-ray rows are never deleted.
+ * reviews, policies, availability) and 3D, capture and X-ray rows are never deleted, except
+ * for homes a host added in the app (D-043): those listings go, with everything under them.
  */
 export const DEMO_TABLES = ["reservations", "deals", "conversations", "trip_briefs"] as const;
 export type DemoTable = (typeof DEMO_TABLES)[number];
+
+/**
+ * The seed's slugs as a PostgREST `in` list, for deleting homes added in the app (D-043).
+ * Refuses an empty list or an odd slug: `not in ()` would match, and delete, every listing.
+ */
+export function seedSlugList(slugs: readonly string[]): string {
+  if (slugs.length === 0) throw new Error("No seed slugs: refusing to delete listings");
+  const bad = slugs.find((s) => !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(s));
+  if (bad !== undefined) throw new Error(`Seed slug "${bad}" can't go in a PostgREST list`);
+  return `(${slugs.join(",")})`;
+}
 
 /** Spot keys that count as the way in; the tour starts at the entry spot (D-009). */
 const ENTRY_SPOTS = ["entrance", "entry", "hall", "hallway", "corridor"];
@@ -54,6 +66,8 @@ export type WorldStep =
 export interface ResetPlan {
   /** Rows to delete per demo table. */
   deletions: Record<DemoTable, number>;
+  /** Homes hosts added in the app (slugs not in the seed), deleted with their rows (D-043). */
+  addedHomes: string[];
   /** Events with an id above this are deleted; null when the seed never logged its event. */
   eventWatermark: number | null;
   eventsToDelete: number;
@@ -126,9 +140,12 @@ export function buildResetPlan(input: {
   worlds: ResetWorld[];
   gaps: ResetGap[];
   version: number;
+  /** Slugs of listings that are not in the seed. */
+  addedHomes?: string[];
 }): ResetPlan {
   return {
     deletions: { ...input.counts },
+    addedHomes: [...(input.addedHomes ?? [])].sort(),
     eventWatermark: input.eventWatermark,
     eventsToDelete: input.eventWatermark === null ? 0 : input.eventsAboveWatermark,
     world: planWorldPublish(input.worlds, input.gaps, input.version),
@@ -139,6 +156,11 @@ export function buildResetPlan(input: {
 export function describePlan(plan: ResetPlan, listingSlug: string): string[] {
   const lines = DEMO_TABLES.map(
     (t) => `delete ${plan.deletions[t]} ${t} (all; the seed makes none)`,
+  );
+  lines.push(
+    plan.addedHomes.length === 0
+      ? "keep listings: no homes were added in the app"
+      : `delete ${plan.addedHomes.length} homes added in the app, with their rows: ${plan.addedHomes.join(", ")}`,
   );
   lines.push(
     plan.eventWatermark === null

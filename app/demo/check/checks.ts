@@ -8,6 +8,7 @@ import { getAvailability } from "@/lib/data/listings";
 import { hasEnv, isDemoMode, settings, type EnvKey } from "@/lib/env";
 import { stayNights } from "@/lib/pricing";
 import { supabaseAdmin } from "@/lib/supabase";
+import { SEED_LISTINGS } from "@/seed/data/listings";
 import {
   DEMO_DEAL,
   HERO_1_POLICY,
@@ -171,8 +172,16 @@ async function xrayRowsCheck(): Promise<Outcome> {
   if (listings.error) return fail(listings.error.message);
   if (facts.error) return fail(facts.error.message);
   const withRow = new Set((facts.data ?? []).map((f) => f.listing_id));
+  const seeded = new Set(SEED_LISTINGS.map((l) => l.slug));
   const missing = (listings.data ?? []).filter((l) => !withRow.has(l.id)).map((l) => l.slug);
-  if (missing.length) return fail(`no X-ray row for ${missing.join(", ")}: run pnpm xray`);
+  const missingSeeded = missing.filter((slug) => seeded.has(slug));
+  if (missingSeeded.length)
+    return fail(`no X-ray row for ${missingSeeded.join(", ")}: run pnpm xray`);
+  // Homes a host added in the app (D-043) have no X-ray until one runs; reset removes them.
+  if (missing.length)
+    return warn(
+      `homes added in the app, no X-ray yet: ${missing.join(", ")} (pnpm demo:reset removes them)`,
+    );
   const slugOf = new Map((listings.data ?? []).map((l) => [l.id, l.slug]));
   const seedOnly = (facts.data ?? [])
     .filter((f) => f.model === "seed")

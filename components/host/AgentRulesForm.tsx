@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { defaultPolicy } from "@/lib/new-home";
 import {
   ALLOWED_TERMS,
   centsToDollars,
@@ -33,13 +34,7 @@ type TermKey = PolicyForm["allowed_terms"][number];
  */
 export function AgentRulesForm({ listingId, initial, basePriceCents }: AgentRulesFormProps) {
   const router = useRouter();
-  const start: PolicyForm = initial ?? {
-    negotiable: true,
-    floor_nightly_cents: basePriceCents,
-    max_discount_pct: 10,
-    auto_accept_total_cents: null,
-    allowed_terms: [],
-  };
+  const start: PolicyForm = initial ?? defaultPolicy(basePriceCents);
   const [negotiable, setNegotiable] = useState(start.negotiable);
   const [floor, setFloor] = useState(centsToDollars(start.floor_nightly_cents));
   const [maxDiscount, setMaxDiscount] = useState(String(start.max_discount_pct));

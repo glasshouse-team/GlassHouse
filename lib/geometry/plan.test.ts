@@ -127,9 +127,19 @@ describe("placeRooms", () => {
 
   it("puts a linked room through the doorway with matching back link", () => {
     const rooms: SpotRoom[] = [
-      { spot: "entrance", name: "Hall", links: [{ to: "kitchen", azimuth: 90 }], footprint: square },
+      {
+        spot: "entrance",
+        name: "Hall",
+        links: [{ to: "kitchen", azimuth: 90 }],
+        footprint: square,
+      },
       // The kitchen's frame is turned: its link back points at azimuth 0 (its -z).
-      { spot: "kitchen", name: "Kitchen", links: [{ to: "entrance", azimuth: 0 }], footprint: square },
+      {
+        spot: "kitchen",
+        name: "Kitchen",
+        links: [{ to: "entrance", azimuth: 0 }],
+        footprint: square,
+      },
     ];
     const { poses, doors } = placeRooms(rooms);
     const kitchen = poses.get("kitchen")!;

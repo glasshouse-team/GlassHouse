@@ -141,12 +141,7 @@ export function footprintExit(f: Footprint, dir: Point2): number {
  * next room seen through a door are dropped), minus short pieces deep inside the room
  * (furniture sides): under `clutterLength` and more than `margin` from every footprint edge.
  */
-export function clipWalls(
-  walls: Wall[],
-  f: Footprint,
-  margin = 0.3,
-  clutterLength = 0.6,
-): Wall[] {
+export function clipWalls(walls: Wall[], f: Footprint, margin = 0.3, clutterLength = 0.6): Wall[] {
   const local = (p: Point2) => rotatePoint(p, -f.angle);
   const inside = ([x, z]: Point2, m: number) =>
     x >= f.minX - m && x <= f.maxX + m && z >= f.minZ - m && z <= f.maxZ + m;
@@ -270,10 +265,7 @@ export function placeRooms(rooms: SpotRoom[], options: PlaceOptions = {}): Place
       doors.push({
         from: a.spot,
         to: b.spot,
-        at: [
-          poseA.x + dir[0] * (outA + WALL_GAP / 2),
-          poseA.z + dir[1] * (outA + WALL_GAP / 2),
-        ],
+        at: [poseA.x + dir[0] * (outA + WALL_GAP / 2), poseA.z + dir[1] * (outA + WALL_GAP / 2)],
       });
       queue.push(b.spot);
     }

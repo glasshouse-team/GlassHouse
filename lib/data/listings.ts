@@ -7,9 +7,11 @@ import { z } from "zod";
 import { type CoverageWorld, type ListingCoverage, publishedCoverage } from "@/lib/coverage";
 import type { Tables } from "@/lib/database.types";
 import { stayNights } from "@/lib/pricing";
+import { defaultPolicy, homeSlug, type NewHome } from "@/lib/new-home";
 import { HouseRulesSchema } from "@/lib/schemas/core";
 import { XrayResultSchema, type XrayResult } from "@/lib/schemas/verifier";
 import { supabaseAdmin } from "@/lib/supabase";
+import { saveHostPolicy } from "./policies";
 
 export type ListingRow = Tables<"listings">;
 export type PhotoRow = Tables<"listing_photos">;
@@ -157,7 +159,37 @@ export async function getListingCoverage(
   return publishedCoverage(listing.published_world_id, await getCoverageWorlds([listing.id]));
 }
 
-/** The host's listings for the dashboard (by slug, so hero-1 comes first). */
+/**
+ * A host lists a new home (D-043): published at once so the capture page and search find it,
+ * with the default agent rules. A slug clash gets a new suffix; if the rules can't be saved
+ * the home is removed again, so a listing never exists without its rules.
+ */
+export async function createHostListing(
+  hostId: string,
+  home: NewHome,
+): Promise<{ id: string; slug: string }> {
+  const db = supabaseAdmin();
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const slug = homeSlug(home.title, crypto.randomUUID().slice(0, 6));
+    const { data, error } = await db
+      .from("listings")
+      .insert({ ...home, host_id: hostId, slug, status: "published" })
+      .select("id, slug")
+      .single();
+    if (error?.code === "23505") continue;
+    check(error, "the new home");
+    try {
+      await saveHostPolicy(data!.id, defaultPolicy(home.base_price_cents));
+    } catch (policyError) {
+      await db.from("listings").delete().eq("id", data!.id);
+      throw policyError;
+    }
+    return data!;
+  }
+  throw new Error("Could not pick a free address for the new home. Try again.");
+}
+
+/** The host's listings for the dashboard: seeded homes first (hero-1 first), new ones last. */
 export async function getHostListings(hostId: string) {
   const { data, error } = await supabaseAdmin()
     .from("listings")
@@ -165,6 +197,8 @@ export async function getHostListings(hostId: string) {
       "id, slug, title, description, city, property_type, max_guests, bedrooms, beds, baths, base_price_cents, cleaning_fee_cents, amenities, house_rules",
     )
     .eq("host_id", hostId)
+    // The seed inserts its homes in one statement (same created_at), so the slug orders them.
+    .order("created_at")
     .order("slug");
   check(error, "host listings");
   return (data ?? []).map((row) => ({
