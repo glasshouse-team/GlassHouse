@@ -5,7 +5,7 @@
  * The host policy and the guest's maximum live in this server-side closure: the model never
  * sees them, and only `amountCents` and `terms` may reach the feed (D-024).
  */
-import { tool } from "ai";
+import { tool, type ToolSet } from "ai";
 import { z } from "zod";
 import type { DealMessageType, OfferTerms } from "@/lib/schemas/core";
 import { validateOffer, type NegotiationPolicy, type OfferBy } from "@/lib/validators";
@@ -60,7 +60,7 @@ function termsRecord(terms: readonly string[]): OfferTerms {
 }
 
 /** The tools for one side's turn. `state.outcome` is set by the first move that went through. */
-export function negotiationTools(side: TurnSide, state: TurnState) {
+export function negotiationTools(side: TurnSide, state: TurnState): ToolSet {
   const who = ACTOR[side.by];
 
   async function money(move: Move, terms: OfferTerms, body: string) {
