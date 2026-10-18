@@ -46,7 +46,7 @@ Agents negotiate over `hostSubtotalCents` (nights + cleaning). The 10% service f
 
 ```ts
 createAgent({ name: "guest" | "host" | "verifier", system, tools, model?: "agent" | "bulk",
-              maxSteps?, stopWhen?, output?, effort?: "low" | "medium" | "high",
+              maxSteps?, stopWhen?, output?, effort?: "low" | "medium" | "high", thinking?: "adaptive" | "off",
               listingId?, dealId?, toolsContext?, logInputs? }): ToolLoopAgent  // .generate() and .stream()
 buildHostContext(listingId, mode: "qa" | "negotiate"): Promise<HostContext>  // policy only in "negotiate"; manual only in "qa" (D-025)
 buildGuestContext(dealId): Promise<GuestContext>                              // includes the guest's limits; house_manual blank
