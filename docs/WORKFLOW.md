@@ -58,7 +58,7 @@ The goal is simple: you never edit the same file, and `main` always works.
 
 `/loop /autopilot` in each developer's Claude Code runs the project without waiting on people.
 
-- **Reviews and merges:** each Claude reviews and approves the other's PRs, merges its own once `ap gate` passes (CI green and peer-approved), then moves its Jira tickets and starts the next one.
+- **Reviews and merges:** each Claude reviews and approves the other's PRs. When `ap gate` passes (CI green and peer-approved), the author's Claude labels the PR `ready-to-merge` and puts "Merge PR #n" on Needs a human; a person clicks Merge (D-030). The Claude then runs the follow-up (`db:push`, Jira, handoff), moves its Jira tickets and starts the next one.
 - **Talking:** the two Claudes talk on the pinned **🤖 Agent channel** issue.
 - **While working:** a background watcher hands new messages and review requests to a side subagent in its own worktree, so the main ticket keeps moving. Each side pulls `main` whenever the other merges.
 - **People:** you get only what a Claude cannot do, as boxes on the pinned **🙋 Needs a human** issue: footage and photos of a real home, World Labs credits, a real-phone run of camera features, and PRs that edit an applied migration or the agents' own rules (CLAUDE.md, settings, hooks, the autopilot skill). The Claudes source stock photos themselves, run `pnpm db:push` after a migration merges, and test every page in a browser at laptop and phone size, recording the 20-second clip for Jira. Tick a box when it's done. You can also write plain comments on the channel; both Claudes read them.

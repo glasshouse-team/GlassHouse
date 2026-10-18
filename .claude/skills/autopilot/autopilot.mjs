@@ -108,6 +108,7 @@ function setup() {
     [config.labels.needsHuman, "d93f0b", "Autopilot will not merge this PR: a person must"],
     [config.labels.pr, "0e8a16", "Opened by /autopilot"],
     [config.labels.hold, "fbca04", "Autopilot: do not merge until removed"],
+    [config.labels.ready, "0e8a16", "Gate passed: a person clicks Merge (D-030)"],
   ];
   for (const [name, color, description] of labels)
     gh([
@@ -333,8 +334,13 @@ async function watch(every) {
             .slice(0, 300),
         });
       }
-      for (const pr of reviewList()) {
-        const key = `review:${pr.number}:${pr.headRefName}`;
+      // A PR leaves the list once I review it and comes back when the author re-requests me,
+      // so forget keys no longer listed: a re-request is announced again.
+      const waiting = reviewList();
+      const listed = new Set(waiting.map((pr) => `review:${pr.number}`));
+      for (const key of seen) if (key.startsWith("review:") && !listed.has(key)) seen.delete(key);
+      for (const pr of waiting) {
+        const key = `review:${pr.number}`;
         if (seen.has(key)) continue;
         seen.add(key);
         emit({

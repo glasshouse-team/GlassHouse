@@ -11,7 +11,7 @@ Each developer runs **`/loop /autopilot`** in their own Claude Code. The two Cla
 
 - they talk on the GitHub **Agent channel** issue;
 - each reviews and approves the other's PRs;
-- each merges its own approved PRs;
+- a person clicks Merge on each PR the gate passes (D-030); the author's Claude does everything after the merge;
 - each moves its own Jira tickets;
 - each takes its next ticket.
 
@@ -31,7 +31,7 @@ D-029 replaces CLAUDE.md's "ask before any write to Jira or GitHub" while autopi
 
 - commit, push ticket branches, and open, label and update PRs;
 - review and approve the peer's PRs;
-- merge its own PRs when `ap gate <n>` passes;
+- label its own PR `ready-to-merge` and ask a person to merge it when `ap gate <n>` passes;
 - comment on and transition its own developer's Jira tickets;
 - post `record-decision` updates.
 
@@ -39,7 +39,7 @@ Everything else in CLAUDE.md still holds: ownership, contracts, money in cents, 
 
 Never, even on autopilot:
 
-- **Git:** push to `main`, force-push, `gh pr merge --admin`, or merge a PR whose gate says no.
+- **Git:** push to `main`, force-push, or run `gh pr merge` at all; a person merges (D-030).
 - **Ownership:** edit the peer's folders. Send a `request` instead.
 - **Credits:** run `pnpm worlds generate` or any other World Labs generation (1,600 credits each). Credits and purchases are a human task.
 - **Database:** edit a migration that is already applied, or run `pnpm db:push` from an unmerged branch. A new `000N_<name>.sql` is pushed only after its PR merges (step 3).
@@ -104,10 +104,10 @@ Review honestly. Approving is what lets the peer's Claude merge alone, so you ar
 
 Each item has `merge`, `reasons`, `needsHuman` and `afterMerge`. For each PR:
 
-- **`merge: true`:** do these in order.
-  1. `gh pr merge <n> --merge --delete-branch`.
-  2. `git fetch origin && git switch --detach origin/main`, then run every command in `afterMerge` in order (`pnpm db:push`, `pnpm db:types`, `pnpm install`). If `pnpm db:types` changed `lib/database.types.ts`, commit it on a `GH-<n>-db-types` branch and open a PR like any other.
-  3. Then do "After a merge" below.
+- **`merge: true`:** a Claude never merges (D-030: approval between two Claudes is not human review).
+  1. `gh pr edit <n> --add-label ready-to-merge`, and `ap human add --who <you> --ticket GH-<n> --task "Merge PR #<n> (<url>): CI green, peer-approved, gate passes. Click Merge."`.
+  2. Move on. When the PR shows up as merged (a `main-updated` event, or `gh pr view <n> --json state`), `git fetch origin && git switch --detach origin/main`, then run every command in `afterMerge` in order (`pnpm db:push`, `pnpm db:types`, `pnpm install`). If `pnpm db:types` changed `lib/database.types.ts`, commit it on a `GH-<n>-db-types` branch and open a PR like any other.
+  3. Then do "After a merge" below, and tick the PR's box on Needs a human if the person has not.
 - **CI failed:** read the run (`gh run view --log-failed`), fix it on the branch, run `pnpm check`, push.
 - **Merge conflict:** merge `origin/main` into the branch, fix, `pnpm check`, push.
 - **Changes requested:** fix each point, push, reply on the PR, then `gh pr edit <n> --add-reviewer <peerLogin>` to ask again.
