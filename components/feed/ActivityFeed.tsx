@@ -229,30 +229,40 @@ function FeedRow(props: {
         onClick={props.onOpen}
         className={cn(
           "flex w-full items-start gap-3 rounded-lg text-left hover:bg-muted",
-          big ? "gap-6 bg-card p-5" : compact ? "px-1 py-2" : "px-2 py-3",
+          big ? "gap-4 bg-card p-4 sm:gap-6 sm:p-5" : compact ? "px-1 py-2" : "px-2 py-3",
         )}
       >
         <span
           className={cn(
             "flex shrink-0 items-center justify-center rounded-full",
             style.badge,
-            big ? "size-16" : compact ? "size-7" : "size-9",
+            big ? "size-12 sm:size-16" : compact ? "size-7" : "size-9",
           )}
           title={style.label}
         >
-          <Icon className={big ? "size-8" : compact ? "size-3.5" : "size-4"} aria-hidden />
+          <Icon
+            className={big ? "size-6 sm:size-8" : compact ? "size-3.5" : "size-4"}
+            aria-hidden
+          />
         </span>
         <span className="min-w-0 flex-1">
           <span
             className={cn(
               "block",
-              big ? "text-4xl leading-tight font-medium" : compact ? "text-xs" : "text-sm",
+              big
+                ? "text-2xl leading-tight font-medium sm:text-4xl"
+                : compact
+                  ? "text-xs"
+                  : "text-sm",
             )}
           >
             {event.summary}
           </span>
           <span
-            className={cn("mt-0.5 block text-muted-foreground", big ? "mt-2 text-2xl" : "text-xs")}
+            className={cn(
+              "mt-0.5 block text-muted-foreground",
+              big ? "mt-2 text-lg sm:text-2xl" : "text-xs",
+            )}
           >
             <span className={cn("font-medium", style.text)}>{style.label}</span>
             {" · "}
