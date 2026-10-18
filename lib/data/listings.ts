@@ -114,12 +114,15 @@ export interface ListingFilters {
   guests?: number;
 }
 
-/** Published listings for the search grid, best rated first. */
+/**
+ * Published listings with at least one photo for the search grid, best rated first. A home a
+ * host just added (D-043) stays out until its first photos land; its own page still opens.
+ */
 export async function searchListings(filters: ListingFilters = {}): Promise<ListingCardData[]> {
   let query = supabaseAdmin()
     .from("listings")
     .select(
-      "id, slug, title, city, neighborhood, property_type, max_guests, base_price_cents, rating, review_count, published_world_id, listing_photos(url, sort)",
+      "id, slug, title, city, neighborhood, property_type, max_guests, base_price_cents, rating, review_count, published_world_id, listing_photos!inner(url, sort)",
     )
     .eq("status", "published");
   if (filters.city) query = query.eq("city", filters.city);
