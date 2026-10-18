@@ -390,7 +390,7 @@ export const SEED_LISTINGS: SeedListing[] = [
     host: "ana",
     title: "Sololaki loft with a reading nook and fast wifi",
     description:
-      "A high-ceilinged loft in an old Sololaki building: a cozy living room with a reading nook, a long desk, very fast fibre and steep stairs up to the sleeping gallery. City views over the rooftops.",
+      "A high-ceilinged loft in an old Sololaki building: a cozy living room with a reading nook, a long desk and very fast fibre. City views over the rooftops.",
     city: "Tbilisi",
     neighborhood: "Sololaki",
     property_type: "loft",

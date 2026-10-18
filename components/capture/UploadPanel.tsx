@@ -9,8 +9,10 @@ export interface UploadJob {
   status: "uploading" | "done" | "failed";
   error?: string;
   flags: string[];
+  /** Indexes of the rooms this capture covers. */
+  rooms: number[];
   retry: () => void;
-  /** Set once the upload is confirmed; POST /api/worlds takes these ids (GH-10). */
+  /** Set once the upload is confirmed; POST /api/worlds takes these ids (GH-10, D-039). */
   captureId?: string;
 }
 

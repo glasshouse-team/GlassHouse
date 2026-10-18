@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ClipRecorder, type ClipResult } from "./ClipRecorder";
 import { FallbackUpload, type FallbackClip } from "./FallbackUpload";
+import { generationReadiness, roomStates, type Readiness, type RoomState } from "./logic/readiness";
 import { CLIP_MAX_SECONDS } from "./logic/recording";
 import { RingCapture, type RingResult } from "./RingCapture";
 import { RoomChecklist } from "./RoomChecklist";
@@ -28,6 +29,14 @@ const TIPS = [
   "Hold the phone level at chest height and move slowly.",
   "Stand in the middle of each room and turn a full circle.",
 ];
+
+const ROOM_STATE_TEXT: Record<RoomState, string> = {
+  todo: "To do",
+  uploading: "Uploading",
+  uploaded: "Uploaded",
+  failed: "Upload failed",
+  skipped: "Skipped",
+};
 
 /**
  * Guided capture on a phone (GH-22): instructions and permission, room checklist, then per spot
@@ -56,7 +65,6 @@ export function CaptureFlow({
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [motionDenied, setMotionDenied] = useState(false);
   const [starting, setStarting] = useState(false);
-  const [done, setDone] = useState<Set<number>>(new Set());
   const [skipped, setSkipped] = useState<Set<number>>(new Set());
   const [jobs, setJobs] = useState<UploadJob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -64,7 +72,10 @@ export function CaptureFlow({
   useEffect(() => () => streamRef.current?.getTracks().forEach((t) => t.stop()), []);
 
   const cleanRooms = rooms.map((r) => r.trim()).filter(Boolean);
-  const nextRoom = cleanRooms.findIndex((_, i) => !done.has(i));
+  // A room is handled once its upload runs or finishes, or it was skipped; a failed upload makes
+  // it the next room again (the job can also be retried from the upload list).
+  const states = roomStates(cleanRooms.length, jobs, skipped);
+  const nextRoom = states.findIndex((s) => s === "todo" || s === "failed");
   const allDone = nextRoom === -1;
 
   function allow() {
@@ -94,18 +105,22 @@ export function CaptureFlow({
     const run = () => {
       updateJob(key, { status: "uploading", progress: 0, error: undefined });
       uploadCapture(request, files, (p) => updateJob(key, { progress: p }))
-        .then((captureId) => {
-          updateJob(key, { status: "done", progress: 1, captureId });
-          setDone((prev) => new Set([...prev, ...roomIdx]));
-        })
+        .then((captureId) => updateJob(key, { status: "done", progress: 1, captureId }))
         .catch((e: Error) => updateJob(key, { status: "failed", error: e.message }));
     };
+    // The job starts as "uploading", so the host can go on to the next room right away.
     setJobs((prev) => [
       ...prev,
-      { key, label, progress: 0, status: "uploading", flags: request.qualityFlags, retry: run },
+      {
+        key,
+        label,
+        progress: 0,
+        status: "uploading",
+        flags: request.qualityFlags,
+        rooms: roomIdx,
+        retry: run,
+      },
     ]);
-    // Mark the rooms as captured now so the host can go on; a failed upload can be retried.
-    setDone((prev) => new Set([...prev, ...roomIdx]));
     run();
   }
 
@@ -179,7 +194,6 @@ export function CaptureFlow({
         onDone={onRing}
         onSkip={() => {
           setSkipped((prev) => new Set([...prev, nextRoom]));
-          setDone((prev) => new Set([...prev, nextRoom]));
           setStep("hub");
         }}
         onCancel={() => setStep("hub")}
@@ -198,14 +212,17 @@ export function CaptureFlow({
     );
   }
 
-  const uploading = jobs.some((j) => j.status === "uploading");
-  const uploaded = jobs.filter((j) => j.status === "done").length;
+  const captureIds = jobs.flatMap((j) => (j.status === "done" && j.captureId ? [j.captureId] : []));
+  const readiness = generationReadiness(cleanRooms, states);
 
   return (
     <div className="mx-auto max-w-xl space-y-6 px-4 py-6">
       <header className="space-y-1">
         <p className="text-sm text-muted-foreground">
-          <Link href="/host/dashboard" className="underline-offset-4 hover:underline">
+          <Link
+            href="/host/dashboard"
+            className="-my-2 inline-flex min-h-11 items-center underline-offset-4 hover:underline"
+          >
             Host dashboard
           </Link>{" "}
           / Capture
@@ -311,14 +328,16 @@ export function CaptureFlow({
                 <span>
                   {i + 1}. {r}
                 </span>
-                <span className={done.has(i) ? "text-brand" : "text-muted-foreground"}>
-                  {skipped.has(i)
-                    ? "Skipped"
-                    : done.has(i)
-                      ? "Captured"
-                      : i === nextRoom
-                        ? "Next"
-                        : "To do"}
+                <span
+                  className={
+                    states[i] === "uploaded"
+                      ? "text-brand"
+                      : states[i] === "failed"
+                        ? "text-destructive"
+                        : "text-muted-foreground"
+                  }
+                >
+                  {states[i] === "todo" && i === nextRoom ? "Next" : ROOM_STATE_TEXT[states[i]!]}
                 </span>
               </li>
             ))}
@@ -341,11 +360,8 @@ export function CaptureFlow({
         <GenerateStep
           listingId={listingId}
           demoMode={demoMode}
-          ready={allDone && uploaded > 0 && !uploading}
-          uploaded={uploaded}
-          captureIds={jobs.flatMap((j) =>
-            j.status === "done" && j.captureId ? [j.captureId] : [],
-          )}
+          readiness={readiness}
+          captureIds={captureIds}
         />
       )}
     </div>
@@ -380,21 +396,19 @@ function ModeCard({
 }
 
 /**
- * "Generate my 3D home" (GH-10): POST /api/worlds with the uploaded capture ids, one Marble
- * generation per room spot. Only this button starts one, never a page view; in DEMO_MODE the
- * route returns the saved version and calls nothing. Progress shows on the host dashboard.
+ * "Generate my 3D home" (GH-10, D-039): POST /api/worlds with the uploaded capture ids, one
+ * Marble generation per room spot. Only this button starts one, never a page view; in DEMO_MODE
+ * the route returns the saved version and calls nothing. Progress shows on the host dashboard.
  */
 function GenerateStep({
   listingId,
   demoMode,
-  ready,
-  uploaded,
+  readiness,
   captureIds,
 }: {
   listingId: string;
   demoMode: boolean;
-  ready: boolean;
-  uploaded: number;
+  readiness: Readiness;
   captureIds: string[];
 }) {
   const [busy, setBusy] = useState(false);
@@ -426,30 +440,30 @@ function GenerateStep({
     }
   }
 
+  const count = captureIds.length;
   return (
     <section className="space-y-2 rounded-xl border p-4">
       <h2 className="font-semibold">Generate my 3D home</h2>
       {demoMode ? (
         <p className="text-sm text-muted-foreground">
           Demo mode: 3D generation is off, so the saved 3D tour stays in place. Your{" "}
-          {uploaded === 1 ? "capture is" : `${uploaded} captures are`} stored for later.
+          {count === 1 ? "capture is" : `${count} captures are`} stored for later.
         </p>
       ) : (
         <p className="text-sm text-muted-foreground">
-          {ready
-            ? `All rooms are uploaded. Each room spot costs about 1,600 World Labs credits.`
-            : "Capture and upload every room first."}
+          {readiness.message}
+          {readiness.ready && " Each room spot costs about 1,600 World Labs credits."}
         </p>
       )}
       <Button
-        disabled={demoMode || !ready || busy || captureIds.length === 0}
+        disabled={demoMode || !readiness.ready || busy || count === 0}
         className="w-full"
         onClick={generate}
       >
         {busy ? "Starting…" : "Generate my 3D home"}
       </Button>
       {result && (
-        <p className="text-sm">
+        <p className="text-sm" role="status">
           {result}{" "}
           <Link href="/host/dashboard" className="underline underline-offset-4">
             Host dashboard

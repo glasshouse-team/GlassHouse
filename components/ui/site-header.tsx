@@ -5,7 +5,7 @@ import type { Viewer } from "@/lib/viewer";
 
 const linkClass = "py-2 text-muted-foreground hover:text-foreground";
 
-/** Logo, search entry, the host's dashboard link and the role switcher. */
+/** Logo, search entry, the host's dashboard link, the feed and the role switcher (all widths). */
 export function SiteHeader({ viewer }: { viewer: Viewer }) {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
@@ -24,7 +24,7 @@ export function SiteHeader({ viewer }: { viewer: Viewer }) {
             Dashboard
           </Link>
         )}
-        <Link href="/feed" className={`${linkClass} hidden sm:inline`}>
+        <Link href="/feed" className={linkClass}>
           Feed
         </Link>
         <div className="ml-auto">
