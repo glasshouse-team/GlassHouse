@@ -5,8 +5,10 @@ const state = vi.hoisted(() => ({
   viewer: { role: "host", profileId: "", name: "Giorgi" },
   listing: null as unknown,
   capture: null as unknown,
-  files: [] as string[],
+  files: [] as { name: string; size: number | null }[],
   gapListing: null as string | null,
+  /** The row's status in the fake database; getCapture's snapshot can be stale (a race). */
+  dbStatus: "uploading",
 }));
 vi.mock("@/lib/viewer", () => ({ getViewer: async () => state.viewer }));
 vi.mock("@/lib/data/listings", () => ({ getListing: async () => state.listing }));
@@ -14,7 +16,12 @@ vi.mock("@/lib/events", () => ({ logEvent: vi.fn(async () => {}) }));
 vi.mock("./store", () => ({
   insertCapture: vi.fn(async () => {}),
   getCapture: async () => state.capture,
-  setCaptureStatus: vi.fn(async () => {}),
+  // Like the real conditional update: changes the row only while it still has status `from`.
+  setCaptureStatus: vi.fn(async (_id: string, status: string, from: string) => {
+    if (state.dbStatus !== from) return false;
+    state.dbStatus = status;
+    return true;
+  }),
   listCaptureFiles: async () => state.files,
   gapListingId: async () => state.gapListing,
   signUploads: async (paths: string[]) =>
@@ -79,6 +86,7 @@ beforeEach(() => {
   state.capture = null;
   state.files = [];
   state.gapListing = null;
+  state.dbStatus = "uploading";
   vi.mocked(insertCapture).mockClear();
   vi.mocked(setCaptureStatus).mockClear();
   vi.mocked(logEvent).mockClear();
@@ -148,15 +156,19 @@ describe("PATCH /api/captures/[id]", () => {
     status: "uploading",
     raw_url: `captures/${hero.id}/${CAPTURE_ID}/ring/`,
     room_markers: [{ room: "Kitchen", t: 0 }],
+    heading_track: Array.from({ length: 8 }, (_, i) => ({ t: i * 3, heading: i * 45 })),
+    size_bytes: 8_000_000,
     duration_s: null,
   };
+  const photos = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ name: `0${i}.jpg`, size: 1_000_000 }));
 
   it("marks an upload done once the files are in storage and logs it", async () => {
     state.capture = uploading;
-    state.files = Array.from({ length: 8 }, (_, i) => `0${i}.jpg`);
+    state.files = photos(8);
     const { status } = await patch("uploaded");
     expect(status).toBe(200);
-    expect(setCaptureStatus).toHaveBeenCalledWith(CAPTURE_ID, "uploaded");
+    expect(setCaptureStatus).toHaveBeenCalledWith(CAPTURE_ID, "uploaded", "uploading");
     expect(vi.mocked(logEvent).mock.calls[0]![0]).toMatchObject({
       actor_type: "human",
       action: "capture.uploaded",
@@ -171,17 +183,59 @@ describe("PATCH /api/captures/[id]", () => {
     expect(setCaptureStatus).not.toHaveBeenCalled();
   });
 
+  it("refuses a partial ring (3 of 8 photos), so POST /api/worlds never gets one", async () => {
+    state.capture = uploading;
+    state.files = photos(3);
+    const { status, json } = await patch("uploaded");
+    expect(status).toBe(409);
+    expect(json.error).toBe("files_missing");
+    expect(setCaptureStatus).not.toHaveBeenCalled();
+    expect(logEvent).not.toHaveBeenCalled();
+  });
+
+  it("refuses a compass-off ring whose doorway photo is missing (bytes do not add up)", async () => {
+    state.capture = { ...uploading, heading_track: [], size_bytes: 9_000_000 };
+    state.files = photos(8);
+    expect((await patch("uploaded")).json.error).toBe("files_missing");
+    state.files = [...photos(8), { name: "08.jpg", size: 1_000_000 }];
+    expect((await patch("uploaded")).status).toBe(200);
+  });
+
   it("checks the video file by name", async () => {
     state.capture = {
       ...uploading,
       kind: "walkthrough",
       raw_url: `captures/${hero.id}/${CAPTURE_ID}/raw.mp4`,
+      size_bytes: 5_000_000,
       duration_s: 28,
     };
-    state.files = ["other.mp4"];
+    state.files = [{ name: "other.mp4", size: 5_000_000 }];
     expect((await patch("uploaded")).status).toBe(409);
-    state.files = ["raw.mp4"];
+    state.files = [{ name: "raw.mp4", size: 5_000_000 }];
     expect((await patch("uploaded")).status).toBe(200);
+  });
+
+  it("lets one of two racing PATCHes win and logs only that one", async () => {
+    // Both requests read the row while it is still "uploading".
+    state.capture = uploading;
+    state.files = photos(8);
+    const [a, b] = await Promise.all([patch("uploaded"), patch("failed")]);
+    expect([a.status, b.status].sort()).toEqual([200, 409]);
+    expect([a, b].find((r) => r.status === 409)!.json.error).toBe("already_final");
+    expect(logEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("reopens a failed upload for a retry, and only a failed one", async () => {
+    state.capture = { ...uploading, status: "failed" };
+    state.dbStatus = "failed";
+    const { status } = await patch("uploading");
+    expect(status).toBe(200);
+    expect(setCaptureStatus).toHaveBeenCalledWith(CAPTURE_ID, "uploading", "failed");
+    expect(vi.mocked(logEvent).mock.calls[0]![0].action).toBe("capture.retried");
+    state.capture = uploading;
+    expect((await patch("uploading")).json.error).toBe("already_final");
+    state.capture = { ...uploading, status: "uploaded" };
+    expect((await patch("uploading")).status).toBe(409);
   });
 
   it("records a failure, refuses a second update and other hosts", async () => {

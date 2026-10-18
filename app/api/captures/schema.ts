@@ -6,7 +6,8 @@
  *   ring:  {listingId}/{captureId}/ring/00.jpg ... (8 ring photos, then one per doorway)
  * `captures.raw_url` stores "captures/<path>" (bucket and path; a private bucket has no URL).
  * A ring's `heading_track` has one sample per photo, in upload order, so photo i's compass
- * heading is heading_track[i]; photos 8 and up are doorway photos (D-009).
+ * heading is heading_track[i]; photos 8 and up are doorway photos (D-009). With the compass off
+ * the track is empty and the ring carries the "no_compass" flag; nothing in between is accepted.
  */
 import { z } from "zod";
 import { HeadingSampleSchema, RoomMarkerSchema } from "@/lib/schemas/world";
@@ -53,15 +54,86 @@ export const CreateCaptureSchema = z.discriminatedUnion("kind", [
     durationS: z.number().positive().max(MAX_DURATION_S),
     file: VideoFile,
   }),
-  z.object({
-    ...Common,
-    kind: z.literal("ring"),
-    files: z.array(PhotoFile).min(RING_PHOTOS).max(MAX_RING_FILES),
-  }),
+  z
+    .object({
+      ...Common,
+      kind: z.literal("ring"),
+      files: z.array(PhotoFile).min(RING_PHOTOS).max(MAX_RING_FILES),
+    })
+    .refine(
+      (ring) =>
+        ring.headingTrack.length === ring.files.length ||
+        (ring.headingTrack.length === 0 && ring.qualityFlags.includes("no_compass")),
+      {
+        path: ["headingTrack"],
+        message: 'A ring needs one heading per photo, or none with the "no_compass" flag.',
+      },
+    ),
 ]);
 export type CreateCapture = z.infer<typeof CreateCaptureSchema>;
 
-export const UpdateCaptureSchema = z.object({ status: z.enum(["uploaded", "failed"]) });
+/**
+ * PATCH body. "uploaded" and "failed" end an upload; "uploading" reopens a failed one so the
+ * browser can re-send its missing files to the same signed URLs (a retry keeps the row).
+ */
+export const UpdateCaptureSchema = z.object({
+  status: z.enum(["uploaded", "failed", "uploading"]),
+});
+export type CaptureStatusUpdate = z.infer<typeof UpdateCaptureSchema>["status"];
+
+/** The status a row must have for a PATCH to move it to `next` (the update is conditional). */
+export function requiredStatus(next: CaptureStatusUpdate): "uploading" | "failed" {
+  return next === "uploading" ? "failed" : "uploading";
+}
+
+/** File name of ring photo i inside the ring folder: 00.jpg, 01.jpg, ... */
+export function ringPhotoName(i: number): string {
+  return `${String(i).padStart(2, "0")}.jpg`;
+}
+
+export interface StoredFile {
+  name: string;
+  /** Bytes, from the storage listing's metadata; null when the listing has none. */
+  size: number | null;
+}
+
+export interface UploadCheck {
+  complete: boolean;
+  /** Files of this capture found in storage. */
+  fileCount: number;
+  /** Expected files that are not in storage. */
+  missing: string[];
+}
+
+/**
+ * Whether every file of a capture is in storage, so a PATCH "uploaded" can be trusted by
+ * POST /api/worlds. A ring expects one photo per heading sample (00.jpg ... in upload order);
+ * a compass-off ring has no headings, so it expects the 8 ring photos, and its doorway photos
+ * are covered by the byte check: the stored files must add up to the declared `size_bytes`.
+ */
+export function checkUpload(
+  capture: { kind: string; path: string; headingCount: number; sizeBytes: number | null },
+  stored: readonly StoredFile[],
+): UploadCheck {
+  let expected: string[];
+  let mine: StoredFile[];
+  if (capture.kind === "ring") {
+    const count = capture.headingCount > 0 ? capture.headingCount : RING_PHOTOS;
+    expected = Array.from({ length: count }, (_, i) => ringPhotoName(i));
+    mine = stored.filter((f) => /^\d{2}\.jpg$/.test(f.name));
+  } else {
+    const name = capture.path.split("/").pop() ?? "";
+    expected = [name];
+    mine = stored.filter((f) => f.name === name);
+  }
+  const names = new Set(mine.map((f) => f.name));
+  const missing = expected.filter((n) => !names.has(n));
+  const sizes = mine.map((f) => f.size);
+  const bytesKnown = capture.sizeBytes !== null && sizes.every((s) => s !== null);
+  const bytesOk =
+    !bytesKnown || sizes.reduce<number>((sum, s) => sum + (s ?? 0), 0) === capture.sizeBytes;
+  return { complete: missing.length === 0 && bytesOk, fileCount: mine.length, missing };
+}
 
 /** Object paths inside the `captures` bucket for one capture, in upload order. */
 export function captureObjectPaths(
@@ -74,7 +146,7 @@ export function captureObjectPaths(
 ): string[] {
   const base = `${listingId}/${captureId}`;
   if (body.kind === "ring")
-    return (body.files ?? []).map((_, i) => `${base}/ring/${String(i).padStart(2, "0")}.jpg`);
+    return (body.files ?? []).map((_, i) => `${base}/ring/${ringPhotoName(i)}`);
   const type = body.file?.contentType;
   const ext = type === "video/webm" ? "webm" : type === "video/quicktime" ? "mov" : "mp4";
   return [`${base}/raw.${ext}`];
