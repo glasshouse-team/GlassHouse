@@ -14,7 +14,7 @@ Client: `lib/marble.ts` (tested). CLI: `pnpm worlds` (scripts/generate-worlds.ts
 
 - Auth header: `WLT-Api-Key: <WORLDLABS_API_KEY>`. Base: `https://api.worldlabs.ai/marble/v1`.
 - `POST /worlds:generate` with `{ model, display_name (max 64), world_prompt, seed?, tags?, permission? }`, returns an operation `{ operation_id, done, ... }`.
-- Models: `marble-1.1-plus` (larger worlds, our default for whole houses), `marble-1.1` (default, cheaper), `marble-1.0`, `marble-1.0-draft`.
+- Models: `marble-1.1-plus` (dynamic world sizing; our default, same 1,600 credits as `marble-1.1` in GH-3), `marble-1.1` (the API default), `marble-1.0`, `marble-1.0-draft`.
 - `world_prompt` variants:
   - `{ type: "video", video_prompt: SourceRef, text_prompt? }`: mp4, webm, mov or avi.
   - `{ type: "multi-image", multi_image_prompt: [{ azimuth?, content: SourceRef }], reconstruct_images?, text_prompt? }`: up to 4 images, up to 8 with `reconstruct_images: true`.
@@ -53,4 +53,4 @@ Per spot (D-009): one generation and one `worlds` row per spot, plus the spot's 
 
 ## Done when
 
-The three GH-6 worlds are served from our storage, a page view makes zero requests to api.worldlabs.ai (check the Network tab), a new generation goes generating, ready, published from the dashboard, and every status change is in the feed.
+The GH-6 spot worlds are served from our storage, a page view makes zero requests to api.worldlabs.ai (check the Network tab), a new generation goes generating, ready, published from the dashboard, and every status change is in the feed.

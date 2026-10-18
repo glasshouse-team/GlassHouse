@@ -14,7 +14,7 @@ Run on the deployed Vercel URL, not localhost, with Beka's phone as the host:
 
 1. Trip brief: the hero home ranks first with cited reasons.
 2. Another listing: the X-ray shows the "sea view" contradiction.
-3. Hero home 1: X-ray panel, then "Walk through this home": walk, Jump to room.
+3. Hero home 1: X-ray panel, then "Walk through this home": doorway arrows between rooms, Jump to room (D-009).
 4. Ask this home: "Can I bring my dog?" gets a sourced answer; "Is there a hair dryer?" is forwarded.
 5. Negotiate: target -$50, max $500: $470, $495, $480, Approve on the phone, "Booked".
 6. `/feed` lists every step above with the right actors.
@@ -30,7 +30,7 @@ Run on the deployed Vercel URL, not localhost, with Beka's phone as the host:
   - [ ] "$50 less" passes 5 runs in a row
   - [ ] X-ray catches both lies
   - [ ] Brief returns the hero home first in under 10 s
-  - [ ] Hero 3D works on laptop, iPhone and Android; no walking through walls
+  - [ ] Hero 3D works on laptop, iPhone and Android; every doorway arrow leads to the right room
   - [ ] Jump to room and the minimap work
   - [ ] Gap pin at the kitchen corner; v2 has a higher coverage score
   - [ ] Feed shows each action within 2 s

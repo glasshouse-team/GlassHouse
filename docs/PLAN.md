@@ -38,7 +38,7 @@ Not judged: business model, pricing, global expansion.
 | Foundation, pages, booking box                | GH-2, GH-5, GH-7, GH-8 | Beka   | Must       |
 | F1 Listing X-ray                              | GH-9                   | Temuri | Must       |
 | F2 Trip brief search                          | GH-14                  | Beka   | Must       |
-| F3 Whole-house 3D pipeline + tour             | GH-10, GH-11           | Temuri | Must       |
+| F3 3D pipeline + per-spot room tour           | GH-10, GH-11           | Temuri | Must       |
 | F4 Activity feed                              | GH-12                  | Beka   | Must       |
 | F5 Negotiation + deal room                    | GH-15                  | Beka   | Must       |
 | F5b Host Q&A                                  | GH-16                  | Temuri | Must       |
