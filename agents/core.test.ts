@@ -12,7 +12,7 @@ vi.mock("@/lib/claude", () => ({
 vi.mock("@/lib/events", () => ({ logEvent: vi.fn(async () => {}) }));
 
 import { logEvent } from "@/lib/events";
-import { createAgent } from "./core";
+import { createAgent, loggableInput } from "./core";
 
 const usage = {
   inputTokens: { total: 1, noCache: 1, cacheRead: undefined, cacheWrite: undefined },
@@ -77,6 +77,32 @@ describe("createAgent", () => {
         listing_id: listingId,
       }),
     );
+  });
+
+  it("keeps tool inputs out of the public feed unless their fields are listed (D-024)", async () => {
+    twoStepModel();
+    await createAgent({ name: "host", system: "Test agent", tools: { echo } }).generate({
+      prompt: "Say hi",
+    });
+    expect(vi.mocked(logEvent).mock.calls[0][0].payload).toMatchObject({ input: undefined });
+
+    vi.mocked(logEvent).mockClear();
+    twoStepModel();
+    await createAgent({
+      name: "host",
+      system: "Test agent",
+      tools: { echo },
+      logInputs: { echo: ["text", "missing"] },
+    }).generate({ prompt: "Say hi" });
+    expect(vi.mocked(logEvent).mock.calls[0][0].payload).toMatchObject({ input: { text: "hi" } });
+  });
+
+  it("loggableInput keeps only listed own fields of an object input", () => {
+    expect(loggableInput({ a: 1, b: 2 }, ["a"])).toEqual({ a: 1 });
+    expect(loggableInput({ a: 1 }, [])).toBeUndefined();
+    expect(loggableInput("text", ["a"])).toBeUndefined();
+    expect(loggableInput(null, ["a"])).toBeUndefined();
+    expect(loggableInput({ a: 1 }, ["constructor", "toString"])).toEqual({});
   });
 
   it("stops on a custom rule and passes effort to Claude", async () => {
