@@ -2,7 +2,34 @@
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { MAX_RING_FILES, RING_PHOTOS } from "./logic/coverage";
 import { CLIP_MAX_SECONDS } from "./logic/recording";
+
+/** A ring picked from the gallery: photos in turning order, no compass (D-045). */
+export interface FallbackRing {
+  photos: Blob[];
+  room: string;
+}
+
+/** The longest side kept for a gallery ring photo; the server takes JPEGs up to 15 MB. */
+const RING_MAX_SIDE_PX = 4096;
+
+/** A gallery photo as a JPEG (HEIC and PNG included, where the browser can decode them). */
+async function toJpeg(file: File): Promise<Blob> {
+  if (file.type === "image/jpeg" && file.size < 12 * 1024 * 1024) return file;
+  const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+  const scale = Math.min(1, RING_MAX_SIDE_PX / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/jpeg", 0.9),
+  );
+  if (!blob) throw new Error("Could not read one of the photos.");
+  return blob;
+}
 
 export interface FallbackClip {
   blob: Blob;
@@ -40,15 +67,19 @@ function readDuration(file: Blob): Promise<number> {
 }
 
 /**
- * Fallback when the camera or recorder is unavailable: pick or film a clip with the phone's own
- * camera app (`capture="environment"`) and say which room it shows. No compass track.
+ * Upload instead of shooting live (D-045): a clip, or a ring of ${RING_PHOTOS} photos, picked from
+ * the phone's gallery or filmed with its camera app (no `capture` attribute, so the phone
+ * offers both), plus the room it shows. No compass track.
  */
 export function FallbackUpload({
   rooms,
   onClip,
+  onRing,
 }: {
   rooms: string[];
   onClip: (clip: FallbackClip) => void;
+  /** Leave out where rings don't apply (fill-in clips). */
+  onRing?: (ring: FallbackRing) => void;
 }) {
   const id = useId();
   const [room, setRoom] = useState(rooms[0] ?? "");
@@ -73,12 +104,30 @@ export function FallbackUpload({
     onClip({ blob: new Blob([file], { type }), durationS: Math.round(durationS * 10) / 10, room });
   }
 
+  async function onPhotos(list: FileList | null) {
+    setError(null);
+    const files = [...(list ?? [])];
+    if (files.length === 0 || !onRing) return;
+    if (files.length < RING_PHOTOS || files.length > MAX_RING_FILES)
+      return setError(
+        `Pick ${RING_PHOTOS} photos of this room taken from its middle while turning (up to ${MAX_RING_FILES} with doorways); you picked ${files.length}.`,
+      );
+    // Taken one after another while turning: the capture time gives the turning order.
+    files.sort((a, b) => a.lastModified - b.lastModified || a.name.localeCompare(b.name));
+    try {
+      onRing({ photos: await Promise.all(files.map(toJpeg)), room });
+    } catch (e) {
+      setError(`${(e as Error).message} Use JPEG or HEIC photos.`);
+    }
+  }
+
   return (
     <div className="space-y-3 rounded-xl border p-4">
-      <h3 className="font-semibold">Upload a clip instead</h3>
+      <h3 className="font-semibold">Upload from your phone instead</h3>
       <p className="text-sm text-muted-foreground">
-        Film one room with your camera app (at most {CLIP_MAX_SECONDS} s, a slow full turn in the
-        middle), then pick it here.
+        Pick a clip of one room (at most {CLIP_MAX_SECONDS} s, a slow full turn in the middle)
+        {onRing ? ` or ${RING_PHOTOS} photos taken from its middle while turning` : ""} from your
+        gallery, or film it now with the camera app.
       </p>
       <div className="space-y-1">
         <Label htmlFor={`${id}-room`}>Room in this clip</Label>
@@ -93,22 +142,41 @@ export function FallbackUpload({
           ))}
         </select>
       </div>
-      <Button asChild variant="outline">
-        <label htmlFor={`${id}-file`} className="cursor-pointer">
-          Choose or film a video
-          <input
-            id={`${id}-file`}
-            type="file"
-            accept="video/*"
-            capture="environment"
-            className="sr-only"
-            onChange={(e) => {
-              void onFile(e.target.files?.[0]);
-              e.target.value = "";
-            }}
-          />
-        </label>
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button asChild variant="outline">
+          <label htmlFor={`${id}-file`} className="cursor-pointer">
+            Choose or film a video
+            <input
+              id={`${id}-file`}
+              type="file"
+              accept="video/*"
+              className="sr-only"
+              onChange={(e) => {
+                void onFile(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        </Button>
+        {onRing && (
+          <Button asChild variant="outline">
+            <label htmlFor={`${id}-photos`} className="cursor-pointer">
+              Choose {RING_PHOTOS} photos
+              <input
+                id={`${id}-photos`}
+                type="file"
+                accept="image/*"
+                multiple
+                className="sr-only"
+                onChange={(e) => {
+                  void onPhotos(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+          </Button>
+        )}
+      </div>
       {error && (
         <p className="text-sm text-destructive" role="alert">
           {error}
