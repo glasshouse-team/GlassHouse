@@ -12,7 +12,7 @@ Already in the starter: `lib/geometry/slice.ts` (`sliceTriangle`, `sliceMesh`, `
 
 ## v1 (build this first, 2-3 h)
 
-1. **Load** the stored collider mesh in Node (GLB: three's `GLTFLoader.parseAsync` on the downloaded buffer; Draco-compressed files need `@gltf-transform/core` + `draco3dgltf`). Bake each mesh's `matrixWorld`, merge, then convert with `lib/geometry/frame.ts` (`marbleToThree` + `floorHeight`) so meters and the floor at y = 0 match the viewer exactly.
+1. **Load** the stored collider mesh in Node with `colliderToThree(bytes, metric_scale_factor)` (lib/geometry/collider.ts): it reads the GLB, applies `marbleToThree` + `floorHeight` from `lib/geometry/frame.ts` and returns merged triangles in meters with the floor at y = 0, matching the viewer exactly. GH-3: Marble colliders are uncompressed trimesh GLBs (130-215k triangles, no Draco, no node transforms), so no GLTFLoader or Draco decoder is needed. Each spot world (D-009) has its own collider: build one plan per spot; a whole-home plan needs the spots placed relative to each other.
 2. **Slice** at y = 1.0, 1.3 and 1.6 m (above furniture, below the ceiling) with `sliceMesh`. For big meshes, build a BVH and use `shapecast` to visit only triangles whose bounds cross each plane.
 3. **Wall grid:** rasterize segments into a 5 cm grid (Bresenham per segment). Keep cells hit in at least 2 of the 3 slices: this drops furniture tops and noise.
 4. **Straighten:** histogram of segment angles modulo 90 degrees, take the peak as the main wall angle, rotate everything so walls are axis-aligned. Snap segments within about 5 degrees to the axes, merge collinear neighbours, drop pieces under 20 cm. These thresholds are starting points; tune them by looking at the result.

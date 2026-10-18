@@ -140,7 +140,7 @@ Temuri's tour page renders `<TourExtensions>` inside `<TourProvider>` and outsid
 
 ```ts
 marbleToThree(metricScaleFactor: number, floorY?: number): Matrix4   // flips OpenCV axes, meters, floor at 0
-floorHeight(positions, index?): number                                // lowest large horizontal surface
+floorHeight(positions, index?): number                                // lowest large horizontal surface below the camera
 ```
 
 The only Marble-to-three transform; the viewer, floor plan and gap check all use it. Every position in `anchors`, `gaps` and floor plans is in these meters. An anchor's `position` is where the camera stands and `look_at` what it looks at (or null). A gap counts as AI-filled while its status is `open` or `requested`.
@@ -153,3 +153,4 @@ The only Marble-to-three transform; the viewer, floor plan and gap check all use
 | 2026-10-17 | Sections 9-14 added after the ticket review (askHome, uploads, demo ids, viewer, tour add-ons, coordinates); createAgent gains stopWhen, output, effort | Beka, Temuri |
 | 2026-10-18 | `core.ts` adds `Amenity` (the 26-word vocabulary from docs/teardown.md) and `ReviewSchema` with the six sub-ratings (additive)                          | Beka, Temuri |
 | 2026-10-18 | Frozen at `a6ba574` (PR #3): migration applied, `lib/database.types.ts` generated, clients typed as `Db` (new export, type-level only)                  | Beka, Temuri |
+| 2026-10-18 | Section 14: `floorHeight` takes the lowest large layer below the camera, so a big ceiling or a bed top is not the floor (D-009); signature unchanged    | Temuri       |

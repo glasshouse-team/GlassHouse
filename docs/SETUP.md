@@ -36,7 +36,7 @@ Add Beka as a collaborator, protect `main` (require a pull request, block force 
 | Supabase             | Beka           | Project in `ap-southeast-2`, Sydney (D-021); keys from Project Settings > API           | Free        |
 | Vercel               | Beka           | Import the GitHub repo; Functions region `syd1` (D-021); add all env vars; first deploy | Free        |
 | ngrok                | Beka           | Account + auth token (`ngrok config add-authtoken ...`)                                 | Free        |
-| Scenario (backup 3D) | Temuri         | Only if the go/no-go test needs HY World                                                | $10-30      |
+| Scenario (backup 3D) | Temuri         | Not needed: GH-3 chose Marble worlds per room spot (D-009)                              | -           |
 | ElevenLabs           | Beka           | Only for Georgian narration (GH-25)                                                     | Free tier   |
 
 Put keys in `.env.local` (copy `.env.example`) and in Vercel. Share them privately (password manager or direct message), never in git, Jira or chat with Claude. Check with `pnpm dev` and http://localhost:3000/api/health.

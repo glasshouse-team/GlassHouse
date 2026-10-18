@@ -4,7 +4,7 @@ Condensed from the team plan ("Glasshouse — Hackathon Project Plan" Claude doc
 
 ## The pitch in one line
 
-Three agents search, check and negotiate for people, and every home comes with a walkable 3D model and a floor plan built from the host's own footage, with AI-filled areas flagged instead of hidden.
+Three agents search, check and negotiate for people, and every home comes with a 3D tour of its rooms (one world per room spot, Zillow-style) and a floor plan built from the host's own photos, with AI-filled areas flagged instead of hidden.
 
 ## Problem
 
@@ -38,7 +38,7 @@ Not judged: business model, pricing, global expansion.
 | Foundation, pages, booking box                | GH-2, GH-5, GH-7, GH-8 | Beka   | Must       |
 | F1 Listing X-ray                              | GH-9                   | Temuri | Must       |
 | F2 Trip brief search                          | GH-14                  | Beka   | Must       |
-| F3 Whole-house 3D pipeline + tour             | GH-10, GH-11           | Temuri | Must       |
+| F3 3D pipeline + per-spot room tour           | GH-10, GH-11           | Temuri | Must       |
 | F4 Activity feed                              | GH-12                  | Beka   | Must       |
 | F5 Negotiation + deal room                    | GH-15                  | Beka   | Must       |
 | F5b Host Q&A                                  | GH-16                  | Temuri | Must       |
@@ -56,8 +56,8 @@ Not judged: business model, pricing, global expansion.
 | Hours | Temuri (3D, capture, Verifier)                                                   | Beka (app, agents, data)                                       | Gate                              |
 | ----- | -------------------------------------------------------------------------------- | -------------------------------------------------------------- | --------------------------------- |
 | 0-1   | World Labs key; go/no-go walkthrough; start generation                           | Repo, Supabase, Vercel, keys, ngrok                            | Keys work                         |
-| 1-3   | Judge go/no-go, pick the path; film 2 hero homes; start generations              | Airbnb teardown (1h); contracts, schema, CLAUDE.md, brand      | Contracts merged by hour 4        |
-| 3-9   | X-ray while worlds generate; 3D pipeline; viewer with scale, walking, collisions | Seed data, listing page, computeQuote, feed, trip brief search | Hero worlds saved                 |
+| 1-3   | Judge go/no-go, pick the path; photograph 2 hero homes; start generations        | Airbnb teardown (1h); contracts, schema, CLAUDE.md, brand      | Contracts merged by hour 4        |
+| 3-9   | X-ray while worlds generate; 3D pipeline; spot viewer with scale, doorway arrows | Seed data, listing page, computeQuote, feed, trip brief search | Hero worlds saved                 |
 | 9-13  | Jump to room, anchors; host Q&A                                                  | Negotiation + deal room + approvals                            | **MVP checkpoint** + backup video |
 | 13-18 | Floor plan v1; gap check v1                                                      | Ask the space; honesty overlay                                 | **Feature freeze**                |
 | 18-22 | Sleep 18-20; polish, slides                                                      | Fixes; sleep 20-22; demo reset                                 | Reset script ready                |
@@ -69,8 +69,8 @@ Cut order if behind: GH-21, then GH-20, then GH-19. Floor plan v1 stays.
 
 | Risk                                   | Fallback                                                                   |
 | -------------------------------------- | -------------------------------------------------------------------------- |
-| Whole-house world is smeared or broken | Many photos to HY World on Scenario; or one splat per room placed together |
-| Walkthrough over 20 MB                 | `pnpm video:prepare`, shorter route, or World Labs media-asset upload      |
+| Spot world blurs far from its 8 photos | Keep visitors at each spot; doorway arrows switch to the next spot (D-009) |
+| Walkthrough over 30 s or 20 MB         | `pnpm video:prepare` speeds it up to 29 s and under 20 MB (D-009)          |
 | Generation slower than expected        | Start hero generations in hour 1; demo only saved versions                 |
 | Floor plan slicing noisy               | Sonnet room rectangles on the top-down render, or show the render itself   |
 | Spark splat tinting unclear            | Translucent amber spheres at gap positions                                 |

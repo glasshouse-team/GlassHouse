@@ -135,3 +135,7 @@ Not judged: business model, pricing, global expansion. Spend no time on them.
 6. "Can I pay $50 less?" → the agents negotiate live ($470 → $495 → $480).
 7. The host taps Approve.
 8. Host side: the gap note "Kitchen corner is blank", then the fill-in version with a higher coverage score.
+
+## Decision updates
+
+- 2026-10-18 D-009: The 3D is a per-spot tour: one Marble world per room spot from an 8-photo ring; visitors look around from each spot and our doorway arrows switch rooms, like Zillow (was: a walkable whole-house 3D model). Jira: pending
