@@ -135,3 +135,10 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+/* Phones: the listing page's fixed booking bar must not cover a focused field (Ask this home). */
+@media (max-width: 1023px) {
+  html:has([data-booking-bar]) {
+    scroll-padding-bottom: 7rem;
+  }
+}

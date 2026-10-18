@@ -30,7 +30,7 @@ flowchart TB
 ## Request flows
 
 - **Search:** page sends the brief to `/api/search`; the guest agent parses it (Haiku), filters in SQL, ranks with X-ray facts (Haiku, thinking off, D-027), returns cited reasons; tool calls land in `events`.
-- **3D (D-009):** host uploads an 8-photo ring per room spot, `/api/worlds` records a generation request (D-038: a person runs `pnpm worlds generate`, later one Marble job per spot from the route), the host page polls `/api/worlds/[id]/status`, which copies assets into `media/worlds/{id}/` when done; the host publishes; guests load each spot's splat and collider mesh from our storage and move between spots with our doorway arrows.
+- **3D (D-009):** host uploads an 8-photo ring per room spot, `/api/worlds` starts one Marble job per spot (D-039: from the capture page's Generate button), the host page polls `/api/worlds/[id]/status`, which copies assets into `media/worlds/{id}/` when done; the host publishes; guests load each spot's splat and collider mesh from our storage and move between spots with our doorway arrows.
 - **Negotiation:** `/api/deals` opens a deal (list total from `computeQuote`, secrets in `deal_secrets`); `/api/deals/[id]/run` alternates agent turns, each money action checked by `validateOffer`; messages stream to the deal room through Realtime; `/api/deals/[id]/approve` creates the reservation.
 - **Verifier:** scripts or routes send images to Claude with Zod output schemas; results go to `listing_facts`, `gaps`, `anchors`, `floor_plans`.
 
@@ -45,7 +45,7 @@ flowchart TB
 | `/api/xray/[listingId]`          | POST          | Verifier facts and contradictions              | GH-9   |
 | `/api/captures`                  | POST          | Register a ring or clip and get signed uploads | GH-22  |
 | `/api/captures/[id]`             | PATCH         | Confirm the upload, log it                     | GH-22  |
-| `/api/worlds`                    | POST          | Record a generation request (D-038)            | GH-10  |
+| `/api/worlds`                    | GET, POST     | List versions (host); start a generation       | GH-10  |
 | `/api/worlds/[id]/status`        | GET           | Poll; download and store assets when done      | GH-10  |
 | `/api/worlds/[id]/publish`       | POST          | Publish a version                              | GH-10  |
 | `/api/worlds/[id]/gaps`          | POST          | Gap check on rig screenshots                   | GH-19  |

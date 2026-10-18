@@ -44,11 +44,11 @@ Layout prompts help only a little: with `--no-recaption` (prompt as written) a w
 
 Per spot (D-009): one generation and one `worlds` row per spot, plus the spot's doorway links (`worlds.spot`, `spot_label`, `links` from migration 0002; `captures.kind` `ring`).
 
-1. `POST /api/worlds { listingId, captureIds }`: today (D-038) it checks the captures and logs `world.generation_requested`, and a person runs `pnpm worlds generate` from it. The web pipeline will: next `worlds.version`, status `generating`, store `operation_id`, log "World v2 generating for <listing>".
+1. `POST /api/worlds { listingId, captureIds }`: next `worlds.version`, status `generating`, store `operation_id`, log "World v2 generating for <listing>".
 2. `GET /api/worlds/[id]/status` (the host page polls every 15 s): `getOperation`; when done, `getWorld`, then download each asset (`fetch` then `upload` to `media/worlds/{id}/...`): web splat (`pickSplatUrls().web`), HQ splat, collider mesh, HQ mesh, pano, thumbnail; save URLs from OUR storage, scale metadata, caption, cost; status `ready`; log an event.
 3. `POST /api/worlds/[id]/publish`: set `listings.published_world_id`, status `published`, archive the previous published version, log an event.
 4. `pnpm worlds --import hero-2` (lib/marble-worlds.ts `importVersion`, `publishVersion`) imports the GH-6 spot worlds listed in docs/hero-worlds.json into storage and `worlds` rows and publishes the newest version; a spot reused by another version shares the first row's files (D-031). `pnpm worlds import <world_id> --listing <id> --version <n> --spot <key>` imports one; `pnpm worlds verify hero-2` checks URLs and collider floors.
-5. `isDemoMode()`: `POST /api/worlds` returns `{ status: "demo" }` (the saved version stays) and never calls World Labs.
+5. `isDemoMode()`: `POST /api/worlds` returns the saved version and never calls World Labs.
 6. `components/tour/WorldVersions.tsx` (host dashboard slot): versions with status, progress, thumbnail, Preview link `/tour/<listing>?version=<n>`, Publish button.
 
 ## Done when

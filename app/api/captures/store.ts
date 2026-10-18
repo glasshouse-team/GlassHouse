@@ -63,17 +63,6 @@ export async function listCaptureFiles(folder: string): Promise<string[]> {
   return (data ?? []).filter((f) => f.id !== null).map((f) => f.name);
 }
 
-/** Captures by id (any listing; callers check `listing_id` and `status`). */
-export async function getCaptures(ids: readonly string[]): Promise<CaptureRow[]> {
-  if (!ids.length) return [];
-  const { data, error } = await supabaseAdmin()
-    .from("captures")
-    .select("*")
-    .in("id", [...ids]);
-  if (error) throw new Error(`Could not load captures: ${error.message}`);
-  return data ?? [];
-}
-
 /** The listing a gap belongs to (through its world), or null when the gap does not exist. */
 export async function gapListingId(gapId: string): Promise<string | null> {
   const db = supabaseAdmin();

@@ -11,9 +11,9 @@ export interface UploadJob {
   flags: string[];
   /** Indexes of the rooms this capture covers. */
   rooms: number[];
-  /** Set once the upload is confirmed (PATCH /api/captures/{id}). */
-  captureId?: string;
   retry: () => void;
+  /** Set once the upload is confirmed; POST /api/worlds takes these ids (GH-10, D-039). */
+  captureId?: string;
 }
 
 function flagText(flag: string): string {

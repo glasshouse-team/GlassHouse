@@ -240,7 +240,10 @@ export function BookingBox(props: BookingBoxProps) {
     <>
       <div className="hidden rounded-2xl border bg-card p-5 shadow-md lg:block">{form}</div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background px-4 py-3 lg:hidden">
+      <div
+        data-booking-bar
+        className="fixed inset-x-0 bottom-0 z-30 border-t bg-background px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden"
+      >
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
           <div className="text-sm">
             <p className="font-semibold">

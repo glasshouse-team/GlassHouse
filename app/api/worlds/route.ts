@@ -1,46 +1,84 @@
-import { getCaptures } from "@/app/api/captures/store";
-import { getListing } from "@/lib/data/listings";
+import { z } from "zod";
 import { isDemoMode } from "@/lib/env";
 import { logEvent } from "@/lib/events";
 import { errorResponse, jsonError, parseJson } from "@/lib/http";
-import { getViewer } from "@/lib/viewer";
-import { GenerateWorldSchema, checkCaptures, generationRequestSummary } from "./request";
+import {
+  baseSpots,
+  entrySpot,
+  savedVersion,
+  startVersion,
+  versionRows,
+} from "@/lib/marble-generation";
+import { summarizeVersions } from "@/lib/marble-versions";
+import { requireHost, worldErrorResponse } from "./_lib/host";
+
+const StartSchema = z.object({
+  listingId: z.uuid(),
+  /** One capture per room spot to (re)generate (D-009). */
+  captureIds: z.array(z.uuid()).min(1).max(10),
+});
 
 /**
- * POST /api/worlds { listingId, captureIds }: "Generate my 3D home" on the capture page (GH-22).
- * Only the listing's host, only with uploaded captures of that listing.
- *
- * D-038: this route records the request (feed event `world.generation_requested` with the
- * capture ids) and makes no World Labs call: generation spends credits, so a person runs
- * `pnpm worlds generate` from the request, then `pnpm worlds import` and publish (GH-10). When a
- * web pipeline replaces that, this route starts the jobs and the request body stays the same.
- * DEMO_MODE=true records nothing new for generation and keeps the saved 3D tour.
+ * POST /api/worlds { listingId, captureIds }: starts the next version (owner: Temuri, GH-10).
+ * One Marble generation per captured spot, status `generating` with its operation id; the
+ * other spots are copied from the version guests see now (D-031). DEMO_MODE returns the
+ * saved version and calls nothing.
  */
 export async function POST(request: Request) {
   try {
-    const body = await parseJson(request, GenerateWorldSchema);
-    const viewer = await getViewer();
-    const listing = await getListing(body.listingId);
-    if (!listing) return jsonError(404, "not_found", "This home does not exist.");
-    if (viewer.role !== "host" || listing.host_id !== viewer.profileId)
-      return jsonError(403, "not_your_listing", "Only this home's host can generate its 3D tour.");
+    const body = await parseJson(request, StartSchema);
+    const host = await requireHost(body.listingId);
+    if (host instanceof Response) return host;
 
-    const check = checkCaptures(listing.id, body.captureIds, await getCaptures(body.captureIds));
-    if (!check.ok) return jsonError(check.status, check.code, check.message);
+    if (isDemoMode()) {
+      const saved = await savedVersion(body.listingId);
+      if (!saved) {
+        return jsonError(409, "no_saved_world", "Demo mode has no saved 3D version for this home.");
+      }
+      await logEvent({
+        actor_type: host.actor.type,
+        actor_name: host.actor.name,
+        action: "world.demo",
+        summary: `${host.actor.name} asked for a new 3D version of ${host.listing.title}; demo mode shows saved v${saved.version}`,
+        listing_id: body.listingId,
+        payload: { version: saved.version, demo: true },
+      });
+      return Response.json({ demo: true, ...saved, failed: [] });
+    }
 
-    if (isDemoMode()) return Response.json({ status: "demo" });
-
-    const captureIds = [...new Set(body.captureIds)];
-    await logEvent({
-      actor_type: "human",
-      actor_name: `${viewer.name} (host)`,
-      action: "world.generation_requested",
-      summary: generationRequestSummary(viewer.name, captureIds.length, check.rooms),
-      listing_id: listing.id,
-      payload: { capture_ids: captureIds, rooms: check.rooms },
+    const started = await startVersion({
+      listingId: body.listingId,
+      listingTitle: host.listing.title,
+      captureIds: body.captureIds,
+      actor: host.actor,
     });
-    return Response.json({ status: "requested", captureIds }, { status: 202 });
+    return Response.json({ demo: false, ...started }, { status: 201 });
   } catch (error) {
-    return errorResponse(error);
+    return worldErrorResponse(error) ?? errorResponse(error);
+  }
+}
+
+/**
+ * GET /api/worlds?listingId=: the versions panel (host only). Reads our database only;
+ * it never calls World Labs (polling is the status route's job).
+ */
+export async function GET(request: Request) {
+  try {
+    const listingId = z.uuid().parse(new URL(request.url).searchParams.get("listingId"));
+    const host = await requireHost(listingId);
+    if (host instanceof Response) return host;
+    const [rows, entry, spots] = await Promise.all([
+      versionRows(listingId),
+      entrySpot(listingId),
+      baseSpots(listingId),
+    ]);
+    return Response.json({
+      demo: isDemoMode(),
+      entrySpot: entry,
+      spots,
+      versions: summarizeVersions(rows, entry),
+    });
+  } catch (error) {
+    return worldErrorResponse(error) ?? errorResponse(error);
   }
 }

@@ -25,6 +25,8 @@ import { logEvent } from "@/lib/events";
 import { computeQuote, stayNights } from "@/lib/pricing";
 import type { Deal, DealStatus } from "@/lib/schemas/core";
 import { formatCents } from "@/lib/utils";
+import { askHostTool } from "@/tools/guest/host";
+import { askHome } from "@/tools/host-qa/askHome";
 import {
   acceptanceOutcome,
   effectiveFloorCents,
@@ -166,6 +168,7 @@ export async function runNegotiation(
   const cleaningCents = host.listing.cleaning_fee_cents;
   const stay = stayRangeLabel(deal.check_in, deal.check_out);
   const names = { guest: guestProfile?.name ?? "the guest", host: hostProfile?.name ?? "the host" };
+  const askedHost = { done: false };
 
   for (let turn = 0; turn < (options.maxTurns ?? 12) && deal.status === "open"; turn++) {
     if (deal.rounds >= policy.max_rounds) {
@@ -225,6 +228,7 @@ export async function runNegotiation(
             ? "offer"
             : "counter",
         theirLastCents: theirs,
+        closeEnough: suggestion.kind === "accept",
         theirLastTerms: (theirLast?.terms ?? {}) as Record<string, boolean | number | string>,
         stay,
         ...(side === "host_agent"
@@ -255,7 +259,23 @@ export async function runNegotiation(
       name: side === "guest_agent" ? "guest" : "host",
       system:
         side === "guest_agent" ? guestPrompt(guest, names.guest) : hostPrompt(host, names.host),
-      tools,
+      tools:
+        side === "guest_agent"
+          ? {
+              ...tools,
+              ask_host: askHostTool({
+                listingId: deal.listing_id,
+                guestId: deal.guest_id,
+                dealId,
+                privateAmountsCents: [
+                  guest.guestMaxCents,
+                  ...(guest.guestTargetCents ? [guest.guestTargetCents] : []),
+                ],
+                asked: askedHost,
+                ask: askHome,
+              }),
+            }
+          : tools,
       stopWhen: () => state.outcome !== null,
       maxSteps: 4,
       effort: "low",

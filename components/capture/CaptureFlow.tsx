@@ -395,17 +395,10 @@ function ModeCard({
   );
 }
 
-type GeneratePhase =
-  | { name: "idle" }
-  | { name: "sending" }
-  | { name: "requested"; count: number }
-  | { name: "error"; message: string };
-
 /**
- * "Generate my 3D home": POST /api/worlds with the uploaded capture ids, only from this button
- * (never on a page view) and never in DEMO_MODE. D-038: the route records the request and a
- * person runs the generation (credits); the new version shows on the host dashboard to preview
- * and publish (GH-10).
+ * "Generate my 3D home" (GH-10, D-039): POST /api/worlds with the uploaded capture ids, one
+ * Marble generation per room spot. Only this button starts one, never a page view; in DEMO_MODE
+ * the route returns the saved version and calls nothing. Progress shows on the host dashboard.
  */
 function GenerateStep({
   listingId,
@@ -418,21 +411,32 @@ function GenerateStep({
   readiness: Readiness;
   captureIds: string[];
 }) {
-  const [phase, setPhase] = useState<GeneratePhase>({ name: "idle" });
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
 
   async function generate() {
-    setPhase({ name: "sending" });
+    setBusy(true);
+    setResult(null);
     try {
       const res = await fetch("/api/worlds", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ listingId, captureIds }),
       });
-      const json = (await res.json().catch(() => null)) as { message?: string } | null;
-      if (!res.ok) throw new Error(json?.message ?? `HTTP ${res.status}`);
-      setPhase({ name: "requested", count: captureIds.length });
-    } catch (e) {
-      setPhase({ name: "error", message: e instanceof Error ? e.message : String(e) });
+      const body = (await res.json().catch(() => ({}))) as {
+        message?: string;
+        demo?: boolean;
+        version?: number;
+        failed?: Array<{ error: string }>;
+      };
+      if (!res.ok) setResult(body.message ?? `Could not start the generation (HTTP ${res.status})`);
+      else if (body.demo)
+        setResult(`Demo mode: nothing was generated; guests keep v${body.version}.`);
+      else if (body.failed?.length) setResult(`v${body.version}: ${body.failed[0].error}`);
+      else
+        setResult(`v${body.version} is generating, about 6-9 minutes. Follow it on the dashboard.`);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -445,27 +449,26 @@ function GenerateStep({
           Demo mode: 3D generation is off, so the saved 3D tour stays in place. Your{" "}
           {count === 1 ? "capture is" : `${count} captures are`} stored for later.
         </p>
-      ) : phase.name === "requested" ? (
-        <p className="text-sm text-brand" role="status">
-          Requested from {phase.count === 1 ? "1 capture" : `${phase.count} captures`}. The new 3D
-          version appears on your host dashboard to preview before guests see it.
-        </p>
       ) : (
-        <p className="text-sm text-muted-foreground">{readiness.message}</p>
-      )}
-      {phase.name === "error" && (
-        <p className="text-sm text-destructive" role="alert">
-          {phase.message}
+        <p className="text-sm text-muted-foreground">
+          {readiness.message}
+          {readiness.ready && " Each room spot costs about 1,600 World Labs credits."}
         </p>
       )}
-      {!demoMode && phase.name !== "requested" && (
-        <Button
-          className="w-full"
-          onClick={() => void generate()}
-          disabled={!readiness.ready || !count || phase.name === "sending"}
-        >
-          {phase.name === "sending" ? "Sending..." : "Generate my 3D home"}
-        </Button>
+      <Button
+        disabled={demoMode || !readiness.ready || busy || count === 0}
+        className="w-full"
+        onClick={generate}
+      >
+        {busy ? "Starting…" : "Generate my 3D home"}
+      </Button>
+      {result && (
+        <p className="text-sm" role="status">
+          {result}{" "}
+          <Link href="/host/dashboard" className="underline underline-offset-4">
+            Host dashboard
+          </Link>
+        </p>
       )}
     </section>
   );
