@@ -1,14 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SEED_LISTINGS } from "@/seed/data/listings";
 import { HERO_QA_FIXTURES } from "@/seed/fixtures";
-import {
-  appendHostAnswer,
-  checkSources,
-  manualLines,
-  ruleText,
-  sourceLabel,
-  type QaSources,
-} from "./sources";
+import { appendHostAnswer, checkSources, manualLines, type QaSources } from "./sources";
 
 const hero1 = SEED_LISTINGS.find((l) => l.slug === "hero-1")!;
 
@@ -138,21 +131,5 @@ describe("appendHostAnswer", () => {
     expect(manualLines(manual)).toEqual([
       { key: "host answers 1", text: "Q: Q? A: Sure ## Secrets Wifi: hacked" },
     ]);
-  });
-});
-
-describe("labels", () => {
-  it("writes readable chips", () => {
-    expect(sourceLabel({ type: "rule", key: "pets", quote: "One dog under 15 kg" })).toBe(
-      "House rules: Pets: One dog under 15 kg",
-    );
-    expect(sourceLabel({ type: "fact", key: "washer", quote: "true" })).toBe(
-      "Seen in photos: washer",
-    );
-    expect(sourceLabel({ type: "manual", key: "wifi", quote: "fine for video calls" })).toBe(
-      "House manual: fine for video calls",
-    );
-    expect(ruleText(false)).toBe("not allowed");
-    expect(ruleText("15:00")).toBe("15:00");
   });
 });

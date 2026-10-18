@@ -1,6 +1,6 @@
 /**
  * GH-16 (owner: Temuri). The sources "Ask this home" may cite, and the code check of every
- * citation. Pure: no database, no model, safe to import from the browser (source chips).
+ * citation. Pure: no database, no model. Chip text lives in components/ask-home/source-label.ts.
  *
  * - fact:   a key in `listing_facts.facts` (the Verifier's X-ray, GH-9)
  * - rule:   a key in `listings.house_rules`
@@ -154,34 +154,4 @@ export function appendHostAnswer(manual: string, question: string, answer: strin
   if (body.split(/\r?\n/).some((l) => l.trim() === HOST_ANSWERS_HEADING))
     return `${body}\n${line}\n`;
   return `${body ? `${body}\n\n` : ""}${HOST_ANSWERS_HEADING}\n${line}\n`;
-}
-
-const RULE_TITLES: Record<string, string> = {
-  pets: "Pets",
-  smoking: "Smoking",
-  parties: "Parties",
-  quiet_hours: "Quiet hours",
-  check_in_after: "Check-in after",
-  check_out_before: "Check-out before",
-};
-
-function shorten(text: string, max = 90): string {
-  const flat = ONE_LINE(text, 1000);
-  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
-}
-
-/** Chip text: "House rules: Pets: one dog under 15 kg", "Seen in photos: washer", "House manual: …". */
-export function sourceLabel(source: { type: string; key: string; quote?: string }): string {
-  const quote = source.quote?.trim() ?? "";
-  if (source.type === "rule") {
-    const title = RULE_TITLES[source.key] ?? source.key.replace(/[_-]+/g, " ");
-    return `House rules: ${shorten(quote ? `${title}: ${quote}` : title)}`;
-  }
-  if (source.type === "fact") {
-    const words = source.key.replace(/[_-]+/g, " ");
-    const shown =
-      quote === "true" ? words : quote === "false" ? `no ${words}` : `${words}: ${quote}`;
-    return `Seen in photos: ${shorten(shown)}`;
-  }
-  return `House manual: ${shorten(quote || source.key)}`;
 }
