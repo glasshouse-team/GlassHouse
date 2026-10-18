@@ -4,19 +4,10 @@
  * panorama's centre column has (tools/verifier/gap-views.ts). So every 90 deg panorama view can
  * be compared with the 2-3 real photos that face the same way, instead of any photo of the room.
  *
- * Pure parts (tested): folder matching, ring azimuths, which photos face a view. I/O part:
- * `loadRingFolder` reads a local folder read-only (JPEG/PNG through sharp, HEIC through macOS
- * `sips` into a temp folder that is removed afterwards).
+ * Pure (tested): folder matching, ring order, which photos face a view. Reading a folder is in
+ * ./ring-folder.ts (script only), so routes that import this never trace local files.
  */
-import { execFile } from "node:child_process";
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import path from "node:path";
-import { promisify } from "node:util";
-import sharp from "sharp";
-import { RING_SIZE, ringAzimuth } from "./known-gap";
-
-const run = promisify(execFile);
+import { RING_SIZE } from "./known-gap";
 
 /** Long side of a ring photo sent to the model. */
 export const RING_PHOTO_PX = 768;
@@ -95,59 +86,4 @@ export function photosFacing<P extends { azimuth: number }>(
     .sort((a, b) => a.d - b.d)
     .slice(0, max)
     .map((x) => x.p);
-}
-
-async function toJpeg(file: string, tmp: string): Promise<Buffer> {
-  if (/\.(heic|heif)$/i.test(file)) {
-    // sharp's prebuilt libvips has no HEVC decoder; macOS sips does. The source stays untouched.
-    const out = path.join(tmp, `${path.basename(file)}.jpg`);
-    await run("sips", ["-s", "format", "jpeg", "-Z", String(RING_PHOTO_PX), file, "--out", out]);
-    return sharp(await readFile(out))
-      .jpeg({ quality: 82 })
-      .toBuffer();
-  }
-  return sharp(await readFile(file))
-    .rotate()
-    .resize({ width: RING_PHOTO_PX, height: RING_PHOTO_PX, fit: "inside" })
-    .jpeg({ quality: 82 })
-    .toBuffer();
-}
-
-/** Reads one ring folder (read-only) into JPEGs with their azimuths. */
-export async function loadRingFolder(dir: string): Promise<RingPhoto[]> {
-  const names = ringOrder(await readdir(dir));
-  const tmp = await mkdtemp(path.join(tmpdir(), "gh19-ring-"));
-  try {
-    return await Promise.all(
-      names.map(async (name, i) => ({
-        name,
-        azimuth: ringAzimuth(i, RING_SIZE),
-        jpeg: await toJpeg(path.join(dir, name), tmp),
-      })),
-    );
-  } finally {
-    await rm(tmp, { recursive: true, force: true });
-  }
-}
-
-/** The middle-ring folder of a spot under a capture root (`<root>/<room>/middle`), or null. */
-export async function findRingDir(
-  root: string,
-  spot: string,
-  spotLabel: string | null,
-): Promise<string | null> {
-  const entries = await readdir(root, { withFileTypes: true });
-  const folder = matchRingFolder(
-    spot,
-    spotLabel,
-    entries.filter((e) => e.isDirectory()).map((e) => e.name),
-  );
-  if (!folder) return null;
-  const middle = path.join(root, folder, "middle");
-  try {
-    await readdir(middle);
-    return middle;
-  } catch {
-    return path.join(root, folder);
-  }
 }

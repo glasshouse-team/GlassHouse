@@ -54,7 +54,8 @@ import {
   writeGate,
   type EvaluationNumbers,
 } from "@/tools/verifier/gap-vote";
-import { findRingDir, loadRingFolder, type RingPhoto } from "@/tools/verifier/ring-photos";
+import { findRingDir, loadRingFolder } from "@/tools/verifier/ring-folder";
+import type { RingPhoto } from "@/tools/verifier/ring-photos";
 
 const { values } = parseArgs({
   options: {

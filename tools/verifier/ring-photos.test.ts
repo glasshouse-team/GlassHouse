@@ -1,15 +1,10 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import {
-  angularDistance,
-  loadRingFolder,
-  matchRingFolder,
-  photosFacing,
-  ringOrder,
-} from "./ring-photos";
+import { findRingDir, loadRingFolder } from "./ring-folder";
+import { angularDistance, matchRingFolder, photosFacing, ringOrder } from "./ring-photos";
 
 const FOLDERS = ["bedroom", "entrance", "kitchen", "living room", "toilet"];
 
@@ -83,6 +78,21 @@ describe("loadRingFolder", () => {
       expect((await sharp(ring[0].jpeg).metadata()).format).toBe("jpeg");
     } finally {
       await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("finds <root>/<room>/middle for a spot, the room folder without one, null for none", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "rings-root-"));
+    try {
+      await mkdir(path.join(root, "toilet", "middle"), { recursive: true });
+      await mkdir(path.join(root, "kitchen"));
+      expect(await findRingDir(root, "bathroom", "Bathroom")).toBe(
+        path.join(root, "toilet", "middle"),
+      );
+      expect(await findRingDir(root, "kitchen", "Kitchen")).toBe(path.join(root, "kitchen"));
+      expect(await findRingDir(root, "balcony", null)).toBeNull();
+    } finally {
+      await rm(root, { recursive: true, force: true });
     }
   });
 });
