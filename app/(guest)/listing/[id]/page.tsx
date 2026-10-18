@@ -22,6 +22,7 @@ import {
   getProfile,
 } from "@/lib/data/listings";
 import { getViewer } from "@/lib/viewer";
+import { DEMO_DEAL } from "@/seed/fixtures";
 
 export async function generateMetadata(props: PageProps<"/listing/[id]">): Promise<Metadata> {
   const listing = await getListing((await props.params).id);
@@ -43,7 +44,7 @@ export default async function ListingPage(props: PageProps<"/listing/[id]">) {
     getAvailability(listing.id, today),
     getViewer(),
   ]);
-  const stay = defaultStay(today);
+  const stay = defaultStay(today, DEMO_DEAL);
   const area = [listing.neighborhood, listing.city].filter(Boolean).join(", ");
   const rules = houseRuleLines(listing.house_rules);
 
@@ -112,14 +113,20 @@ export default async function ListingPage(props: PageProps<"/listing/[id]">) {
 
         <aside className="min-w-0">
           <div className="space-y-6 lg:sticky lg:top-20">
+            {/* A client component: pass only what it shows, never the whole row. */}
             <BookingBox
               listingId={listing.id}
               title={listing.title}
-              pricing={listing}
+              pricing={{
+                base_price_cents: listing.base_price_cents,
+                weekend_price_cents: listing.weekend_price_cents,
+                cleaning_fee_cents: listing.cleaning_fee_cents,
+              }}
               maxGuests={listing.max_guests}
               blockedDates={availability.blockedDates}
               overrides={availability.overrides}
-              initial={{ ...stay, guests: defaultGuests(listing.max_guests) }}
+              today={today}
+              initial={{ ...stay, guests: defaultGuests(listing.max_guests, DEMO_DEAL.guests) }}
               canBook={viewer.role === "guest"}
             />
             <div className="max-h-[40vh] overflow-y-auto">

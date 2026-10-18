@@ -5,6 +5,7 @@
 import { cache } from "react";
 import { z } from "zod";
 import type { Tables } from "@/lib/database.types";
+import { stayNights } from "@/lib/pricing";
 import { HouseRulesSchema } from "@/lib/schemas/core";
 import { supabaseAdmin } from "@/lib/supabase";
 
@@ -127,19 +128,34 @@ export async function getHostListings(hostId: string) {
   return data ?? [];
 }
 
-/** Blocked nights and per-night prices from today on (what the booking box needs). */
+/**
+ * What the booking box needs from `from` on: nights that can't be booked (blocked by the host
+ * or already reserved) and per-night prices. Only dates leave here, never who booked them.
+ */
 export async function getAvailability(listingId: string, from: string) {
-  const { data, error } = await supabaseAdmin()
-    .from("availability")
-    .select("date, is_blocked, price_override_cents")
-    .eq("listing_id", listingId)
-    .gte("date", from)
-    .or("is_blocked.eq.true,price_override_cents.not.is.null")
-    .order("date");
-  check(error, "availability");
-  const rows = data ?? [];
+  const db = supabaseAdmin();
+  const [availability, reservations] = await Promise.all([
+    db
+      .from("availability")
+      .select("date, is_blocked, price_override_cents")
+      .eq("listing_id", listingId)
+      .gte("date", from)
+      .or("is_blocked.eq.true,price_override_cents.not.is.null")
+      .order("date"),
+    db
+      .from("reservations")
+      .select("check_in, check_out")
+      .eq("listing_id", listingId)
+      .eq("status", "confirmed")
+      .gt("check_out", from),
+  ]);
+  check(availability.error, "availability");
+  check(reservations.error, "reservations");
+  const rows = availability.data ?? [];
+  const booked = (reservations.data ?? []).flatMap((r) => stayNights(r.check_in, r.check_out));
+  const blocked = rows.filter((r) => r.is_blocked).map((r) => r.date);
   return {
-    blockedDates: rows.filter((r) => r.is_blocked).map((r) => r.date),
+    blockedDates: [...new Set([...blocked, ...booked])].sort(),
     overrides: rows
       .filter((r) => r.price_override_cents !== null)
       .map((r) => ({ date: r.date, price_override_cents: r.price_override_cents })),

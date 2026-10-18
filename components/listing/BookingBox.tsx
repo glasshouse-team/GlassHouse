@@ -1,6 +1,6 @@
 "use client";
 
-import { format, parseISO, startOfToday } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { CalendarDays, Minus, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -32,6 +32,8 @@ export interface BookingBoxProps {
   maxGuests: number;
   blockedDates: string[];
   overrides: PriceOverride[];
+  /** Today as "YYYY-MM-DD" from the server, so the calendar and the API agree. */
+  today: string;
   initial: { checkIn: string; checkOut: string; guests: number };
   /** False in the host view: only guests book. */
   canBook: boolean;
@@ -93,6 +95,7 @@ export function BookingBox(props: BookingBoxProps) {
           guests,
           maxGuests: props.maxGuests,
           blockedDates: props.blockedDates,
+          today: props.today,
         });
   let quote: Quote | null = null;
   if (!problem) {
@@ -161,7 +164,10 @@ export function BookingBox(props: BookingBoxProps) {
               selected={range}
               onSelect={setRange}
               defaultMonth={range?.from}
-              disabled={[{ before: startOfToday() }, ...props.blockedDates.map((d) => parseISO(d))]}
+              disabled={[
+                { before: parseISO(props.today) },
+                ...props.blockedDates.map((d) => parseISO(d)),
+              ]}
             />
           </PopoverContent>
         </Popover>
@@ -217,11 +223,14 @@ export function BookingBox(props: BookingBoxProps) {
           Switch to the guest view to book.
         </p>
       )}
-      {problem ? (
-        <p className="text-sm text-destructive">{problem}</p>
-      ) : (
-        quote && <PriceLines quote={quote} />
-      )}
+      {/* Announced to screen readers when the dates or guests change. */}
+      <div aria-live="polite">
+        {problem ? (
+          <p className="text-sm text-destructive">{problem}</p>
+        ) : (
+          quote && <PriceLines quote={quote} />
+        )}
+      </div>
     </div>
   );
 

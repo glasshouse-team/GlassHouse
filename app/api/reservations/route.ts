@@ -32,7 +32,8 @@ export async function POST(request: Request) {
     if (!listing) return jsonError(404, "not_found", "This home is not available.");
 
     const { blockedDates, overrides } = await getAvailability(listing.id, body.checkIn);
-    const problem = bookingProblem({ ...body, maxGuests: listing.max_guests, blockedDates });
+    const today = new Date().toISOString().slice(0, 10);
+    const problem = bookingProblem({ ...body, maxGuests: listing.max_guests, blockedDates, today });
     if (problem) return jsonError(400, "cannot_book", problem);
     if (await hasOverlappingReservation(listing.id, body.checkIn, body.checkOut))
       return jsonError(409, "already_booked", "These dates were just booked. Pick other dates.");
