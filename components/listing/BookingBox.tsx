@@ -217,6 +217,8 @@ export function BookingBox(props: BookingBoxProps) {
         checkIn={checkIn}
         checkOut={checkOut}
         guests={guests}
+        listTotalCents={quote?.hostSubtotalCents ?? null}
+        canNegotiate={props.canBook}
       />
       {!props.canBook && (
         <p className="text-center text-xs text-muted-foreground">

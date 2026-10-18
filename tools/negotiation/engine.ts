@@ -5,7 +5,10 @@
  * or the guest's limits, so it may appear in prompts and in the deal room.
  */
 import type { OfferBy, OfferRejectCode } from "@/lib/validators";
+import { differenceFromList } from "@/components/deal/format";
 import { formatCents } from "@/lib/utils";
+
+export { approvalPrompt, differenceFromList } from "@/components/deal/format";
 
 export interface PastOffer {
   by: OfferBy;
@@ -66,13 +69,6 @@ export const REFUSAL_NOTES: Record<OfferRejectCode, string> = {
 
 const ACTOR = { guest_agent: "Guest agent", host_agent: "Host agent" } as const;
 
-/** "-$50" or "+$10" against the list total; "" when equal. */
-export function differenceFromList(amountCents: number, listTotalCents: number): string {
-  const diff = amountCents - listTotalCents;
-  if (diff === 0) return "";
-  return diff < 0 ? `-${formatCents(-diff)}` : `+${formatCents(diff)}`;
-}
-
 /** Feed line for a money move, e.g. "Guest agent offered $470 for Nov 9 to Nov 13 (-$50)". */
 export function moveSummary(by: OfferBy, move: Move, listTotalCents: number, stay: string): string {
   const diff = differenceFromList(move.amountCents, listTotalCents);
@@ -80,13 +76,4 @@ export function moveSummary(by: OfferBy, move: Move, listTotalCents: number, sta
   if (move.kind === "accept") return `${ACTOR[by]} accepted ${amount} for ${stay}`;
   if (move.kind === "counter") return `${ACTOR[by]} countered at ${amount}`;
   return `${ACTOR[by]} offered ${amount} for ${stay}`;
-}
-
-/** "Approve $480 for Nov 9 to Nov 13 (-$40, 7.7% off)?" for the host's toast and queue. */
-export function approvalPrompt(amountCents: number, listTotalCents: number, stay: string): string {
-  const off = listTotalCents - amountCents;
-  const pct = ((off / listTotalCents) * 100).toFixed(1);
-  return off > 0
-    ? `Approve ${formatCents(amountCents)} for ${stay} (-${formatCents(off)}, ${pct}% off)?`
-    : `Approve ${formatCents(amountCents)} for ${stay}?`;
 }

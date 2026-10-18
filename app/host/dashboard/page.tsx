@@ -3,10 +3,13 @@ import { QuestionsWaiting } from "@/components/ask-home/QuestionsWaiting";
 import { CaptureLauncher } from "@/components/capture/CaptureLauncher";
 import { ActivityFeed } from "@/components/feed/ActivityFeed";
 import { GapTasks } from "@/components/gaps/GapTasks";
+import { approvalPrompt } from "@/components/deal/format";
 import { AgentRulesForm } from "@/components/host/AgentRulesForm";
+import { ApprovalsQueue } from "@/components/host/ApprovalsQueue";
 import { WorldVersions } from "@/components/tour/WorldVersions";
-import { ComingSoon } from "@/components/ui/coming-soon";
 import { RoleSwitcher } from "@/components/ui/role-switcher";
+import { stayRangeLabel } from "@/lib/booking";
+import { getPendingApprovals } from "@/lib/data/deals";
 import { getHostListings } from "@/lib/data/listings";
 import { getHostPolicy } from "@/lib/data/policies";
 import { getViewer } from "@/lib/viewer";
@@ -33,7 +36,10 @@ export default async function HostDashboardPage() {
   }
 
   const listings = await getHostListings(viewer.profileId);
-  const policies = await Promise.all(listings.map((listing) => getHostPolicy(listing.id)));
+  const [policies, approvals] = await Promise.all([
+    Promise.all(listings.map((listing) => getHostPolicy(listing.id))),
+    getPendingApprovals(viewer.profileId),
+  ]);
 
   return (
     <div className="space-y-10">
@@ -42,7 +48,18 @@ export default async function HostDashboardPage() {
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Needs you</h2>
         <div className="grid gap-4 lg:grid-cols-2">
-          <ComingSoon title="Approvals queue" ticket="GH-15" owner="Beka" />
+          <ApprovalsQueue
+            initial={approvals.map(({ deal, listingTitle }) => ({
+              dealId: deal.id,
+              title: listingTitle,
+              prompt: approvalPrompt(
+                deal.final_total_cents ?? deal.list_total_cents,
+                deal.list_total_cents,
+                stayRangeLabel(deal.check_in, deal.check_out),
+              ),
+            }))}
+            listings={listings.map((l) => ({ id: l.id, title: l.title }))}
+          />
           <QuestionsWaiting hostId={viewer.profileId} />
         </div>
       </section>
