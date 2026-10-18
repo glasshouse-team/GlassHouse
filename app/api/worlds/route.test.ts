@@ -333,6 +333,75 @@ describe("GH-10 pipeline: generating -> ready -> published", () => {
     });
   });
 
+  it("marks the row failed, once, when a required asset is over the 50 MB limit", async () => {
+    await start(json({ listingId: LISTING, captureIds: [CAPTURE] }));
+    const kitchen = rows(3).find((r) => r.spot === "kitchen")!;
+    vi.mocked(getOperation).mockResolvedValue({
+      operation_id: "op-1",
+      done: true,
+      response: { ...newWorld, assets: null },
+      cost: { total_credits: 1600, line_items: [] },
+    });
+    // The web splat (500k) is 51 MB; everything else is small.
+    vi.mocked(fetch).mockImplementation(async (input) =>
+      String(input).endsWith("s_500k.spz")
+        ? new Response(new Uint8Array(51 * 1024 * 1024))
+        : new Response(new Uint8Array(1234)),
+    );
+    const first = await status(new Request("http://localhost"), ctx(kitchen.id as string));
+    expect(first.status).toBe(200);
+    expect(await first.json()).toMatchObject({ status: "failed", changed: true });
+    const second = await status(new Request("http://localhost"), ctx(kitchen.id as string));
+    expect(await second.json()).toMatchObject({ status: "failed", changed: false });
+    const failed = rows(3).find((r) => r.spot === "kitchen")!;
+    expect(failed.status).toBe("failed");
+    expect(failed.error).toMatch(/splat-web\.spz is 51\.0 MB, over the 50 MB limit/);
+    expect(actions()).toEqual(["world.generating", "world.failed"]);
+  });
+
+  it("marks the row failed when the CDN refuses an asset (404), not a 500 on every poll", async () => {
+    await start(json({ listingId: LISTING, captureIds: [CAPTURE] }));
+    const kitchen = rows(3).find((r) => r.spot === "kitchen")!;
+    vi.mocked(getOperation).mockResolvedValue({
+      operation_id: "op-1",
+      done: true,
+      response: { ...newWorld, assets: null },
+    });
+    vi.mocked(fetch).mockImplementation(async (input) =>
+      String(input).endsWith("collider.glb")
+        ? new Response("gone", { status: 404 })
+        : new Response(new Uint8Array(1234)),
+    );
+    const res = await status(new Request("http://localhost"), ctx(kitchen.id as string));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ status: "failed", changed: true });
+    expect(actions()).toEqual(["world.generating", "world.failed"]);
+  });
+
+  it("keeps generating when an asset download fails for a moment (CDN 503, network)", async () => {
+    await start(json({ listingId: LISTING, captureIds: [CAPTURE] }));
+    const kitchen = rows(3).find((r) => r.spot === "kitchen")!;
+    vi.mocked(getOperation).mockResolvedValue({
+      operation_id: "op-1",
+      done: true,
+      response: { ...newWorld, assets: null },
+    });
+    vi.mocked(fetch).mockResolvedValueOnce(new Response("busy", { status: 503 }));
+    let res = await status(new Request("http://localhost"), ctx(kitchen.id as string));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      status: "generating",
+      pollError: expect.stringMatching(/HTTP 503/),
+    });
+    vi.mocked(fetch).mockRejectedValueOnce(new TypeError("fetch failed"));
+    res = await status(new Request("http://localhost"), ctx(kitchen.id as string));
+    expect(await res.json()).toMatchObject({ status: "generating", pollError: expect.any(String) });
+    // The next poll copies everything and the row is ready.
+    res = await status(new Request("http://localhost"), ctx(kitchen.id as string));
+    expect(await res.json()).toMatchObject({ status: "ready", changed: true });
+    expect(actions()).toEqual(["world.generating", "world.ready"]);
+  });
+
   it("marks the row failed when World Labs refuses to start (no credits)", async () => {
     vi.mocked(generateWorld).mockRejectedValue(
       new MarbleError(402, "Not enough World Labs API credits."),
