@@ -110,7 +110,7 @@ export function FallbackUpload({
     if (files.length === 0 || !onRing) return;
     if (files.length < RING_PHOTOS || files.length > MAX_RING_FILES)
       return setError(
-        `Pick ${RING_PHOTOS} photos of this room taken from its middle while turning (up to ${MAX_RING_FILES} with doorways); you picked ${files.length}.`,
+        `Pick ${RING_PHOTOS} photos of this room taken from its middle while turning (then up to ${MAX_RING_FILES - RING_PHOTOS} doorway photos, shot after the ring); you picked ${files.length}.`,
       );
     // Taken one after another while turning: the capture time gives the turning order.
     files.sort((a, b) => a.lastModified - b.lastModified || a.name.localeCompare(b.name));
@@ -126,8 +126,10 @@ export function FallbackUpload({
       <h3 className="font-semibold">Upload from your phone instead</h3>
       <p className="text-sm text-muted-foreground">
         Pick a clip of one room (at most {CLIP_MAX_SECONDS} s, a slow full turn in the middle)
-        {onRing ? ` or ${RING_PHOTOS} photos taken from its middle while turning` : ""} from your
-        gallery, or film it now with the camera app.
+        {onRing
+          ? ` or ${RING_PHOTOS} photos taken from its middle while turning (doorway photos, if any, shot after them)`
+          : ""}{" "}
+        from your gallery, or film it now with the camera app.
       </p>
       <div className="space-y-1">
         <Label htmlFor={`${id}-room`}>Room in this clip</Label>
