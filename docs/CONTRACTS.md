@@ -132,7 +132,10 @@ Server only. Pages, `/api/qa`, deals and the dashboard use it instead of a login
 TourExtensions({ listingId, worldId }): ReactNode   // index.tsx: GH-20 and GH-21 mount inside it
 TourActionSchema / TourAction                        // actions.ts: fly_to, look_toward, highlight_room, show_fact
 runTourAction(tour: TourApi, action: TourAction): Promise<void>
+AskSpacePanel({ listingId, worldId?, version? }): ReactNode  // AskSpacePanel.tsx (GH-20), mounted by TourExtensions
 ```
+
+`POST /api/ask-space` (GH-20) takes `{ listingId, worldId?, version?, messages }` (useChat UI messages) and streams UI messages. The version comes from `version`, else the spot world `worldId`, else the published or newest viewable world. Tool outputs are `{ ok: true, summary, action, shown, honestyNote? }` or `{ ok: false, summary, error }`.
 
 Temuri's tour page renders `<TourExtensions>` inside `<TourProvider>` and outside the `<Canvas>`. Deep link: `/tour/{listingId}?version={n}&anchor={anchorId}`.
 
@@ -155,3 +158,4 @@ The only Marble-to-three transform; the viewer, floor plan and gap check all use
 | 2026-10-18 | Frozen at `a6ba574` (PR #3): migration applied, `lib/database.types.ts` generated, clients typed as `Db` (new export, type-level only)                  | Beka, Temuri |
 | 2026-10-18 | Section 14: `floorHeight` takes the lowest large layer below the camera, so a big ceiling or a bed top is not the floor (D-009); signature unchanged    | Temuri       |
 | 2026-10-18 | Migration 0002 (D-009): `worlds` gains `spot`, `spot_label`, `links`, unique on (listing, version, spot); `captures.kind` adds `ring`                   | Beka, Temuri |
+| 2026-10-18 | Section 13: `TourExtensions` mounts `AskSpacePanel`; `/api/ask-space` body and tool output documented (additive, GH-20)                                 | Beka         |

@@ -97,6 +97,29 @@ describe("createAgent", () => {
     expect(vi.mocked(logEvent).mock.calls[0][0].payload).toMatchObject({ input: { text: "hi" } });
   });
 
+  it("logs a refused tool result as not ok, without its input", async () => {
+    twoStepModel();
+    const refusing = tool({
+      description: "Echo text back",
+      inputSchema: z.object({ text: z.string() }),
+      execute: async () => ({
+        ok: false,
+        code: "below_floor",
+        summary: "Host agent's move was refused",
+      }),
+    });
+    await createAgent({
+      name: "host",
+      system: "Test agent",
+      tools: { echo: refusing },
+      logInputs: { echo: ["text"] },
+    }).generate({ prompt: "Say hi" });
+    expect(vi.mocked(logEvent).mock.calls[0][0].payload).toMatchObject({
+      ok: false,
+      input: undefined,
+    });
+  });
+
   it("loggableInput keeps only listed own fields of an object input", () => {
     expect(loggableInput({ a: 1, b: 2 }, ["a"])).toEqual({ a: 1 });
     expect(loggableInput({ a: 1 }, [])).toBeUndefined();
