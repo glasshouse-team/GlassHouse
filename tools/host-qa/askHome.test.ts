@@ -107,7 +107,9 @@ function memoryStore() {
       return messageId;
     },
     setNeedsHost: async (messageId, needsHost) => {
-      messages.get(messageId)!.needsHost = needsHost;
+      const m = messages.get(messageId)!;
+      m.needsHost = needsHost;
+      if (needsHost) m.answeredBy = null;
     },
     markAnswered: async (messageId, answeredBy) => {
       const m = messages.get(messageId)!;
@@ -204,7 +206,10 @@ describe("askHome with a mock model", () => {
       },
       DEMO_PROFILES.giorgi.id,
     );
-    expect(messages.get(reply.messageId)).toMatchObject({ actor: "host", answeredBy: "host" });
+    expect(messages.get(reply.messageId)).toMatchObject({
+      actor: "host",
+      answeredBy: first.messageId,
+    });
     expect(messages.get(first.messageId)).toMatchObject({ needsHost: false, answeredBy: "host" });
     expect(listing.house_manual).toContain(
       "## Host answers\n- Q: Is there a hair dryer? A: Yes, there is a hair dryer in the bathroom cabinet.",
@@ -226,6 +231,54 @@ describe("askHome with a mock model", () => {
     expect(again.sources).toEqual([
       { type: "manual", key: "host answers 1", quote: "bathroom cabinet" },
     ]);
+  });
+
+  it("keeps the question waiting when saving the host's reply fails, so a retry works", async () => {
+    scriptedModel();
+    const { deps, store, messages, listing } = memoryStore();
+    const first = await ask(deps, "Is there a hair dryer?");
+    const addMessage = store.addMessage;
+    store.addMessage = async () => {
+      throw new Error("Could not save the message: network down");
+    };
+    const reply = {
+      messageId: first.messageId,
+      answer: "Yes, in the bathroom drawer.",
+      saveToManual: true,
+    };
+
+    await expect(hostReplyWith(store, reply, DEMO_PROFILES.giorgi.id)).rejects.toThrow(
+      "network down",
+    );
+    expect(messages.get(first.messageId)).toMatchObject({ needsHost: true, answeredBy: null });
+    expect(await store.question(first.messageId)).toMatchObject({ needsHost: true });
+    expect(events().some((e) => e.action === "qa.host_replied")).toBe(false);
+
+    store.addMessage = addMessage;
+    const retried = await hostReplyWith(store, reply, DEMO_PROFILES.giorgi.id);
+    expect(messages.get(retried.messageId)).toMatchObject({ actor: "host" });
+    expect(messages.get(first.messageId)).toMatchObject({ needsHost: false });
+    // The manual was saved on the failed try; the retry does not add the line again.
+    expect(listing.house_manual.match(/bathroom drawer/g)).toHaveLength(1);
+  });
+
+  it("reopens the question when the manual update fails, before any reply is saved", async () => {
+    scriptedModel();
+    const { deps, store, messages } = memoryStore();
+    const first = await ask(deps, "Is there a hair dryer?");
+    const count = messages.size;
+    store.setHouseManual = async () => {
+      throw new Error("Could not save the house manual");
+    };
+    await expect(
+      hostReplyWith(
+        store,
+        { messageId: first.messageId, answer: "Yes.", saveToManual: true },
+        DEMO_PROFILES.giorgi.id,
+      ),
+    ).rejects.toThrow("house manual");
+    expect(messages.size).toBe(count);
+    expect(messages.get(first.messageId)).toMatchObject({ needsHost: true });
   });
 
   it("refuses an answer without a real source; the agent then forwards instead of guessing", async () => {

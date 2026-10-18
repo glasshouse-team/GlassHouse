@@ -69,16 +69,21 @@ function WaitingItem({ question, onDone }: { question: Waiting; onDone: (id: str
         rows={2}
       />
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-sm max-sm:min-h-11 max-sm:pr-2">
           <input
             type="checkbox"
             checked={save}
             onChange={(e) => setSave(e.target.checked)}
-            className="size-4 accent-[var(--brand)]"
+            className="size-4 accent-[var(--brand)] max-sm:size-5"
           />
           Save to house manual
         </label>
-        <Button size="sm" onClick={() => void send()} disabled={sending || !answer.trim()}>
+        <Button
+          size="sm"
+          onClick={() => void send()}
+          disabled={sending || !answer.trim()}
+          className="max-sm:h-11 max-sm:px-4"
+        >
           {sending && <Loader2 className="size-4 animate-spin" aria-hidden />}
           Send reply
         </Button>
