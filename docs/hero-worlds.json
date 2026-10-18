@@ -5,9 +5,13 @@
     "entrySpot": "entrance",
     "versions": {
       "1": {
-        "$comment": "Gap demo version: the kitchen ring without photos 1019 and 1020 (the photo-frame wall), so Marble invented that wall: a door, an air conditioner and hanging cables that are not there. v2 shows the real plain wall with the photo frame.",
+        "$comment": "Gap demo version: the kitchen ring without photos 1019 and 1020 (the photo-frame wall), so Marble invented that wall: a door, an air conditioner and hanging cables that are not there. v2 shows the real plain wall with the photo frame. The other 4 spots reuse v2's worlds, so v1 is a full 5-spot version too (D-031); the import shares their files with the v2 rows.",
         "spots": {
-          "kitchen": "6aae85e6-9837-42d2-98a8-1c07ab332da8"
+          "entrance": "4cea1a85-9031-4123-87ef-0b6a600f4a47",
+          "bathroom": "980e1ff7-4957-4e4e-ae6b-db03c3f35422",
+          "bedroom": "fbeb2785-e9e6-49e0-b6dd-ce23436c5032",
+          "kitchen": "6aae85e6-9837-42d2-98a8-1c07ab332da8",
+          "living": "ab896c5f-df6c-44de-94e7-2b278d30d12b"
         }
       },
       "2": {
