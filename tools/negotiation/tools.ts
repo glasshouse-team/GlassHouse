@@ -7,7 +7,7 @@
  */
 import { tool, type ToolSet } from "ai";
 import { z } from "zod";
-import type { DealMessageType, OfferTerms } from "@/lib/schemas/core";
+import type { DealActor, DealMessageType, OfferTerms } from "@/lib/schemas/core";
 import { validateOffer, type NegotiationPolicy, type OfferBy } from "@/lib/validators";
 import { moveSummary, REFUSAL_NOTES, type Move } from "./engine";
 
@@ -15,7 +15,7 @@ import { moveSummary, REFUSAL_NOTES, type Move } from "./engine";
 const TERMS = ["late_checkout", "early_checkin"] as const;
 
 export interface DealMessageDraft {
-  actor: OfferBy;
+  actor: DealActor;
   type: DealMessageType;
   amount_cents: number | null;
   terms: OfferTerms;
