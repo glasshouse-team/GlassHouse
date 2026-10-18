@@ -15,11 +15,13 @@ import { isOurStorage } from "@/lib/geometry/store-floorplans";
 import { supabaseAdmin } from "@/lib/supabase";
 import {
   KNOWN_GAPS,
+  RING_SIZE,
   azimuthToDirection,
   coverageUpdates,
   gapToInsert,
   knownGapRow,
   rayOrigin,
+  ringCoverage,
   type KnownGap,
 } from "@/tools/verifier/known-gap";
 
@@ -134,7 +136,7 @@ async function markKnown(dryRun: boolean) {
         fail(`Could not set coverage of ${u.spot} v${u.version}: ${updateError.message}`);
     }
 
-    const kitchen = updates.find((u) => u.version === known.version && u.spot === known.spot);
+    const knownScore = ringCoverage(RING_SIZE, known.missingPhotos.length);
     await logEvent({
       actor_type: "agent",
       actor_name: "Verifier",
@@ -142,7 +144,7 @@ async function markKnown(dryRun: boolean) {
       action: "gap.marked",
       summary: insert
         ? `Flagged an AI-invented wall in the ${known.room.toLowerCase()} 3D (v${known.version}): photos ${known.missingPhotos.join(" and ")} were skipped`
-        : `Set the 3D coverage scores from the ring photos (${known.room.toLowerCase()} v${known.version}: ${Math.round((kitchen?.coverage_score ?? 0) * 100)}%)`,
+        : `Set the 3D coverage scores from the ring photos (${known.room.toLowerCase()} v${known.version}: ${Math.round(knownScore * 100)}%)`,
       listing_id: known.listingId,
       payload: {
         world_id: world.id,

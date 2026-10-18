@@ -4,8 +4,11 @@
  * 270 and 315 deg), so Marble invented that wall: a door, an air conditioner and cables. v2 has
  * all 8 photos. `pnpm gaps --mark-known` stores that gap and the coverage scores from the ring
  * photo counts (not from the automatic check). Pure, no I/O: the script does the reads and writes.
+ * The automatic check (GH-19 part 2) must keep this gap when it clears its own open gaps, and
+ * must not re-run the coverage step here once it writes measured scores (D-041).
  */
 import type { Gap, GapIssue, Vec3 } from "@/lib/schemas/world";
+import { HERO_LISTINGS } from "@/seed/fixtures";
 
 /** Photos in one spot's ring (D-009): 8, turning right 45 deg each. */
 export const RING_SIZE = 8;
@@ -53,7 +56,7 @@ export interface KnownGap {
   description: string;
 }
 
-export const HERO2_LISTING_ID = "00000000-0000-4000-8000-0000000000b2";
+export const HERO2_LISTING_ID = HERO_LISTINGS.hero2.id;
 
 /**
  * Hero 2 kitchen v1. The ring is ~/Desktop/house/kitchen/middle, IMG_1013..1020 taken 2 s apart
