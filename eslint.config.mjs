@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     // Generated or not app code:
     "lib/database.types.ts",
     "supabase/**",
+    // Parallel agents' git worktrees (Claude Code) live here; each is linted in its own checkout.
+    ".claude/**",
   ]),
 ]);
 
