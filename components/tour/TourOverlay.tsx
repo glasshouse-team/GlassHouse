@@ -162,10 +162,13 @@ function Hint({ coarse }: { coarse: boolean }) {
     return () => clearTimeout(t);
   }, [ready]);
   if (!ready) return null;
+  // Clear of tour-ext's bottom corners (honesty toggle bottom-left: bottom-20 below sm, bottom-4
+  // from sm, about 90 px tall with its legend on; Ask the space bottom-right: bottom-4): 176 px up
+  // on phones, 112 px on tablets where the centred pill can still reach a corner, 24 px from lg.
   return (
     <p
       className={cn(
-        "mx-auto mb-20 rounded-full bg-black/55 px-4 py-1.5 text-center text-xs text-white backdrop-blur transition-opacity duration-700 sm:mb-6",
+        "mx-auto mb-44 max-w-[calc(100%-2rem)] rounded-full bg-black/55 px-4 py-1.5 text-center text-xs text-white backdrop-blur transition-opacity duration-700 sm:mb-28 lg:mb-6",
         shown ? "opacity-100" : "opacity-0",
       )}
     >

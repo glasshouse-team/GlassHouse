@@ -6,6 +6,7 @@ import { getListingPhotos } from "@/lib/data/listings";
 import { ContradictionSchema, FactSchema } from "@/lib/schemas/verifier";
 import { supabaseAdmin } from "@/lib/supabase";
 import { factLabel } from "./fact-label";
+import { isRealCheck } from "./real-check";
 
 /** Facts below this confidence stay out of the chips. */
 const MIN_CONFIDENCE = 0.5;
@@ -69,7 +70,13 @@ export async function XrayPanel({ listingId }: { listingId: string }) {
     getListingPhotos(listingId),
   ]);
 
-  if (!row) {
+  const facts = Facts.parse(row?.facts ?? []);
+  const contradictions = Contradictions.parse(row?.contradictions ?? []);
+  const photoIds = new Set(photoRows.map((p) => p.id));
+
+  // A seed placeholder (model "seed") or a row citing photos the listing no longer has is not
+  // a Verifier check: never show "Checked by Verifier" over facts with no photos behind them.
+  if (!row || !isRealCheck({ model: row.model, facts, contradictions }, photoIds)) {
     return (
       <section className="flex items-center gap-2 rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
         <ScanSearch className="size-4 shrink-0" aria-hidden />
@@ -81,8 +88,7 @@ export async function XrayPanel({ listingId }: { listingId: string }) {
   const photos: PhotoUrls = new Map(
     photoRows.map((p) => [p.id, { url: p.url, label: p.room_label }]),
   );
-  const facts = Facts.parse(row.facts).filter((f) => f.confidence >= MIN_CONFIDENCE);
-  const contradictions = Contradictions.parse(row.contradictions);
+  const shownFacts = facts.filter((f) => f.confidence >= MIN_CONFIDENCE);
   const missing = Missing.parse(row.missing_photos);
 
   return (
@@ -126,13 +132,13 @@ export async function XrayPanel({ listingId }: { listingId: string }) {
         </ul>
       )}
 
-      {facts.length > 0 && (
+      {shownFacts.length > 0 && (
         <div className="space-y-2">
           <h3 className="flex items-center gap-1.5 text-sm font-medium">
             <Eye className="size-4" aria-hidden /> Seen in photos
           </h3>
           <ul className="flex flex-wrap gap-2">
-            {facts.map((fact) => (
+            {shownFacts.map((fact) => (
               <li key={fact.key}>
                 <Popover>
                   <PopoverTrigger
