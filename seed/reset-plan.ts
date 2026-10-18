@@ -47,7 +47,8 @@ export interface WorldPublishPlan {
   reopenGapIds: string[];
 }
 
-export type WorldStep = { kind: "publish"; plan: WorldPublishPlan } | { kind: "skip"; reason: string };
+export type WorldStep =
+  { kind: "publish"; plan: WorldPublishPlan } | { kind: "skip"; reason: string };
 
 export interface ResetPlan {
   /** Rows to delete per demo table. */
@@ -128,7 +129,9 @@ export function buildResetPlan(input: {
 
 /** Lines that describe the plan, printed by `--dry-run` and before a real run. */
 export function describePlan(plan: ResetPlan, listingSlug: string): string[] {
-  const lines = DEMO_TABLES.map((t) => `delete ${plan.deletions[t]} ${t} (all; the seed makes none)`);
+  const lines = DEMO_TABLES.map(
+    (t) => `delete ${plan.deletions[t]} ${t} (all; the seed makes none)`,
+  );
   lines.push(
     plan.eventWatermark === null
       ? "keep events: no seed.completed event found (run pnpm seed first)"

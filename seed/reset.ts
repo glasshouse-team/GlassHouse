@@ -93,10 +93,7 @@ async function publishWorlds(plan: WorldPublishPlan): Promise<void> {
     .eq("id", DEMO_WORLD.listing.id);
   check(listingError, "set published_world_id");
   if (plan.reopenGapIds.length > 0) {
-    const { error } = await db
-      .from("gaps")
-      .update({ status: "open" })
-      .in("id", plan.reopenGapIds);
+    const { error } = await db.from("gaps").update({ status: "open" }).in("id", plan.reopenGapIds);
     check(error, "reopen gaps");
   }
 }
@@ -130,7 +127,13 @@ export interface SeedCounts {
 /** Seed rows still in place, printed after a reset so a person can see nothing seeded went. */
 export async function seedCounts(): Promise<SeedCounts> {
   const db = supabaseAdmin();
-  const tables = ["listings", "reviews", "listing_photos", "host_policies", "listing_facts"] as const;
+  const tables = [
+    "listings",
+    "reviews",
+    "listing_photos",
+    "host_policies",
+    "listing_facts",
+  ] as const;
   const entries = await Promise.all(
     tables.map(async (t) => {
       const { count, error } = await db.from(t).select("*", { count: "exact", head: true });
