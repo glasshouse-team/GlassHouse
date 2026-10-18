@@ -4,6 +4,7 @@
  */
 import { cache } from "react";
 import { z } from "zod";
+import { type CoverageWorld, type ListingCoverage, publishedCoverage } from "@/lib/coverage";
 import type { Tables } from "@/lib/database.types";
 import { stayNights } from "@/lib/pricing";
 import { HouseRulesSchema } from "@/lib/schemas/core";
@@ -90,6 +91,8 @@ export interface ListingCardData {
   rating: number | null;
   review_count: number;
   photoUrl: string | null;
+  /** Share of the published 3D tour filmed by the host (GH-21), or null. */
+  coverage: ListingCoverage | null;
 }
 
 export interface ListingFilters {
@@ -102,7 +105,7 @@ export async function searchListings(filters: ListingFilters = {}): Promise<List
   let query = supabaseAdmin()
     .from("listings")
     .select(
-      "id, slug, title, city, neighborhood, property_type, max_guests, base_price_cents, rating, review_count, listing_photos(url, sort)",
+      "id, slug, title, city, neighborhood, property_type, max_guests, base_price_cents, rating, review_count, published_world_id, listing_photos(url, sort)",
     )
     .eq("status", "published");
   if (filters.city) query = query.eq("city", filters.city);
@@ -111,10 +114,35 @@ export async function searchListings(filters: ListingFilters = {}): Promise<List
     .order("rating", { ascending: false, nullsFirst: false })
     .order("title");
   check(error, "listings");
-  return (data ?? []).map(({ listing_photos, ...listing }) => ({
+  const rows = data ?? [];
+  const worlds = await getCoverageWorlds(rows.filter((r) => r.published_world_id).map((r) => r.id));
+  return rows.map(({ listing_photos, published_world_id, ...listing }) => ({
     ...listing,
     photoUrl: [...listing_photos].sort((a, b) => a.sort - b.sort)[0]?.url ?? null,
+    coverage: publishedCoverage(published_world_id, worlds),
   }));
+}
+
+/** The worlds columns the coverage score needs, for these listings. */
+async function getCoverageWorlds(listingIds: string[]): Promise<CoverageWorld[]> {
+  if (listingIds.length === 0) return [];
+  const { data, error } = await supabaseAdmin()
+    .from("worlds")
+    .select("id, listing_id, version, spot, status, coverage_score")
+    .in("listing_id", listingIds);
+  check(error, "world coverage");
+  return data ?? [];
+}
+
+/**
+ * The published tour's coverage score (GH-21): the mean of `coverage_score` over the spot
+ * worlds of the published version, or null without a published world or any score.
+ */
+export async function getListingCoverage(
+  listing: Pick<ListingRow, "id" | "published_world_id">,
+): Promise<ListingCoverage | null> {
+  if (!listing.published_world_id) return null;
+  return publishedCoverage(listing.published_world_id, await getCoverageWorlds([listing.id]));
 }
 
 /** The host's listings for the dashboard (by slug, so hero-1 comes first). */
