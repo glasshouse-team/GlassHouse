@@ -59,6 +59,9 @@ export function RingCapture({
   const [samples, setSamples] = useState<HeadingSample[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [busy, setBusy] = useState(false);
+  // A ref, not state: two taps in one frame must not both pass the check.
+  const busyRef = useRef(false);
+  const lastShotRef = useRef(0);
   const { heading, headingRef } = useHeading(compass);
   const { warnings, historyRef } = useLiveWarnings({ videoRef, motion: compass, samplesRef });
   useWakeLock(true);
@@ -87,19 +90,27 @@ export function RingCapture({
 
   async function shoot(doorway: boolean) {
     const video = videoRef.current;
-    if (!video || busy) return;
+    if (!video || busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
+    // Read the heading at the tap, not after the frame is encoded.
+    const heading = headingRef.current;
+    const t = Math.round(((performance.now() - startRef.current) / 1000) * 100) / 100;
     try {
       const blob = await grabPhoto(video);
-      const t = Math.round(((performance.now() - startRef.current) / 1000) * 100) / 100;
-      setPhotos((prev) => [...prev, { blob, heading: headingRef.current, t, doorway }]);
+      setPhotos((prev) => [...prev, { blob, heading, t, doorway }]);
       navigator.vibrate?.(30);
     } finally {
+      lastShotRef.current = performance.now();
+      busyRef.current = false;
       setBusy(false);
     }
   }
 
   function finish() {
+    // Ignore a double tap that lands on "Save spot" right after the last photo.
+    if (busyRef.current || performance.now() - lastShotRef.current < 600) return;
+    busyRef.current = true;
     const ordered = [...ring, ...doors];
     const withHeading = ordered.every((p) => p.heading !== null);
     const flags: string[] = qualityFlags(historyRef.current);

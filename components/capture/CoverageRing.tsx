@@ -77,14 +77,16 @@ export function CoverageRing({
         })()}
       {heading != null &&
         (() => {
-          const [x, y] = polar(heading, R - 12);
+          // A short needle across the ring, clear of the label in the middle.
+          const [x1, y1] = polar(heading, R - 20);
+          const [x2, y2] = polar(heading, R + 8);
           return (
             <line
-              x1={C}
-              y1={C}
-              x2={x}
-              y2={y}
-              strokeWidth={3}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              strokeWidth={3.5}
               strokeLinecap="round"
               className="stroke-white"
             />

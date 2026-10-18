@@ -151,7 +151,7 @@ export function CaptureFlow({
   function onFallback(clip: FallbackClip) {
     const idx = Math.max(0, cleanRooms.indexOf(clip.room));
     submit(
-      `${clip.room}: uploaded clip`,
+      `${clip.room}: clip from a file`,
       {
         listingId,
         kind,
