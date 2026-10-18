@@ -23,7 +23,7 @@ Run on the deployed Vercel URL, not localhost, with Beka's phone as the host:
 ## GH-26 Demo mode, reset, QA (Beka)
 
 - `DEMO_MODE=true`: no World Labs calls (generation returns saved versions), 1.5 s pause between negotiation turns, fixed demo dates.
-- `pnpm demo:reset` (scripts/reset-demo.ts): delete deals, deal messages, reservations, Q&A messages and events created after the seed; restore the hero policy; publish Hero 1 v1 (the gap version); clear the hair-dryer answer from the manual; print "Demo ready".
+- `pnpm demo:reset` (scripts/reset-demo.ts): delete every deal, reservation, Q&A conversation and trip brief (the seed makes none, D-032) and the events after the latest `seed.completed`; restore hero-1's policy and manual (drops the hair-dryer answer); publish Hero 2 v1 (the gap version, D-026); print "Demo ready". `--dry-run` prints the plan only. QA checklist with how to run each line: docs/QA.md.
 - `/demo/check`: green or red for env vars, Supabase, both hero worlds loading, X-ray rows, a Claude ping (`/api/health` covers the env part).
 - QA checklist on the deployed URL:
   - [ ] `pnpm check` passes; the lowball is blocked
