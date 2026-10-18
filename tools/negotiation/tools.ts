@@ -52,6 +52,11 @@ export interface TurnSide {
    * A reason the model wrote that names one is not shown to the other side.
    */
   privateAmountsCents?: number[];
+  /**
+   * The code's suggestion is to accept (the gap is $15 or less): a counter is refused while
+   * accepting their offer would pass the rules, so the deal closes instead of drifting.
+   */
+  closeEnough?: boolean;
   /** Re-reads the deal just before a move is saved: false when it moved on meanwhile. */
   stillCurrent?: () => Promise<boolean>;
   save: (message: DealMessageDraft) => Promise<void>;
@@ -103,9 +108,8 @@ export function negotiationTools(side: TurnSide, state: TurnState): ToolSet {
     summary: `${who} already moved this turn`,
   };
 
-  async function money(move: Move, terms: OfferTerms, body: string) {
-    if (state.outcome || state.claimed) return turnOver;
-    const check = validateOffer({
+  const rules = (move: Move, terms: OfferTerms) =>
+    validateOffer({
       by: side.by,
       kind: move.kind,
       amountCents: move.amountCents,
@@ -119,6 +123,21 @@ export function negotiationTools(side: TurnSide, state: TurnState): ToolSet {
         ? { policy: side.policy }
         : { guestMaxCents: side.guestMaxCents }),
     });
+
+  async function money(move: Move, terms: OfferTerms, body: string) {
+    if (state.outcome || state.claimed) return turnOver;
+    if (
+      side.closeEnough &&
+      move.kind !== "accept" &&
+      side.theirLastCents !== null &&
+      rules({ kind: "accept", amountCents: side.theirLastCents }, side.theirLastTerms ?? {}).ok
+    )
+      return {
+        ok: false as const,
+        code: "accept_instead",
+        summary: `${who} was asked to accept: the offers are close`,
+      };
+    const check = rules(move, terms);
     if (!check.ok) {
       await side.save({
         actor: side.by,

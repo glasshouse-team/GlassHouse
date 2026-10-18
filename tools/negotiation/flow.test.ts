@@ -17,6 +17,7 @@ vi.mock("@/lib/claude", () => ({
   bulkModel: () => h.model.current,
 }));
 vi.mock("@/lib/events", () => ({ logEvent: vi.fn(async () => {}) }));
+vi.mock("@/tools/host-qa/askHome", () => ({ askHome: vi.fn() }));
 vi.mock("@/lib/data/reservations", () => ({
   hasOverlappingReservation: async () => h.overlap,
   createReservation: vi.fn(async () => "reservation-1"),
