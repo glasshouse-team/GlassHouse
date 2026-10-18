@@ -19,12 +19,21 @@ export async function hasOverlappingReservation(
   return (count ?? 0) > 0;
 }
 
+/** The database refused an overlapping confirmed booking (migration 0003). */
+export class DatesTakenError extends Error {
+  constructor() {
+    super("These dates were just booked. Pick other dates.");
+    this.name = "DatesTakenError";
+  }
+}
+
 export async function createReservation(row: TablesInsert<"reservations">): Promise<string> {
   const { data, error } = await supabaseAdmin()
     .from("reservations")
     .insert(row)
     .select("id")
     .single();
+  if (error?.code === "23P01") throw new DatesTakenError();
   if (error) throw new Error(`Could not create the reservation: ${error.message}`);
   return data.id;
 }
