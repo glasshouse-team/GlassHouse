@@ -89,32 +89,42 @@ export function WorldVersions({ listingId }: { listingId: string }) {
   }
 
   return (
-    <section className="rounded-xl border p-4 text-sm">
-      <div className="flex items-center justify-between gap-2">
+    // contain-inline-size: long spot names or errors never widen the dashboard grid on phones.
+    <section className="min-w-0 rounded-xl border p-3 text-sm [contain:inline-size] sm:p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-semibold">3D versions</h2>
         {panel?.demo && <Badge variant="secondary">Demo mode: saved worlds only</Badge>}
       </div>
-      {error && <p className="mt-2 text-red-600">{error}</p>}
+      {error && <p className="mt-2 text-red-600 [overflow-wrap:anywhere]">{error}</p>}
       {!panel && !error && <p className="mt-2 text-neutral-500">Loading versions…</p>}
       {panel && panel.versions.length === 0 && (
         <p className="mt-2 text-neutral-500">No 3D version yet. Photograph a room to start one.</p>
       )}
       <ul className="mt-3 space-y-3">
         {panel?.versions.map((v) => (
-          <li key={v.version} className="flex gap-3 rounded-lg border p-2">
-            {v.thumbnailUrl ? (
-              // Our storage URL; next/image would need the Supabase host in next.config.ts.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={v.thumbnailUrl}
-                alt={`Version ${v.version} thumbnail`}
-                className="h-16 w-24 shrink-0 rounded object-cover"
-              />
-            ) : (
-              <div className="h-16 w-24 shrink-0 rounded bg-neutral-100" />
-            )}
+          <li key={v.version} className="flex min-w-0 gap-3 rounded-lg border p-2">
+            <figure className="w-20 shrink-0 sm:w-24">
+              {v.thumbnailUrl ? (
+                // Our storage URL; next/image would need the Supabase host in next.config.ts.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={v.thumbnailUrl}
+                  alt={`Version ${v.version}: ${v.thumbnailLabel ?? "entry room"}`}
+                  className="h-14 w-full rounded object-cover sm:h-16"
+                />
+              ) : (
+                <div className="h-14 w-full rounded bg-neutral-100 sm:h-16" />
+              )}
+              {v.thumbnailUrl && (
+                <figcaption className="mt-1 text-[11px] leading-tight text-neutral-500 [overflow-wrap:anywhere]">
+                  {v.thumbnailSameAs !== null
+                    ? `Same as v${v.thumbnailSameAs}`
+                    : (v.thumbnailLabel ?? "")}
+                </figcaption>
+              )}
+            </figure>
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="font-medium">v{v.version}</span>
                 <Badge variant={STATUS_VARIANT[v.status]}>{STATUS_TEXT[v.status]}</Badge>
                 <span className="text-xs text-neutral-500">
@@ -125,21 +135,23 @@ export function WorldVersions({ listingId }: { listingId: string }) {
                 {v.done} of {v.total} room spots done
                 {v.status === "generating" && " · checks every 15 s, about 6-9 minutes a spot"}
               </p>
-              <p className="mt-1 truncate text-xs text-neutral-500">
-                {v.spots
-                  .map(
-                    (s) =>
-                      `${s.spot_label ?? s.spot}: ${s.status}${s.error ? ` (${s.error})` : ""}`,
-                  )
-                  .join(" · ")}
-              </p>
-              <div className="mt-2 flex gap-2">
-                <Button asChild size="xs" variant="outline">
+              <ul className="mt-1 space-y-0.5 text-xs text-neutral-500 [overflow-wrap:anywhere]">
+                {v.spots.map((s) => (
+                  <li key={s.id}>
+                    {s.spot_label ?? s.spot}: {s.status}
+                    {s.error && <span className="text-red-600"> ({s.error})</span>}
+                  </li>
+                ))}
+              </ul>
+              {/* 44 px touch targets on phones, compact from sm up. */}
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button asChild size="sm" variant="outline" className="h-11 min-w-20 sm:h-8">
                   <Link href={previewHref(listingId, v.version)}>Preview</Link>
                 </Button>
                 {v.status !== "published" && (
                   <Button
-                    size="xs"
+                    size="sm"
+                    className="h-11 min-w-20 sm:h-8"
                     disabled={v.status !== "ready" && v.status !== "archived"}
                     onClick={() => publish(v)}
                   >

@@ -72,6 +72,35 @@ describe("summarizeVersions", () => {
     expect(v3.spots[0].spot).toBe("entrance");
   });
 
+  it("says which version a copied thumbnail comes from (D-031)", () => {
+    const [v3, v2] = summarizeVersions(rows, "entrance");
+    expect(v3).toMatchObject({ thumbnailSameAs: 2, thumbnailLabel: "entrance" });
+    expect(v2).toMatchObject({ thumbnailUrl: "e.webp", thumbnailSameAs: null });
+  });
+
+  it("shows the room a version shot itself when its entry spot is a copy", () => {
+    const hero2 = [
+      row({ version: 2, spot: "living", thumbnail_url: "l2.webp", cost_credits: 1600 }),
+      row({ version: 2, spot: "kitchen", thumbnail_url: "k2.webp", cost_credits: 1600 }),
+      row({ version: 1, spot: "living", thumbnail_url: "l2.webp", cost_credits: 0 }),
+      row({
+        version: 1,
+        spot: "kitchen",
+        spot_label: "Kitchen",
+        thumbnail_url: "k1.webp",
+        cost_credits: 1600,
+      }),
+    ];
+    const [v2, v1] = summarizeVersions(hero2, "living");
+    expect(v2).toMatchObject({ thumbnailUrl: "l2.webp", thumbnailSameAs: null });
+    expect(v1).toMatchObject({
+      thumbnailUrl: "k1.webp",
+      thumbnailLabel: "Kitchen",
+      thumbnailSameAs: null,
+      publishRowId: "1-living",
+    });
+  });
+
   it("polls only generating rows and links the preview to the tour", () => {
     expect(rowsToPoll(rows)).toEqual(["3-kitchen"]);
     expect(previewHref("abc", 3)).toBe("/tour/abc?version=3");

@@ -32,8 +32,15 @@ export interface VersionSummary {
   /** Spots finished (ready, published or archived) out of all spots. */
   done: number;
   total: number;
-  /** Thumbnail of the entry spot, else of the first spot that has one. */
+  /**
+   * Thumbnail of the entry spot, else of the first spot that has one. When that spot is a
+   * copy (D-031), a spot this version shot itself is shown instead if it has a thumbnail.
+   */
   thumbnailUrl: string | null;
+  /** Room name of the thumbnail's spot. */
+  thumbnailLabel: string | null;
+  /** The version whose world files this thumbnail reuses (D-031), else null. */
+  thumbnailSameAs: number | null;
   createdAt: string;
   /** Credits this version cost (copied spots cost 0, D-031). */
   credits: number;
@@ -56,6 +63,29 @@ export function versionStatus(statuses: WorldStatus[]): VersionStatus {
   return "ready";
 }
 
+/** Copied spot rows cost 0 credits (D-031); fresh ones carry the spot's cost. */
+const isCopy = (row: WorldVersionRow) => row.cost_credits === 0;
+
+/** The row whose thumbnail stands for a version: the entry spot, unless it is a copy. */
+function thumbnailRow(sorted: WorldVersionRow[]): WorldVersionRow | null {
+  const withThumb = sorted.filter((s) => s.thumbnail_url);
+  const first = withThumb[0] ?? null;
+  if (!first || !isCopy(first)) return first;
+  return withThumb.find((s) => !isCopy(s)) ?? first;
+}
+
+/**
+ * For a copied thumbnail row, the other version that holds the same picture: the one whose
+ * row is not a copy, else the newest other one. Null when the picture is this version's own.
+ */
+function sameAsVersion(row: WorldVersionRow | null, rows: WorldVersionRow[]): number | null {
+  if (!row || !isCopy(row)) return null;
+  const twins = rows
+    .filter((r) => r.version !== row.version && r.thumbnail_url === row.thumbnail_url)
+    .sort((a, b) => Number(isCopy(a)) - Number(isCopy(b)) || b.version - a.version);
+  return twins[0]?.version ?? null;
+}
+
 /** Groups spot rows into versions, newest first. `entrySpot` picks the thumbnail. */
 export function summarizeVersions(
   rows: WorldVersionRow[],
@@ -74,14 +104,16 @@ export function summarizeVersions(
           a.spot.localeCompare(b.spot),
       );
       const entry = sorted[0];
+      const thumb = thumbnailRow(sorted);
       return {
         version,
         status: versionStatus(sorted.map((s) => s.status)),
         spots: sorted,
         done: sorted.filter((s) => FINISHED.includes(s.status)).length,
         total: sorted.length,
-        thumbnailUrl:
-          entry.thumbnail_url ?? sorted.find((s) => s.thumbnail_url)?.thumbnail_url ?? null,
+        thumbnailUrl: thumb?.thumbnail_url ?? null,
+        thumbnailLabel: thumb ? (thumb.spot_label ?? thumb.spot) : null,
+        thumbnailSameAs: sameAsVersion(thumb, rows),
         createdAt: sorted.map((s) => s.created_at).sort()[sorted.length - 1],
         credits: sorted.reduce((n, s) => n + (s.cost_credits ?? 0), 0),
         publishRowId: entry.id,
