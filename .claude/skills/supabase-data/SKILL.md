@@ -57,7 +57,7 @@ Tables in the publication: events, deal_messages, deals, worlds, gaps, messages.
 
 - `scripts/seed.ts`: upsert by `listings.slug` (`.upsert(rows, { onConflict: "slug" })`) so it can run many times; profiles by a fixed uuid. Demo numbers come from `seed/fixtures.ts`; never retype them.
 - Hero home 1 must keep `weekend_price_cents = null` so the demo dates (Mon Nov 9 to Fri Nov 13, 2026) price at $520.
-- `scripts/reset-demo.ts`: delete rows created after the seed (deals cascade to deal_messages and deal_secrets), restore the hero policy, publish Hero 1 v1 (the gap version), print "Demo ready". Run it before every rehearsal.
+- `scripts/reset-demo.ts` (logic in seed/reset.ts and seed/reset-plan.ts): delete every row of the tables the seed never writes (deals, reservations, conversations, trip_briefs; cascades take deal_messages, deal_secrets, checkins, messages) and events after the latest `seed.completed` (D-032); restore hero-1's policy and manual; publish Hero 2 v1, the gap version (D-026); print "Demo ready". `pnpm demo:reset --dry-run` first. Run it before every rehearsal.
 
 ## Setup (GH-2)
 

@@ -8,7 +8,7 @@ The spoken pitch, click-by-click script with backups per segment, readiness gate
 
 - **Projector:** one laptop in split screen: guest view left, host dashboard right, feed in the guest sidebar (or `/feed` full screen).
 - **Phone:** the host's phone, mirrored to the laptop, for the live recording and the Approve tap.
-- **Before going on:** `pnpm demo:reset`, `DEMO_MODE=true`, `/demo/check` all green, other tabs closed, notifications off.
+- **Before going on:** `pnpm demo:reset`, `DEMO_MODE=true`, `/demo/check` all green, other tabs closed, notifications off. QA checklist and how to run each check: docs/QA.md.
 - **Backup:** the full demo as a video on the desktop; switch to it after one failed retry.
 
 ## Script
