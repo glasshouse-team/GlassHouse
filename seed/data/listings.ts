@@ -121,15 +121,15 @@ export const SEED_LISTINGS: SeedListing[] = [
   {
     slug: "hero-2",
     host: "giorgi",
-    title: "Bright Vera apartment with a desk and two balconies",
+    title: "Vera apartment with a desk and an open-plan kitchen",
     description:
-      "A one-bedroom flat on a leafy street in Vera, ten minutes on foot from Rustaveli Avenue. The open-plan kitchen and living room has a dining table for four, a sofa bed and a proper desk with two monitors; the bedroom has a double bed and its own balcony door. Fast fibre internet and a walk-in shower.",
+      "A one-bedroom flat on a leafy street in Vera, ten minutes on foot from Rustaveli Avenue. The open-plan kitchen and living room has a dining table for four, a sofa, a wall-mounted TV and a proper desk with an ultrawide monitor; the bedroom has a double bed and a second TV. Fast fibre internet, air conditioning and a glass walk-in shower.",
     city: "Tbilisi",
     neighborhood: "Vera",
     property_type: "apartment",
-    max_guests: 4,
+    max_guests: 2,
     bedrooms: 1,
-    beds: 2,
+    beds: 1,
     baths: 1,
     base_price_cents: 8_500,
     weekend_price_cents: 9_500,
@@ -141,8 +141,6 @@ export const SEED_LISTINGS: SeedListing[] = [
       "washer",
       "air_conditioning",
       "heating",
-      "balcony",
-      "city_view",
       "tv",
     ],
     house_rules: {
