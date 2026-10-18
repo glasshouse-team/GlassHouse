@@ -41,6 +41,35 @@ export function mergeMessages(current: QaMessage[], incoming: QaMessage[]): QaMe
   );
 }
 
+const asks = (m: QaMessage) => m.actor === "guest" || m.actor === "guest_agent";
+
+/**
+ * Display order: a host reply (its `answered_by` is the question's id) goes right under the
+ * question it answers, after the host agent's "I asked the host" note, instead of at the end
+ * of the thread. Everything else keeps its time order. Takes rows sorted by mergeMessages.
+ */
+export function threadOrder(messages: QaMessage[]): QaMessage[] {
+  const questions = new Set(messages.filter(asks).map((m) => m.id));
+  const replyTo = (m: QaMessage) =>
+    m.actor === "host" && m.answered_by && questions.has(m.answered_by) ? m.answered_by : null;
+  const replies = new Map<string, QaMessage[]>();
+  for (const m of messages) {
+    const to = replyTo(m);
+    if (to) replies.set(to, [...(replies.get(to) ?? []), m]);
+  }
+  const ordered: QaMessage[] = [];
+  let due: QaMessage[] = [];
+  for (const m of messages) {
+    if (replyTo(m)) continue;
+    if (asks(m)) {
+      ordered.push(...due);
+      due = replies.get(m.id) ?? [];
+    }
+    ordered.push(m);
+  }
+  return [...ordered, ...due];
+}
+
 /** Suggested questions on the listing page (GH-16). */
 export const SUGGESTED_QUESTIONS = [
   "Can I bring my dog?",

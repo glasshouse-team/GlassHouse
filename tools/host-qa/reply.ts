@@ -41,22 +41,35 @@ export async function hostReplyWith(
   const question = await store.question(input.messageId);
   if (!question) throw new QaReplyError(404, "That question does not exist.");
   if (question.hostId !== hostId) throw new QaReplyError(403, "Only this home's host can reply.");
+  // Claim the question first, so two replies at once cannot both go through.
   if (!question.needsHost || !(await store.markAnswered(question.id, "host")))
     throw new QaReplyError(409, "This question was already answered.");
 
-  const messageId = await store.addMessage({
-    conversationId: question.conversationId,
-    actor: "host",
-    body: input.answer,
-    answeredBy: "host",
-  });
-  if (input.saveToManual) {
-    await store.setHouseManual(
-      question.listingId,
-      appendHostAnswer(question.houseManual, question.body, input.answer),
-    );
+  let messageId: string;
+  try {
+    // The manual first: appendHostAnswer skips a line it already has, so a retry after a
+    // failed message insert does not add the answer twice.
+    if (input.saveToManual) {
+      const manual = appendHostAnswer(question.houseManual, question.body, input.answer);
+      if (manual !== question.houseManual) await store.setHouseManual(question.listingId, manual);
+    }
+    // The reply's `answered_by` holds the question's id, so the thread shows it under it.
+    messageId = await store.addMessage({
+      conversationId: question.conversationId,
+      actor: "host",
+      body: input.answer,
+      answeredBy: question.id,
+    });
+  } catch (error) {
+    // Nothing reached the guest: put the question back on the waiting list so the host can retry.
+    await store.setNeedsHost(question.id, true).catch((rollback: unknown) => {
+      console.warn("[hostReply] could not reopen the question:", rollback);
+    });
+    throw error;
   }
-  const name = await store.hostName(hostId);
+
+  // The reply is delivered; a failed name lookup must not turn it into an error.
+  const name = await store.hostName(hostId).catch(() => "The host");
   await logEvent({
     actor_type: "human",
     actor_name: `${name} (host)`,

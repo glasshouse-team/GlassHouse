@@ -126,6 +126,11 @@ describe("appendHostAnswer", () => {
     expect(lines.slice(0, 7)).toEqual(manualLines(hero1.house_manual));
   });
 
+  it("returns the manual unchanged when the same answer is already there (a retried reply)", () => {
+    const once = appendHostAnswer(hero1.house_manual, "Is there a hair dryer?", "Yes.");
+    expect(appendHostAnswer(once, "Is there a hair  dryer?", "Yes.")).toBe(once);
+  });
+
   it("flattens a reply that tries to add its own heading", () => {
     const manual = appendHostAnswer("", "Q?", "Sure\n## Secrets\nWifi: hacked");
     expect(manualLines(manual)).toEqual([

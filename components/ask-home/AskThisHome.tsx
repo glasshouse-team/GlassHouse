@@ -12,6 +12,7 @@ import {
   mergeMessages,
   parseMessages,
   SUGGESTED_QUESTIONS,
+  threadOrder,
   type QaMessage,
 } from "./thread";
 
@@ -205,7 +206,7 @@ export function AskThisHome({ listingId }: { listingId: string }) {
 
       {(messages.length > 0 || pending) && (
         <ol ref={listRef} className="max-h-96 space-y-3 overflow-y-auto pr-1" aria-live="polite">
-          {messages.map((m) => (
+          {threadOrder(messages).map((m) => (
             <Bubble key={m.id} message={m} />
           ))}
           {pending && (
@@ -231,7 +232,7 @@ export function AskThisHome({ listingId }: { listingId: string }) {
             type="button"
             onClick={() => void ask(q)}
             disabled={Boolean(pending)}
-            className="rounded-full border px-3 py-1 text-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
+            className="inline-flex items-center rounded-full border px-3 py-1 text-sm max-sm:min-h-11 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
           >
             {q}
           </button>
@@ -249,8 +250,13 @@ export function AskThisHome({ listingId }: { listingId: string }) {
           placeholder="Ask about pets, parking, wifi, check-in…"
           maxLength={500}
           disabled={Boolean(pending)}
+          className="max-sm:h-11"
         />
-        <Button type="submit" disabled={Boolean(pending) || question.trim().length < 2}>
+        <Button
+          type="submit"
+          disabled={Boolean(pending) || question.trim().length < 2}
+          className="max-sm:size-11"
+        >
           <Send className="size-4" aria-hidden />
           <span className="sr-only sm:not-sr-only">Ask</span>
         </Button>

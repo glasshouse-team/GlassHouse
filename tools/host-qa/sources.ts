@@ -151,7 +151,9 @@ const ONE_LINE = (text: string, max: number) => text.replace(/\s+/g, " ").trim()
 export function appendHostAnswer(manual: string, question: string, answer: string): string {
   const line = `- Q: ${ONE_LINE(question, 200)} A: ${ONE_LINE(answer, 400)}`;
   const body = manual.replace(/\s+$/, "");
-  if (body.split(/\r?\n/).some((l) => l.trim() === HOST_ANSWERS_HEADING))
-    return `${body}\n${line}\n`;
+  const lines = body.split(/\r?\n/).map((l) => l.trim());
+  // Idempotent: a retried host reply does not add the same answer twice.
+  if (lines.includes(line)) return manual;
+  if (lines.includes(HOST_ANSWERS_HEADING)) return `${body}\n${line}\n`;
   return `${body ? `${body}\n\n` : ""}${HOST_ANSWERS_HEADING}\n${line}\n`;
 }

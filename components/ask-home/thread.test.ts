@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeMessages, parseMessages } from "./thread";
+import { mergeMessages, parseMessages, threadOrder } from "./thread";
 
 const row = (id: string, created_at: string, extra: Record<string, unknown> = {}) => ({
   id,
@@ -37,6 +37,32 @@ describe("Q&A thread", () => {
     expect(merged.map((m) => [m.id, m.needs_host])).toEqual([
       ["b", false],
       ["a", false],
+    ]);
+  });
+
+  it("puts a host reply under the question it answers, even when later questions came first", () => {
+    const thread = mergeMessages(
+      [],
+      parseMessages([
+        row("dryer", "2026-10-18T10:00:00Z", { answered_by: "host" }),
+        row("note", "2026-10-18T10:00:01Z", { actor: "host_agent", body: "I asked Giorgi." }),
+        row("dog", "2026-10-18T10:01:00Z", { body: "Can I bring my dog?" }),
+        row("dog-a", "2026-10-18T10:01:01Z", { actor: "host_agent", body: "Yes." }),
+        row("crib", "2026-10-18T10:02:00Z", { body: "Is there a crib?", answered_by: "host" }),
+        row("crib-r", "2026-10-18T10:03:00Z", { actor: "host", answered_by: "crib" }),
+        row("dryer-r", "2026-10-18T10:04:00Z", { actor: "host", answered_by: "dryer" }),
+        row("old", "2026-10-18T10:05:00Z", { actor: "host", answered_by: "host" }),
+      ]),
+    );
+    expect(threadOrder(thread).map((m) => m.id)).toEqual([
+      "dryer",
+      "note",
+      "dryer-r",
+      "dog",
+      "dog-a",
+      "crib",
+      "old", // an older reply with no question id keeps its time order
+      "crib-r",
     ]);
   });
 });

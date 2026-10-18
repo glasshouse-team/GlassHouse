@@ -32,6 +32,7 @@ export interface QaStore {
   /** Reuses `conversationId` when it is a Q&A thread of this listing, else creates one. */
   conversation(listingId: string, guestId?: string, conversationId?: string): Promise<string>;
   addMessage(message: NewMessage): Promise<string>;
+  /** Forwards (true, also clears `answered_by`) or un-forwards a question. */
   setNeedsHost(messageId: string, needsHost: boolean): Promise<void>;
   /** Clears `needs_host` only if it is still set; false when someone answered first. */
   markAnswered(messageId: string, answeredBy: string): Promise<boolean>;
@@ -88,7 +89,8 @@ export function supabaseQaStore(): QaStore {
     async setNeedsHost(messageId, needsHost) {
       const { error } = await db
         .from("messages")
-        .update({ needs_host: needsHost })
+        // Reopening a question (a failed host reply) also clears who answered it.
+        .update(needsHost ? { needs_host: true, answered_by: null } : { needs_host: false })
         .eq("id", messageId);
       check(error, "forward the question");
     },
