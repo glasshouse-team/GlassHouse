@@ -42,7 +42,7 @@ Layout prompts help only a little: with `--no-recaption` (prompt as written) a w
 
 ## GH-10: the pipeline
 
-Per spot (D-009): one generation and one `worlds` row per spot, plus the spot's doorway links (schema change proposed in GH-5).
+Per spot (D-009): one generation and one `worlds` row per spot, plus the spot's doorway links (`worlds.spot`, `spot_label`, `links` from migration 0002; `captures.kind` `ring`).
 
 1. `POST /api/worlds { listingId, captureIds }`: next `worlds.version`, status `generating`, store `operation_id`, log "World v2 generating for <listing>".
 2. `GET /api/worlds/[id]/status` (the host page polls every 15 s): `getOperation`; when done, `getWorld`, then download each asset (`fetch` then `upload` to `media/worlds/{id}/...`): web splat (`pickSplatUrls().web`), HQ splat, collider mesh, HQ mesh, pano, thumbnail; save URLs from OUR storage, scale metadata, caption, cost; status `ready`; log an event.

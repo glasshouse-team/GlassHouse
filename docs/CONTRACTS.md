@@ -154,3 +154,4 @@ The only Marble-to-three transform; the viewer, floor plan and gap check all use
 | 2026-10-18 | `core.ts` adds `Amenity` (the 26-word vocabulary from docs/teardown.md) and `ReviewSchema` with the six sub-ratings (additive)                          | Beka, Temuri |
 | 2026-10-18 | Frozen at `a6ba574` (PR #3): migration applied, `lib/database.types.ts` generated, clients typed as `Db` (new export, type-level only)                  | Beka, Temuri |
 | 2026-10-18 | Section 14: `floorHeight` takes the lowest large layer below the camera, so a big ceiling or a bed top is not the floor (D-009); signature unchanged    | Temuri       |
+| 2026-10-18 | Migration 0002 (D-009): `worlds` gains `spot`, `spot_label`, `links`, unique on (listing, version, spot); `captures.kind` adds `ring`                   | Beka, Temuri |

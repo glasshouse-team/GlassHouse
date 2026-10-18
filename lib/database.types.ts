@@ -1038,6 +1038,7 @@ export type Database = {
           id: string
           input_capture_ids: string[]
           input_kind: string | null
+          links: Json
           listing_id: string
           marble_world_id: string | null
           metric_scale_factor: number | null
@@ -1046,6 +1047,8 @@ export type Database = {
           pano_url: string | null
           published_at: string | null
           ready_at: string | null
+          spot: string
+          spot_label: string | null
           spz_hq_url: string | null
           spz_url: string | null
           status: string
@@ -1064,6 +1067,7 @@ export type Database = {
           id?: string
           input_capture_ids?: string[]
           input_kind?: string | null
+          links?: Json
           listing_id: string
           marble_world_id?: string | null
           metric_scale_factor?: number | null
@@ -1072,6 +1076,8 @@ export type Database = {
           pano_url?: string | null
           published_at?: string | null
           ready_at?: string | null
+          spot?: string
+          spot_label?: string | null
           spz_hq_url?: string | null
           spz_url?: string | null
           status?: string
@@ -1090,6 +1096,7 @@ export type Database = {
           id?: string
           input_capture_ids?: string[]
           input_kind?: string | null
+          links?: Json
           listing_id?: string
           marble_world_id?: string | null
           metric_scale_factor?: number | null
@@ -1098,6 +1105,8 @@ export type Database = {
           pano_url?: string | null
           published_at?: string | null
           ready_at?: string | null
+          spot?: string
+          spot_label?: string | null
           spz_hq_url?: string | null
           spz_url?: string | null
           status?: string

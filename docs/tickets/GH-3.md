@@ -121,4 +121,4 @@ Ask it to write a tiny TypeScript script: generate → poll → fetch world → 
 
 ## Decision updates
 
-- 2026-10-18 D-009: Per-spot tour chosen: one `marble-1.1-plus` world per room spot from its 8-photo ring (0.5x lens, turning right about 45 degrees, `--reconstruct`); our doorway arrows link the spots. Whole-house worlds from video or 8 photos mixed rooms, and a ring world blurs about 1 m from its spot. The test apartment's 5 spot worlds and their links are in the decision comment (was: Path 1, 2 or 3 open). Jira: pending
+- 2026-10-18 D-009: Per-spot tour chosen: one `marble-1.1-plus` world per room spot from its 8-photo ring (0.5x lens, turning right about 45 degrees, `--reconstruct`); our doorway arrows link the spots. Whole-house worlds from video or 8 photos mixed rooms, and a ring world blurs about 1 m from its spot. The test apartment's 5 spot worlds and their links are in the decision comment (was: Path 1, 2 or 3 open). Jira: updated
