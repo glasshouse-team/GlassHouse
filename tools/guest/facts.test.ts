@@ -34,7 +34,12 @@ function home(id: string, extra: Partial<Candidate["listing"]> = {}, withFacts =
     facts: withFacts
       ? {
           facts: [
-            { key: "desk_near_window", value: true, evidence: ["photo_04"], confidence: 0.9 },
+            {
+              key: "desk_near_window",
+              value: true,
+              evidence: ["3f6c1d2e-photo-id"],
+              confidence: 0.9,
+            },
           ],
           contradictions: [],
           missing_photos: ["bathroom"],
@@ -88,7 +93,7 @@ describe("resolveFactKey", () => {
   });
 
   it("labels the source for the chip", () => {
-    expect(sourceLabel("fact:desk_near_window", hero)).toBe("Seen in photo 4");
+    expect(sourceLabel("fact:desk_near_window", hero)).toBe("Seen in 1 photo");
     expect(sourceLabel("amenity:fireplace", hero)).toBe("Listed amenity");
     expect(sourceLabel("field:max_guests", hero)).toBe("Listing details");
   });
@@ -147,7 +152,7 @@ describe("cleanShortlist", () => {
       ["cabin", 72],
     ]);
     expect(list.ranked[0].reasons.map((r) => r.source)).toEqual([
-      "Seen in photo 4",
+      "Seen in 1 photo",
       "Listed amenity",
       "Listed amenity",
     ]);

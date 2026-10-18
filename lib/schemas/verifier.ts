@@ -32,7 +32,7 @@ export const KNOWN_FACT_KEYS = [
 export const FactSchema = z.object({
   key: z.string(),
   value: z.union([z.string(), z.number(), z.boolean()]),
-  /** Photo ids such as "photo_04". At least one. */
+  /** Claude cites labels such as "photo_04"; tools/verifier/xray.ts stores `listing_photos.id` values. At least one. */
   evidence: z.array(z.string()),
   confidence: Confidence,
 });
