@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { MAX_RING_FILES, RING_PHOTOS } from "./logic/coverage";
 import { CLIP_MAX_SECONDS } from "./logic/recording";
 
-/** A ring picked from the gallery: photos in turning order, no compass (D-045). */
+/** A ring picked from the gallery: photos in turning order, no compass (D-009 ring, D-037). */
 export interface FallbackRing {
   photos: Blob[];
   room: string;
@@ -14,9 +14,12 @@ export interface FallbackRing {
 /** The longest side kept for a gallery ring photo; the server takes JPEGs up to 15 MB. */
 const RING_MAX_SIDE_PX = 4096;
 
-/** A gallery photo as a JPEG (HEIC and PNG included, where the browser can decode them). */
+/**
+ * A gallery photo as an upright JPEG: always re-drawn, so a portrait shot whose orientation
+ * lives only in its EXIF tag comes out the right way up (HEIC and PNG too, where the browser
+ * can decode them).
+ */
 async function toJpeg(file: File): Promise<Blob> {
-  if (file.type === "image/jpeg" && file.size < 12 * 1024 * 1024) return file;
   const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
   const scale = Math.min(1, RING_MAX_SIDE_PX / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");
@@ -67,7 +70,7 @@ function readDuration(file: Blob): Promise<number> {
 }
 
 /**
- * Upload instead of shooting live (D-045): a clip, or a ring of ${RING_PHOTOS} photos, picked from
+ * Upload instead of shooting live (gallery picks, D-037): a clip, or a ring of ${RING_PHOTOS} photos, picked from
  * the phone's gallery or filmed with its camera app (no `capture` attribute, so the phone
  * offers both), plus the room it shows. No compass track.
  */
@@ -117,7 +120,7 @@ export function FallbackUpload({
     try {
       onRing({ photos: await Promise.all(files.map(toJpeg)), room });
     } catch (e) {
-      setError(`${(e as Error).message} Use JPEG or HEIC photos.`);
+      setError(`${(e as Error).message} Use JPEG photos.`);
     }
   }
 

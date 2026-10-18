@@ -190,7 +190,7 @@ export function CaptureFlow({
     if (step === "intro") setStep("hub");
   }
 
-  // A ring picked from the gallery (D-045): no compass, so no heading per photo.
+  // A ring picked from the gallery (D-009 ring, D-037): no compass, so no heading per photo.
   function onFallbackRing(ring: FallbackRing) {
     const idx = Math.max(0, cleanRooms.indexOf(ring.room));
     submit(
