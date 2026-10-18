@@ -10,7 +10,7 @@ import { RingCapture, type RingResult } from "./RingCapture";
 import { RoomChecklist } from "./RoomChecklist";
 import { requestCameraAndMotion } from "./sensors";
 import { UploadPanel, type UploadJob } from "./UploadPanel";
-import { uploadCapture, type CaptureRequest } from "./upload";
+import { uploadCapture, type CaptureRequest, type UploadSession } from "./upload";
 
 export interface FillInGap {
   id: string;
@@ -102,9 +102,17 @@ export function CaptureFlow({
 
   function submit(label: string, request: CaptureRequest, files: Blob[], roomIdx: number[]) {
     const key = crypto.randomUUID();
+    // The job's capture row and signed URLs: "Try again" re-sends only the missing files to
+    // them instead of registering a new capture (upload.ts).
+    let session: UploadSession | null = null;
     const run = () => {
-      updateJob(key, { status: "uploading", progress: 0, error: undefined });
-      uploadCapture(request, files, (p) => updateJob(key, { progress: p }))
+      updateJob(key, { status: "uploading", error: undefined });
+      uploadCapture(request, files, (p) => updateJob(key, { progress: p }), {
+        session,
+        onSession: (s) => {
+          session = s;
+        },
+      })
         .then((captureId) => updateJob(key, { status: "done", progress: 1, captureId }))
         .catch((e: Error) => updateJob(key, { status: "failed", error: e.message }));
     };
