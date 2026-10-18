@@ -1,6 +1,6 @@
 # Agent design
 
-Agents act only through tools; code enforces every money rule; a person approves anything that books below the host's auto-accept level. Each agent is one `createAgent(...)` (agents/core.ts, on AI SDK v7 `ToolLoopAgent`); every tool call is written to `events`.
+Agents act only through tools; code enforces every money rule; a person approves anything that books below the host's auto-accept level. Each agent is one `createAgent(...)` (agents/core.ts, on AI SDK v7 `ToolLoopAgent`); every tool call is written to `events` (tool inputs only for the fields listed in `logInputs`, D-024, since events are public).
 
 ## The agents
 
