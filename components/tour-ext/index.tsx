@@ -18,10 +18,11 @@ export interface TourExtensionsProps {
 }
 
 export function TourExtensions({ listingId, worldId }: TourExtensionsProps) {
-  // The honesty toggle sits bottom left; the Ask the space panel sits bottom right.
+  // The honesty toggle sits bottom left; the Ask the space panel sits bottom right. On phones
+  // the toggle sits above the Ask button, so the open legend never runs under it.
   return (
     <>
-      <HonestyOverlay className="fixed bottom-4 left-4 z-20" />
+      <HonestyOverlay className="fixed bottom-20 left-4 z-20 sm:bottom-4" />
       <AskSpacePanel listingId={listingId} worldId={worldId} />
     </>
   );

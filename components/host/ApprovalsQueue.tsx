@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 import { approvalPrompt } from "@/components/deal/format";
 import { Button } from "@/components/ui/button";
@@ -29,19 +29,24 @@ export function ApprovalsQueue({ initial, listings }: ApprovalsQueueProps) {
   const [items, setItems] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const idsKey = listings.map((l) => l.id).join(",");
+  // A channel name of its own per mount: React dev mounts effects twice, and a shared topic
+  // lets the first mount's leave close the second mount's channel.
+  const channelId = useId();
 
   useEffect(() => {
     if (!hasSupabaseEnv() || !idsKey) return;
     const titles = new Map(listings.map((l) => [l.id, l.title]));
     const db = supabaseBrowser();
     const channel = db
-      .channel("approvals")
+      .channel(`approvals-${channelId}`)
       .on(
+        // No server filter: Realtime didn't deliver UPDATEs through `listing_id=in.(...)`.
+        // Deals are public-read, so the host's homes are picked here instead.
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "deals", filter: `listing_id=in.(${idsKey})` },
+        { event: "UPDATE", schema: "public", table: "deals" },
         (payload) => {
           const deal = DealSchema.safeParse(payload.new);
-          if (!deal.success) return;
+          if (!deal.success || !titles.has(deal.data.listing_id)) return;
           const d = deal.data;
           if (d.status !== "agreed_pending_host" || d.final_total_cents === null) {
             setItems((current) => current.filter((i) => i.dealId !== d.id));
@@ -93,7 +98,7 @@ export function ApprovalsQueue({ initial, listings }: ApprovalsQueueProps) {
     };
     // listings only changes with idsKey
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idsKey]);
+  }, [channelId, idsKey]);
 
   async function decide(dealId: string, decision: "approve" | "decline") {
     setBusy(dealId);

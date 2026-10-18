@@ -200,7 +200,7 @@ export function showFact(space: Space, guestName: string, factKey: string): Spac
     };
   return {
     ok: true,
-    summary: `Guest agent showed ${guestName} a checked fact: ${fact.key}`,
+    summary: `Guest agent showed ${guestName} the checked fact "${fact.key.replaceAll("_", " ")}"`,
     action: { type: "show_fact", key: fact.key, value: fact.value },
     shown: `${fact.key}: ${String(fact.value)}`,
   };
