@@ -6,7 +6,7 @@
  *   pnpm gaps --mark-known --dry-run  print what it would write, write nothing
  *   pnpm gaps --check hero-2 [--version 1] [--spot kitchen] [--out dir]
  *             [--rings ~/Desktop/house] [--runs 3] [--no-confirm] [--evaluate 3]
- *                                     automatic Verifier check (tools/verifier/gaps.ts, D-046):
+ *                                     automatic Verifier check (tools/verifier/gaps.ts, D-047):
  *                                     each view against the real photos facing that way (the
  *                                     spot's ring under --rings <root>/<room>/middle, read-only;
  *                                     else listing photos), voted over 3 runs, then a second look;
@@ -373,14 +373,14 @@ async function check(listing: string) {
   if (known.size > 0)
     console.log(
       `\nmeasured: known gap found in ${tally.knownFound} of ${tally.evaluations} evaluations; ` +
-        `at most ${tally.maxFalseGapsV2} false gaps on v${latest}; D-046 target ${targetMet(tally) ? "met" : "NOT met"}`,
+        `at most ${tally.maxFalseGapsV2} false gaps on v${latest}; D-047 target ${targetMet(tally) ? "met" : "NOT met"}`,
     );
 
   if (!values.write) {
     console.log("\n(dry run, nothing saved; add --write to store)");
     return;
   }
-  // --write only stores what a check proven reliable on hero 2 finds (D-046).
+  // --write only stores what a check proven reliable on hero 2 finds (D-047).
   const gate = writeGate(
     MEASURED_HERO2,
     last.map(({ world, result }) => ({

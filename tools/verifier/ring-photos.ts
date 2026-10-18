@@ -1,5 +1,5 @@
 /**
- * Real ring photos of a spot for the gap check (GH-19, owner: Temuri, D-046). A spot's middle
+ * Real ring photos of a spot for the gap check (GH-19, owner: Temuri, D-047). A spot's middle
  * ring is 8 photos taken turning right 45 deg each, the first at azimuth 0, the same azimuth the
  * panorama's centre column has (tools/verifier/gap-views.ts). So every 90 deg panorama view can
  * be compared with the 2-3 real photos that face the same way, instead of any photo of the room.

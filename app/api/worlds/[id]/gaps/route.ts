@@ -12,7 +12,7 @@ export const maxDuration = 300;
 const Body = z.object({ runs: z.number().int().min(1).max(VOTE_RUNS).optional() }).strict();
 
 /**
- * POST /api/worlds/[id]/gaps (GH-19, D-046): runs the automatic gap check on one spot world and
+ * POST /api/worlds/[id]/gaps (GH-19, D-047): runs the automatic gap check on one spot world and
  * returns its findings. A dry run: nothing is written (storing goes through `pnpm gaps --check
  * --write`, which is gated on the measured evaluation). Only the listing's host may run it (each
  * call costs about 20 vision calls). Compares with the listing photos of the room (the ring

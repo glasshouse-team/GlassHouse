@@ -81,7 +81,7 @@ export const GapCheckResultSchema = z.object({
 export type GapCheckResult = z.infer<typeof GapCheckResultSchema>;
 
 /**
- * One view checked on its own against the real photos facing the same way (D-046). The code
+ * One view checked on its own against the real photos facing the same way (D-047). The code
  * adds the view id and assembles a GapCheckResult from the six answers.
  */
 export const ViewCheckSchema = z.object({

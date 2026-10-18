@@ -1,7 +1,7 @@
 /**
  * Automatic gap check of one spot world (GH-19, owner: Temuri). Server or script only.
  * Views: six crops of the world's panorama from our storage (tools/verifier/gap-views.ts).
- * D-046: each view is checked on its own against the real photos facing the same way (the spot's
+ * D-047: each view is checked on its own against the real photos facing the same way (the spot's
  * 8-photo ring when the caller has it, else up to 4 listing photos of the room), 3 times; a gap
  * stays only when 2 of the 3 runs place one within 1 m (tools/verifier/gap-vote.ts), and then
  * only when a second look (red box on the view + the facing photos) says the photos do not show

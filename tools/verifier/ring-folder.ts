@@ -1,6 +1,6 @@
 /**
  * Reads a spot's ring photos from a local capture folder for `pnpm gaps --check --rings`
- * (GH-19, owner: Temuri, D-046). Script only (never imported by a route): it reads the folder
+ * (GH-19, owner: Temuri, D-047). Script only (never imported by a route): it reads the folder
  * read-only, JPEG/PNG through sharp, HEIC through macOS `sips` into a temp folder that is removed
  * afterwards. The pure parts are in ./ring-photos.ts.
  */

@@ -1,5 +1,5 @@
 /**
- * Voting over repeated gap checks of one spot world (GH-19, owner: Temuri, D-046). One vision
+ * Voting over repeated gap checks of one spot world (GH-19, owner: Temuri, D-047). One vision
  * run finds the invented kitchen wall most of the time and adds a few false gaps; the false ones
  * move around between runs while the real one stays. So the check runs 3 times and keeps a gap
  * only when at least 2 runs place a gap within 1 m of it. Plus the evaluation numbers the script
@@ -103,7 +103,7 @@ export function falseGaps<G extends { position: Vec3; severity: number }>(
   );
 }
 
-/** Measured result of an evaluation on the hero 2 kitchen (D-046 target). */
+/** Measured result of an evaluation on the hero 2 kitchen (D-047 target). */
 export interface EvaluationNumbers {
   /** Evaluation runs (each a 3-run vote) that found the known gap within 1 m. */
   knownFound: number;
@@ -112,14 +112,14 @@ export interface EvaluationNumbers {
   maxFalseGapsV2: number;
 }
 
-/** D-046 target: the known wall in every evaluation and at most 1 false gap on v2. */
+/** D-047 target: the known wall in every evaluation and at most 1 false gap on v2. */
 export function targetMet(n: EvaluationNumbers): boolean {
   return n.evaluations >= 3 && n.knownFound === n.evaluations && n.maxFalseGapsV2 <= 1;
 }
 
 /**
  * The last measured evaluation on hero 2 (`pnpm gaps --check hero-2 --rings ~/Desktop/house
- * --evaluate 3`, D-046). null until measured. `--write` stores nothing unless it meets the target.
+ * --evaluate 3`, D-047). null until measured. `--write` stores nothing unless it meets the target.
  * 2026-10-18, partial (the Anthropic credits ran out during evaluation 1 of 3): kitchen v1's wall
  * found in both full passes made (3 of 3 runs and 2 of 3 runs, at 0.06 m from the known gap);
  * bathroom, bedroom and entrance (v1 = v2 files): 0 false gaps after the second look (it dropped
