@@ -32,7 +32,7 @@ Run on the deployed Vercel URL, not localhost, with Beka's phone as the host:
   - [ ] Brief returns the hero home first in under 10 s
   - [ ] Hero 3D works on laptop, iPhone and Android; every doorway arrow leads to the right room
   - [ ] Jump to room and the minimap work
-  - [ ] Gap pin at the kitchen corner; v2 has a higher coverage score
+  - [ ] Gap pin at the kitchen photo-frame wall (D-026); v2 has a higher coverage score
   - [ ] Feed shows each action within 2 s
   - [ ] Network tab: no World Labs requests on page views
   - [ ] Reset, run, reset, run works twice
