@@ -81,24 +81,28 @@ export default async function TripPage(props: PageProps<"/trip/[id]">) {
 
       <Separator />
 
-      <section className="space-y-3" aria-label="Price">
-        <h2 className="text-lg font-semibold">What you paid</h2>
-        <dl className="space-y-1.5 text-sm">
-          {lines.map((line) => (
-            <div
-              key={line.label}
-              className={
-                line.total
-                  ? "flex justify-between border-t pt-2 font-semibold"
-                  : "flex justify-between"
-              }
-            >
-              <dt>{line.label}</dt>
-              <dd>{line.amount}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+      {(isGuest || isHost) && (
+        <section className="space-y-3" aria-label="Price">
+          <h2 className="text-lg font-semibold">
+            {isGuest ? "What you paid" : "What the guest paid"}
+          </h2>
+          <dl className="space-y-1.5 text-sm">
+            {lines.map((line) => (
+              <div
+                key={line.label}
+                className={
+                  line.total
+                    ? "flex justify-between border-t pt-2 font-semibold"
+                    : "flex justify-between"
+                }
+              >
+                <dt>{line.label}</dt>
+                <dd>{line.amount}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
 
       {rules.length > 0 && (
         <>

@@ -57,9 +57,11 @@ export async function POST(request: Request) {
 
     const checkinId = await createCheckin(reservation.id);
     const event = { actor_type: "agent", actor_name: "Verifier", agent: "verifier" } as const;
+    let run: Awaited<ReturnType<typeof compareArrival>>;
+    let stored: StoredCheckinReport;
     try {
       const photoImages = await Promise.all(picked.map(({ photo }) => prepareImage(photo.url)));
-      const { report, frameIds, usage } = await compareArrival({
+      run = await compareArrival({
         model: agentModel(),
         listing: {
           title: listing.title,
@@ -75,34 +77,13 @@ export async function POST(request: Request) {
         photoImages,
         frames: frames as Buffer[],
       });
-      const stored: StoredCheckinReport = {
-        ...report,
-        frame_ids: frameIds,
+      stored = {
+        ...run.report,
+        frame_ids: run.frameIds,
         photo_ids: Object.fromEntries(picked.map(({ label, photo }) => [label, photo.id])),
         model: settings.agentModel,
       };
       await finishCheckin(checkinId, { status: "ready", report: stored });
-      // The host's notice: a Verifier event on the listing (their dashboard feed shows it).
-      await logEvent({
-        ...event,
-        action: "checkin.verified",
-        summary: checkinFeedLine(viewer.name, report),
-        listing_id: listing.id,
-        payload: {
-          checkinId,
-          reservationId: reservation.id,
-          notify: "host",
-          hostId: listing.host_id,
-          frames: frameIds.length,
-          photos: picked.length,
-          matches: report.matches.length,
-          severity: severitySummary(report),
-          differences: report.differences.map((d) => `${d.room}: ${d.seen}`),
-          model: settings.agentModel,
-          usage,
-        },
-      });
-      return Response.json({ id: checkinId, report: stored }, { status: 201 });
     } catch (error) {
       await finishCheckin(checkinId, { status: "failed" }).catch(() => {});
       await logEvent({
@@ -118,6 +99,30 @@ export async function POST(request: Request) {
       });
       throw error;
     }
+
+    // The host's notice: a Verifier event on the listing (their dashboard feed shows it).
+    // Outside the try above, so a feed problem can never mark a saved report as failed.
+    const { report, frameIds, usage } = run;
+    await logEvent({
+      ...event,
+      action: "checkin.verified",
+      summary: checkinFeedLine(viewer.name, report),
+      listing_id: listing.id,
+      payload: {
+        checkinId,
+        reservationId: reservation.id,
+        notify: "host",
+        hostId: listing.host_id,
+        frames: frameIds.length,
+        photos: picked.length,
+        matches: report.matches.length,
+        severity: severitySummary(report),
+        differences: report.differences.map((d) => `${d.room}: ${d.seen}`),
+        model: settings.agentModel,
+        usage,
+      },
+    });
+    return Response.json({ id: checkinId, report: stored }, { status: 201 });
   } catch (error) {
     return errorResponse(error);
   }
