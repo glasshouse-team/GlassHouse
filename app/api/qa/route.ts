@@ -15,7 +15,7 @@ const BodySchema = z.object({
 /**
  * POST /api/qa: the host agent answers a guest's question from facts, house rules and the
  * manual, with sources, or forwards it to the host (GH-16, Temuri). Returns the
- * AskHomeResult as JSON (D-031); the thread also updates live through Realtime on `messages`.
+ * AskHomeResult as JSON (D-035); the thread also updates live through Realtime on `messages`.
  */
 export async function POST(request: Request) {
   try {
