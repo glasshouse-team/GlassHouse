@@ -50,3 +50,14 @@ export function defaultStay(today: string): { checkIn: string; checkOut: string 
 export function defaultGuests(maxGuests: number): number {
   return Math.max(1, Math.min(DEMO_DEAL.guests, maxGuests));
 }
+
+/** "Nov 9 to Nov 13" for feed lines and confirmations. */
+export function stayRangeLabel(checkIn: string, checkOut: string): string {
+  const day = (date: string) =>
+    new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    });
+  return `${day(checkIn)} to ${day(checkOut)}`;
+}

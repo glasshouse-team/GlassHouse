@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEMO_DEAL } from "@/seed/fixtures";
-import { bookingProblem, defaultGuests, defaultStay } from "./booking";
+import { bookingProblem, defaultGuests, defaultStay, stayRangeLabel } from "./booking";
 
 const ok = {
   checkIn: DEMO_DEAL.checkIn,
@@ -50,5 +50,11 @@ describe("defaultGuests", () => {
   it("uses the demo's 4 guests, capped by the home", () => {
     expect(defaultGuests(6)).toBe(4);
     expect(defaultGuests(2)).toBe(2);
+  });
+});
+
+describe("stayRangeLabel", () => {
+  it("reads like a person would say it", () => {
+    expect(stayRangeLabel("2026-11-09", "2026-11-13")).toBe("Nov 9 to Nov 13");
   });
 });
