@@ -15,7 +15,8 @@ import { formatCents } from "@/lib/utils";
 export const BriefDraftSchema = z.object({
   destinations: z.array(z.string()),
   /** Seeded cities that fit the places or the vibe (mountains, sea, wine, city); [] if no clue. */
-  fitting_cities: z.array(z.enum(SEARCH_CITIES)),
+  // Plain strings: a city outside the list must not fail the whole parse; code filters.
+  fitting_cities: z.array(z.string()),
   check_in: z.string().nullable(),
   check_out: z.string().nullable(),
   nights: z.number().nullable(),
@@ -62,12 +63,21 @@ export function toTripBrief(draft: BriefDraft): {
 } {
   const assumptions: string[] = [];
   const named = cleanList(draft.destinations);
+  const fitting = draft.fitting_cities.filter((c) =>
+    (SEARCH_CITIES as readonly string[]).includes(c),
+  );
+  const anywhere = named.some((d) => /georgia|anywhere/i.test(d));
+  const seeded = named.filter((d) => matchCities([d]).length > 0);
+  // A real place we have no homes in (Paris), not a vibe word ("the mountains").
+  const elsewhere = anywhere
+    ? []
+    : named.filter((d) => matchCities([d]).length === 0 && vibeCities(d).length === 0);
   const destinations =
-    named.length > 0
-      ? named
-      : draft.fitting_cities.length > 0
-        ? [...draft.fitting_cities]
-        : [ANYWHERE];
+    seeded.length > 0 ? seeded : anywhere ? named : fitting.length > 0 ? fitting : [ANYWHERE];
+  if (elsewhere.length > 0)
+    assumptions.push(
+      `Glasshouse has no homes in ${elsewhere.join(" or ")} yet, only in ${SEARCH_CITIES.join(", ")}, so I searched ${seeded.length > 0 ? seeded.join(" and ") : "those"}.`,
+    );
   const stated = validGuests(draft.guests);
   const guessed = validGuests(draft.guests_guess);
   const guests = stated ?? guessed ?? DEFAULT_GUESTS;
