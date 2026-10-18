@@ -218,7 +218,12 @@ export async function runNegotiation(
     } catch (error) {
       console.error("[negotiation] turn failed", error);
     }
-    if (!state.outcome) await playSuggestion(tools as unknown as Record<string, Tool>, suggestion);
+    if (!state.outcome)
+      await playSuggestion(tools as unknown as Record<string, Tool>, suggestion, {
+        by: side,
+        dealId,
+        listingId: deal.listing_id,
+      });
     if (!state.outcome) break;
 
     deal = await applyOutcome(deal, side, state.outcome, policy, names, stay);
@@ -230,22 +235,49 @@ export async function runNegotiation(
 type Tool = { execute: (input: unknown, options: unknown) => Promise<unknown> };
 const callOptions = { toolCallId: "code-fallback", messages: [] };
 
-/** Code plays the suggested move when the model didn't; the tools still validate it. */
-async function playSuggestion(tools: Record<string, Tool>, s: Suggestion) {
+/**
+ * Code plays the suggested move when the model didn't; the tools still validate it. These calls
+ * bypass createAgent, so the move (or its refusal) is logged here like an agent tool call, with
+ * the same public inputs only (D-024).
+ */
+async function playSuggestion(
+  tools: Record<string, Tool>,
+  s: Suggestion,
+  where: { by: OfferBy; dealId: string; listingId: string },
+) {
   const reason = "Suggested by Glasshouse to keep the deal moving.";
-  if (s.kind === "ask_guest")
-    await tools.ask_guest?.execute(
-      { question: "The host's best price is above your limit. Accept it anyway?" },
-      callOptions,
-    );
-  else if (s.kind === "accept") await tools.accept_offer.execute({ reason }, callOptions);
-  else if (s.kind === "keep")
-    await tools.make_offer.execute(
-      { amountCents: s.amountCents, terms: [s.term], reason },
-      callOptions,
-    );
-  else
-    await tools.make_offer.execute({ amountCents: s.amountCents, terms: [], reason }, callOptions);
+  let name: string;
+  let input: Record<string, unknown>;
+  if (s.kind === "ask_guest") {
+    name = "ask_guest";
+    input = { question: "The host's best price is above your limit. Accept it anyway?" };
+  } else if (s.kind === "accept") {
+    name = "accept_offer";
+    input = { reason };
+  } else {
+    name = "make_offer";
+    input = { amountCents: s.amountCents, terms: s.kind === "keep" ? [s.term] : [], reason };
+  }
+  const tool = tools[name];
+  if (!tool) return;
+  const result = (await tool.execute(input, callOptions)) as { ok?: boolean; summary?: string };
+  await logEvent({
+    actor_type: "agent",
+    actor_name: where.by === "guest_agent" ? "Guest agent" : "Host agent",
+    agent: where.by === "guest_agent" ? "guest" : "host",
+    action: `tool.${name}`,
+    summary:
+      result.summary ?? `${where.by === "guest_agent" ? "Guest" : "Host"} agent used ${name}`,
+    deal_id: where.dealId,
+    listing_id: where.listingId,
+    payload: {
+      ok: result.ok === true,
+      fallback: true,
+      ...(name === "make_offer"
+        ? { input: { amountCents: input.amountCents, terms: input.terms } }
+        : {}),
+    },
+  });
 }
 
 async function applyOutcome(
@@ -271,7 +303,24 @@ async function applyOutcome(
     });
     if (!agreed) return null;
     if (status === "approved") {
-      await bookDeal(agreed, `${names.host}'s agent rules (auto-accept)`);
+      try {
+        await bookDeal(agreed, `${names.host}'s agent rules (auto-accept)`);
+      } catch (error) {
+        const declined = await updateDealIf(
+          deal.id,
+          { status: "approved" },
+          { status: "declined" },
+        );
+        await logEvent({
+          actor_type: "system",
+          actor_name: "Glasshouse",
+          action: "deal.booking_failed",
+          deal_id: deal.id,
+          listing_id: deal.listing_id,
+          summary: `Couldn't book at ${formatCents(outcome.amountCents)}: ${error instanceof Error ? error.message : "booking failed"}`,
+        });
+        return declined ?? agreed;
+      }
     } else {
       await logEvent({
         actor_type: "system",

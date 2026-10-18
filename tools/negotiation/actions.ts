@@ -89,7 +89,12 @@ export async function decline(dealId: string, viewer: Viewer): Promise<void> {
   });
 }
 
-/** The host counters in person; the guest agent answers on the next run. */
+/**
+ * The host counters in person; the guest agent answers on the next run. Deliberately not
+ * checked by validateOffer: the agent rules limit the host's agent, not the host, who may
+ * price below their own floor. The amount is still bounded (above $0, up to the list), and the
+ * round limit still applies to the agents' turns that follow (the run expires the deal).
+ */
 export async function hostCounter(
   dealId: string,
   viewer: Viewer,
