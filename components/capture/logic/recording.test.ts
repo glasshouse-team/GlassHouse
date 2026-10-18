@@ -53,7 +53,13 @@ describe("clip limits", () => {
 
 describe("defaultRooms", () => {
   it("pre-fills from bedrooms and baths", () => {
-    expect(defaultRooms(1, 1)).toEqual(["Entrance", "Living room", "Kitchen", "Bedroom", "Bathroom"]);
+    expect(defaultRooms(1, 1)).toEqual([
+      "Entrance",
+      "Living room",
+      "Kitchen",
+      "Bedroom",
+      "Bathroom",
+    ]);
     expect(defaultRooms(2, 1.5)).toEqual([
       "Entrance",
       "Living room",

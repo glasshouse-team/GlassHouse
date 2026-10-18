@@ -2,7 +2,7 @@
  * Request bodies and storage paths for /api/captures (GH-22). Pure, tested in schema.test.ts.
  *
  * Every raw capture goes to the private `captures` bucket (docs/ARCHITECTURE.md):
- *   video: {listingId}/{captureId}/raw.(mp4|webm)
+ *   video: {listingId}/{captureId}/raw.(mp4|webm|mov)
  *   ring:  {listingId}/{captureId}/ring/00.jpg ... (8 ring photos, then one per doorway)
  * `captures.raw_url` stores "captures/<path>" (bucket and path; a private bucket has no URL).
  * A ring's `heading_track` has one sample per photo, in upload order, so photo i's compass
@@ -11,17 +11,16 @@
 import { z } from "zod";
 import { HeadingSampleSchema, RoomMarkerSchema } from "@/lib/schemas/world";
 import { CLIP_MAX_SECONDS, MAX_UPLOAD_BYTES } from "@/components/capture/logic/recording";
-import { RING_PHOTOS } from "@/components/capture/logic/coverage";
+import { MAX_RING_FILES, RING_PHOTOS } from "@/components/capture/logic/coverage";
 
-/** 8 ring photos plus up to 4 doorway photos. */
-export const MAX_RING_FILES = RING_PHOTOS + 4;
 /** A 30 s clip sampled at 10 Hz is 300 samples; leave room for faster sensors. */
 const MAX_HEADING_SAMPLES = 3_000;
 /** MediaRecorder stops a little after the cap; allow one second of slack. */
 const MAX_DURATION_S = CLIP_MAX_SECONDS + 1;
 
 const VideoFile = z.object({
-  contentType: z.enum(["video/mp4", "video/webm"]),
+  // video/quicktime: an iPhone file picked in the upload fallback (.mov; World Labs takes mov).
+  contentType: z.enum(["video/mp4", "video/webm", "video/quicktime"]),
   sizeBytes: z.number().int().positive().max(MAX_UPLOAD_BYTES),
 });
 const PhotoFile = z.object({
@@ -76,7 +75,8 @@ export function captureObjectPaths(
   const base = `${listingId}/${captureId}`;
   if (body.kind === "ring")
     return (body.files ?? []).map((_, i) => `${base}/ring/${String(i).padStart(2, "0")}.jpg`);
-  const ext = body.file?.contentType === "video/webm" ? "webm" : "mp4";
+  const type = body.file?.contentType;
+  const ext = type === "video/webm" ? "webm" : type === "video/quicktime" ? "mov" : "mp4";
   return [`${base}/raw.${ext}`];
 }
 

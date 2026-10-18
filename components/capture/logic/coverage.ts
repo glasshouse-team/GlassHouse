@@ -11,6 +11,9 @@ export const RING_TARGET_DEGREES = 330;
 /** D-009: one 8-photo ring per spot, turning right about 45 degrees each time. */
 export const RING_PHOTOS = 8;
 export const RING_STEP_DEGREES = 360 / RING_PHOTOS;
+/** Plus one photo per doorway (D-009), at most 4. */
+export const MAX_DOORWAY_PHOTOS = 4;
+export const MAX_RING_FILES = RING_PHOTOS + MAX_DOORWAY_PHOTOS;
 /** A ring photo counts as aimed when the heading is this close to its target. */
 export const AIM_TOLERANCE_DEGREES = 10;
 /** Neighbouring samples closer than this fill the bins between them (slow sensors skip bins). */

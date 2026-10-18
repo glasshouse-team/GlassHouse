@@ -50,7 +50,7 @@ describe("CreateCaptureSchema", () => {
       {
         kind: "walkthrough",
         durationS: 10,
-        file: { contentType: "video/quicktime", sizeBytes: 1 },
+        file: { contentType: "video/x-msvideo", sizeBytes: 1 },
       },
       { kind: "walkthrough", durationS: 10, file: { contentType: "video/mp4", sizeBytes: 60e6 } },
       { kind: "checkin", durationS: 10, file: { contentType: "video/mp4", sizeBytes: 1 } },
@@ -86,6 +86,9 @@ describe("captureObjectPaths", () => {
     expect(
       captureObjectPaths(L, C, { kind: "fill_in", file: { contentType: "video/mp4" } }),
     ).toEqual([`${L}/${C}/raw.mp4`]);
+    expect(
+      captureObjectPaths(L, C, { kind: "walkthrough", file: { contentType: "video/quicktime" } }),
+    ).toEqual([`${L}/${C}/raw.mov`]);
   });
 
   it("numbers ring photos in upload order", () => {
