@@ -25,8 +25,8 @@ export interface ListingCoverage {
 
 /**
  * The published tour's coverage. `publishedWorldId` is `listings.published_world_id`, the
- * entry spot of the published version (0002). Every version has one row per spot (a
- * fill-in copies the other spots' rows, Temuri on the channel 2026-10-18), so the score is
+ * entry spot of the published version (0002). Every version has one row per spot (D-031: a
+ * fill-in copies the other spots' rows), so the score is
  * the mean over the rows with the entry's (listing_id, version). Spots without a score are
  * left out; null when none is scored.
  */
