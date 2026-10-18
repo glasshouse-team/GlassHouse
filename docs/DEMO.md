@@ -8,19 +8,19 @@ The spoken pitch, click-by-click script with backups per segment, readiness gate
 
 - **Projector:** one laptop in split screen: guest view left, host dashboard right, feed in the guest sidebar (or `/feed` full screen).
 - **Phone:** the host's phone, mirrored to the laptop, for the live recording and the Approve tap.
-- **Before going on:** `pnpm demo:reset`, `DEMO_MODE=true`, `/demo/check` all green, other tabs closed, notifications off.
+- **Before going on:** `pnpm demo:reset`, `DEMO_MODE=true`, `/demo/check` all green, other tabs closed, notifications off. QA checklist and how to run each check: docs/QA.md.
 - **Backup:** the full demo as a video on the desktop; switch to it after one failed retry.
 
 ## Script
 
-| Time      | Who                                | On screen                                                                                                                                                                           |
-| --------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0:00-0:20 | Temuri                             | Hook: "Ever arrived somewhere that didn't look like the photos?" One line on the problem, one on Glasshouse.                                                                        |
-| 0:20-0:45 | Beka                               | Types the trip brief. The guest agent returns a shortlist with cited reasons. The X-ray flags another listing's fake "sea view".                                                    |
-| 0:45-1:25 | Temuri                             | Opens hero 2's 3D tour at the entrance; arrows lead through the kitchen to the living room. "Where would I work?" turns to the desk. "Show what's real" tints the AI-filled corner. |
-| 1:25-2:05 | Beka (Temuri holds the host phone) | "Can I pay $50 less?" The deal room fills live: $470, $495, $480. The phone shows "Approve $480 for Nov 9-13?"; tap; "Booked" in the feed.                                          |
-| 2:05-2:40 | Temuri with the phone              | Host side, cooking-show style: record 10 seconds live, then open the saved version with its gap note ("Kitchen corner is blank") and the fill-in version with the higher score.     |
-| 2:40-3:00 | Beka                               | Close: "Three agents, one rule: show what's real." Map back to the three judging criteria.                                                                                          |
+| Time      | Who                                | On screen                                                                                                                                                                                                    |
+| --------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0:00-0:20 | Temuri                             | Hook: "Ever arrived somewhere that didn't look like the photos?" One line on the problem, one on Glasshouse.                                                                                                 |
+| 0:20-0:45 | Beka                               | Types the trip brief. The guest agent returns a shortlist with cited reasons. The X-ray flags another listing's fake "sea view".                                                                             |
+| 0:45-1:25 | Temuri                             | Opens hero 2's 3D tour at the entrance; arrows lead through the kitchen to the living room. "Where would I work?" turns to the desk. "Show what's real" tints the AI-filled photo-frame wall in the kitchen. |
+| 1:25-2:05 | Beka (Temuri holds the host phone) | "Can I pay $50 less?" The deal room fills live: $470, $495, $480. The phone shows "Approve $480 for Nov 9-13?"; tap; "Booked" in the feed.                                                                   |
+| 2:05-2:40 | Temuri with the phone              | Host side, cooking-show style: record 10 seconds live, then open the saved version with its gap note ("Kitchen photo-frame wall is AI-filled") and the fill-in version with the higher score.                |
+| 2:40-3:00 | Beka                               | Close: "Three agents, one rule: show what's real." Map back to the three judging criteria.                                                                                                                   |
 
 Demo brief: _"4 friends, Kazbegi or Tbilisi, early November, about $60 each per night, one of us works remotely, we want a fireplace or a cozy living room and a mountain view."_
 

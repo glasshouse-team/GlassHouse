@@ -1,12 +1,21 @@
-import { ComingSoon } from "@/components/ui/coming-soon";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
-/** Host dashboard slot (GH-5 contract). Temuri replaces this stub in GH-22 (stretch). Keep the name and props. */
+/**
+ * Host dashboard slot (GH-5 contract, GH-22). Keep the name and props.
+ * Opens the guided phone capture; phones need HTTPS for the camera.
+ */
 export function CaptureLauncher({ listingId }: { listingId: string }) {
   return (
-    <ComingSoon title="Record a walkthrough" ticket="GH-22" owner="Temuri">
-      <a className="mt-2 inline-block text-xs underline" href={`/host/capture/${listingId}`}>
-        Open the capture page
-      </a>
-    </ComingSoon>
+    <section className="space-y-2 rounded-xl border p-4 text-sm">
+      <h2 className="font-semibold">Capture this home in 3D</h2>
+      <p className="text-muted-foreground">
+        Open this on your phone: 8 photos per room with a compass guide, or short video clips. Each
+        room uploads as you go.
+      </p>
+      <Button asChild size="sm">
+        <Link href={`/host/capture/${listingId}`}>Start a guided capture</Link>
+      </Button>
+    </section>
   );
 }

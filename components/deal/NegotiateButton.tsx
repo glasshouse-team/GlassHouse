@@ -84,6 +84,11 @@ export function NegotiateButton(props: NegotiateButtonProps) {
         }),
       });
       const body = (await response.json().catch(() => ({}))) as { id?: string; message?: string };
+      if (response.status === 409 && body.id) {
+        toast.info(body.message ?? "You already have a negotiation for this home.");
+        router.push(`/deal/${body.id}`);
+        return;
+      }
       if (!response.ok || !body.id) {
         toast.error(body.message ?? "Couldn't start the negotiation. Try again.");
         return;
