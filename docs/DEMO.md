@@ -2,11 +2,13 @@
 
 Three minutes: one guest journey and one host journey, with the activity feed always visible. Everything runs on saved data in demo mode; the only live camera moment is a 10-second recording.
 
+The spoken pitch, click-by-click script with backups per segment, readiness gate, judge answers and slide outline are in [PITCH.md](PITCH.md) (GH-27); this file keeps the stage setup.
+
 ## Stage setup
 
 - **Projector:** one laptop in split screen: guest view left, host dashboard right, feed in the guest sidebar (or `/feed` full screen).
 - **Phone:** the host's phone, mirrored to the laptop, for the live recording and the Approve tap.
-- **Before going on:** `pnpm demo:reset`, `DEMO_MODE=true`, `/demo/check` all green, other tabs closed, notifications off.
+- **Before going on:** `pnpm demo:reset`, `DEMO_MODE=true`, `/demo/check` all green, other tabs closed, notifications off. QA checklist and how to run each check: docs/QA.md.
 - **Backup:** the full demo as a video on the desktop; switch to it after one failed retry.
 
 ## Script
@@ -24,15 +26,15 @@ Demo brief: _"4 friends, Kazbegi or Tbilisi, early November, about $60 each per 
 
 ## Questions judges will ask
 
-| Question                           | Answer                                                                                                                                                        |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Isn't the 3D just hallucinated?    | Partly, and we show exactly where: the gap check finds blank spots, the overlay marks them, the coverage score counts them, and hosts are asked to film them. |
-| Can the agent give the house away? | No. Floors and limits are enforced in code, and anything below the host's auto-accept level needs a person's tap.                                             |
-| How long and how much per 3D home? | About 6-9 minutes and 1,600 World Labs credits per room, rooms in parallel (GH-3); each is generated once and saved.                                          |
-| How accurate is the floor plan?    | Approximate: the scale comes from the 3D model's metric estimate, and the host can calibrate with one known width.                                            |
-| Why not just Airbnb's AI?          | Airbnb's AI ranks and summarizes. Ours acts for both sides, negotiates within rules, and verifies the home at check-in.                                       |
-| Privacy?                           | Owners consent, personal items are removed before filming, check-in videos stay in a private bucket.                                                          |
-| What did you build vs use?         | We used Marble for reconstruction. We built the agents, validators, pipeline, gap check, floor plan geometry, capture flow and Verifier.                      |
+| Question                           | Answer                                                                                                                                                                                               |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Isn't the 3D just hallucinated?    | Partly, and we show exactly where: the gap check finds blank spots, the overlay marks them, the coverage score counts them, and hosts are asked to film them.                                        |
+| Can the agent give the house away? | No. Floors and limits are enforced in code, and anything below the host's auto-accept level needs a person's tap.                                                                                    |
+| How long and how much per 3D home? | About 6-9 minutes and 1,600 World Labs credits per room, rooms in parallel (GH-3); each is generated once and saved.                                                                                 |
+| How accurate is the floor plan?    | Approximate: the scale comes from the 3D model's metric estimate, and the host can calibrate with one known width.                                                                                   |
+| Why not just Airbnb's AI?          | Airbnb's AI ranks and summarizes. Ours acts for both sides, negotiates within rules, and checks each listing against its own photos (add "and verifies the home at check-in" only if GH-23 shipped). |
+| Privacy?                           | Owners consent, personal items are removed before filming, check-in videos stay in a private bucket.                                                                                                 |
+| What did you build vs use?         | We used Marble for reconstruction. We built the agents, validators, pipeline, gap check, floor plan geometry, capture flow and Verifier.                                                             |
 
 ## Slides (5 at most)
 
