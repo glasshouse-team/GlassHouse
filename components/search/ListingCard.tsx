@@ -1,6 +1,7 @@
 import { Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { CoverageBadge } from "@/components/listing/CoverageBadge";
 import { PhotoPlaceholder } from "@/components/listing/PhotoPlaceholder";
 import type { ListingCardData } from "@/lib/data/listings";
 import { formatCents } from "@/lib/utils";
@@ -21,6 +22,7 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
         ) : (
           <PhotoPlaceholder className="h-full w-full" />
         )}
+        <CoverageBadge coverage={listing.coverage} card className="absolute top-2 left-2" />
       </div>
       <div className="flex items-start justify-between gap-2 text-sm">
         <div className="min-w-0">

@@ -6,6 +6,7 @@ import { ActivityFeed } from "@/components/feed/ActivityFeed";
 import { FloorPlanCard } from "@/components/floorplan/FloorPlanCard";
 import { AmenityGrid } from "@/components/listing/AmenityGrid";
 import { BookingBox } from "@/components/listing/BookingBox";
+import { CoverageBadge, HowWeVerify } from "@/components/listing/CoverageBadge";
 import { factsLine, houseRuleLines, stayLabel } from "@/components/listing/format";
 import { Gallery } from "@/components/listing/Gallery";
 import { HostCard } from "@/components/listing/HostCard";
@@ -17,6 +18,7 @@ import { defaultGuests, defaultStay } from "@/lib/booking";
 import {
   getAvailability,
   getListing,
+  getListingCoverage,
   getListingPhotos,
   getListingReviews,
   getProfile,
@@ -37,12 +39,13 @@ export default async function ListingPage(props: PageProps<"/listing/[id]">) {
   if (!listing) notFound();
 
   const today = new Date().toISOString().slice(0, 10);
-  const [photos, reviews, host, availability, viewer] = await Promise.all([
+  const [photos, reviews, host, availability, viewer, coverage] = await Promise.all([
     getListingPhotos(listing.id),
     getListingReviews(listing.id),
     getProfile(listing.host_id),
     getAvailability(listing.id, today),
     getViewer(),
+    getListingCoverage(listing),
   ]);
   const stay = defaultStay(today, DEMO_DEAL);
   const area = [listing.neighborhood, listing.city].filter(Boolean).join(", ");
@@ -60,6 +63,7 @@ export default async function ListingPage(props: PageProps<"/listing/[id]">) {
             </span>
           )}
           <span>{area}, Georgia</span>
+          <CoverageBadge coverage={coverage} />
         </p>
       </div>
 
@@ -85,6 +89,7 @@ export default async function ListingPage(props: PageProps<"/listing/[id]">) {
           <TourLauncher listingId={listing.id} />
           <FloorPlanCard listingId={listing.id} />
           <AskThisHome listingId={listing.id} />
+          {coverage && <HowWeVerify />}
           <Separator />
           <ReviewsSection reviews={reviews} rating={listing.rating} />
           {rules.length > 0 && (
