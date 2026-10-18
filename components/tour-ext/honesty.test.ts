@@ -1,5 +1,5 @@
 import type { Object3D } from "three";
-import { Mesh, MeshBasicMaterial, Raycaster, Vector3 } from "three";
+import { DoubleSide, Mesh, MeshBasicMaterial, Raycaster, Vector3 } from "three";
 import { describe, expect, it, vi } from "vitest";
 import type { Gap } from "@/lib/schemas/world";
 import { buildGapSpheres, HONESTY_COLOR, markedGaps, showGapSpheres } from "./honesty";
@@ -63,6 +63,7 @@ describe("buildGapSpheres", () => {
     expect(`#${material.color.getHexString()}`).toBe(HONESTY_COLOR);
     expect(material.transparent).toBe(true);
     expect(material.opacity).toBeLessThan(1);
+    expect(material.side).toBe(DoubleSide);
     expect(material.depthWrite).toBe(false);
   });
 
@@ -75,7 +76,7 @@ describe("buildGapSpheres", () => {
     plain.position.copy(meshes[0].position);
     plain.scale.copy(meshes[0].scale);
     plain.updateMatrixWorld();
-    expect(ray.intersectObject(plain)).toHaveLength(1);
+    expect(ray.intersectObject(plain).length).toBeGreaterThan(0);
   });
 });
 

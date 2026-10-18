@@ -20,7 +20,7 @@ import { useTour } from "@/components/tour/TourContext";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { runTourAction } from "./actions";
-import { shownResults, SUGGESTED_QUESTIONS, takeNewActions } from "./ask-space";
+import { answerText, shownResults, SUGGESTED_QUESTIONS, takeNewActions } from "./ask-space";
 
 export interface AskSpacePanelProps {
   /** Listing uuid or slug. */
@@ -159,10 +159,7 @@ export function AskSpacePanel({
         )}
 
         {messages.map((m) => {
-          const text = m.parts
-            .map((p) => (p.type === "text" ? p.text : ""))
-            .join("")
-            .trim();
+          const text = answerText(m.parts);
           const results = m.role === "assistant" ? shownResults(m.parts) : [];
           const notes = [...new Set(results.flatMap((r) => r.honestyNote ?? []))];
           return (

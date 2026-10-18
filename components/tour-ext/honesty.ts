@@ -2,7 +2,7 @@
  * Honesty overlay geometry (GH-21): translucent amber spheres at the AI-filled gaps of the
  * current spot's world (D-009). Pure three.js, no React, so it is tested without a viewer.
  */
-import { Mesh, MeshBasicMaterial, SphereGeometry } from "three";
+import { DoubleSide, Mesh, MeshBasicMaterial, SphereGeometry } from "three";
 import type { TourApi } from "@/components/tour/TourContext";
 import type { Gap } from "@/lib/schemas/world";
 
@@ -39,6 +39,8 @@ export function buildGapSpheres(gaps: readonly Gap[]): {
     transparent: true,
     opacity: HONESTY_OPACITY,
     depthWrite: false,
+    // Both faces: the tint stays visible when the camera steps inside a gap sphere.
+    side: DoubleSide,
   });
   const meshes = marked.map((gap) => {
     const mesh = new Mesh(geometry, material);

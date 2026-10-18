@@ -35,9 +35,25 @@ export interface ShownResult {
 /** Loose shape of a UI message part, so this works without the server's tool types. */
 export interface PartLike {
   type: string;
+  text?: string;
   toolCallId?: string;
   state?: string;
   output?: unknown;
+}
+
+/**
+ * The agent's answer: the text after its last tool call (a model sometimes narrates before the
+ * tools run, and that draft would read as a second answer). All the text if no tool ran.
+ */
+export function answerText(parts: readonly PartLike[]): string {
+  const texts = (from: number) =>
+    parts
+      .slice(from)
+      .flatMap((p) => (p.type === "text" && p.text ? [p.text.trim()] : []))
+      .filter(Boolean)
+      .join(" ");
+  const lastTool = parts.findLastIndex((p) => p.type.startsWith("tool-"));
+  return (lastTool >= 0 && texts(lastTool + 1)) || texts(0);
 }
 
 /** The successful, valid tool results of one message, in order. */

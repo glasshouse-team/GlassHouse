@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { shownResults, takeNewActions, type PartLike } from "./ask-space";
+import { answerText, shownResults, takeNewActions, type PartLike } from "./ask-space";
 
 const DESK = "11111111-1111-4111-8111-111111111111";
 
@@ -57,5 +57,24 @@ describe("takeNewActions", () => {
       { type: "look_toward", anchorId: DESK },
     ]);
     expect(takeNewActions(messages, done)).toEqual([]);
+  });
+});
+
+describe("answerText", () => {
+  it("keeps only the answer written after the last tool call", () => {
+    expect(
+      answerText([
+        { type: "text", text: "I'll show the living room one first." },
+        flyPart,
+        { type: "text", text: "Yes, there's a TV in the living room." },
+      ]),
+    ).toBe("Yes, there's a TV in the living room.");
+  });
+
+  it("falls back to all the text when no tool ran or nothing followed it", () => {
+    expect(answerText([{ type: "text", text: "I can't see a jacuzzi in this home." }])).toBe(
+      "I can't see a jacuzzi in this home.",
+    );
+    expect(answerText([{ type: "text", text: "Here it is." }, flyPart])).toBe("Here it is.");
   });
 });
