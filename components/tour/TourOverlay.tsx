@@ -2,13 +2,16 @@
 
 /**
  * HTML around the 3D view (GH-11): back link, room badge, Jump to room, HQ toggle, loading
- * and fade screens, errors. Bottom left stays free for Beka's honesty toggle (tour-ext).
+ * and fade screens, errors, and the floor-plan minimap (top right). The bottom corners stay
+ * free for Beka's tour-ext: honesty toggle bottom left, Ask the space bottom right.
  */
 import { ArrowLeft, ImageOff, Sparkles, Video } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useTour } from "./TourContext";
+import { TourMinimap } from "./TourMinimap";
+import type { TourPlans } from "./minimap";
 import { FADE_MS, useTourInternal } from "./TourProvider";
 import { roomBadge, spotLabel } from "./spots";
 
@@ -30,12 +33,15 @@ export function TourOverlay({
   title,
   preview,
   version,
+  plans,
 }: {
   title: string;
   preview: boolean;
   version: number;
+  /** Floor plans of the tour's worlds (GH-18); the minimap shows when the current one has one. */
+  plans?: TourPlans;
 }) {
-  const { listingId, current, hq, setHq } = useTourInternal();
+  const { listingId, current, hq, setHq, anchorMode } = useTourInternal();
   const { gaps } = useTour();
   const coarse = useCoarsePointer();
   const badge = roomBadge(gaps);
@@ -43,62 +49,70 @@ export function TourOverlay({
   return (
     <div className="pointer-events-none absolute inset-0 z-30 flex flex-col">
       <div className="flex items-start gap-2 p-3 sm:p-4">
-        <Link
-          href={`/listing/${listingId}`}
-          className={cn(
-            PANEL,
-            "inline-flex size-10 shrink-0 items-center justify-center hover:bg-black/75",
-          )}
-          aria-label="Back to the listing"
-        >
-          <ArrowLeft className="size-5" aria-hidden />
-        </Link>
-        <div className={cn(PANEL, "min-w-0 flex-1 px-3 py-2 sm:flex-none")}>
-          <p className="truncate text-xs text-white/70">{title}</p>
-          <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-            {spotLabel(current)}
-            <span
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div className="flex min-w-0 items-start gap-2">
+            <Link
+              href={`/listing/${listingId}`}
               className={cn(
-                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
-                badge === "real"
-                  ? "bg-emerald-500/25 text-emerald-100"
-                  : "bg-honesty text-neutral-950",
+                PANEL,
+                "inline-flex size-11 shrink-0 items-center justify-center hover:bg-black/75",
               )}
+              aria-label="Back to the listing"
             >
-              {badge === "real" ? (
-                <>
-                  <Video className="size-3" aria-hidden /> Built from real footage
-                </>
-              ) : (
-                <>
-                  <Sparkles className="size-3" aria-hidden /> Partly AI-filled
-                </>
-              )}
-            </span>
-          </p>
+              <ArrowLeft className="size-5" aria-hidden />
+            </Link>
+            <div className={cn(PANEL, "min-w-0 flex-1 px-3 py-2 sm:flex-none")}>
+              <p className="truncate text-xs text-white/70">{title}</p>
+              <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+                {spotLabel(current)}
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                    badge === "real"
+                      ? "bg-emerald-500/25 text-emerald-100"
+                      : "bg-honesty text-neutral-950",
+                  )}
+                >
+                  {badge === "real" ? (
+                    <>
+                      <Video className="size-3" aria-hidden /> Built from real footage
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="size-3" aria-hidden /> Partly AI-filled
+                    </>
+                  )}
+                </span>
+              </p>
+            </div>
+          </div>
+          {preview && (
+            <p className="pointer-events-auto w-fit rounded-lg bg-honesty px-3 py-1 text-xs font-medium text-neutral-950">
+              Preview of version {version}: guests do not see it until it is published.
+            </p>
+          )}
+          <RoomList />
         </div>
-        {!coarse && current.spz_hq_url && (
-          <button
-            type="button"
-            aria-pressed={hq}
-            onClick={() => setHq(!hq)}
-            className={cn(
-              PANEL,
-              "ml-auto hidden h-10 px-3 text-sm font-medium sm:block",
-              hq && "bg-white text-neutral-900",
-            )}
-            title="High-quality splat (bigger download)"
-          >
-            HQ
-          </button>
-        )}
+        {/* Top right: HQ toggle and the floor-plan minimap. The bottom corners are tour-ext's. */}
+        <div className="flex shrink-0 items-start gap-2">
+          {!coarse && current.spz_hq_url && (
+            <button
+              type="button"
+              aria-pressed={hq}
+              onClick={() => setHq(!hq)}
+              className={cn(
+                PANEL,
+                "hidden h-11 px-3 text-sm font-medium sm:block",
+                hq && "bg-white text-neutral-900",
+              )}
+              title="High-quality splat (bigger download)"
+            >
+              HQ
+            </button>
+          )}
+          {plans && !anchorMode && <TourMinimap plans={plans} />}
+        </div>
       </div>
-      {preview && (
-        <p className="pointer-events-auto mx-3 -mt-1 mb-2 w-fit rounded-lg bg-honesty px-3 py-1 text-xs font-medium text-neutral-950 sm:mx-4">
-          Preview of version {version}: guests do not see it until it is published.
-        </p>
-      )}
-      <RoomList />
       <div className="flex-1" />
       <Hint coarse={coarse} />
       <FadeAndLoading />
@@ -111,7 +125,7 @@ export function TourOverlay({
 function RoomList() {
   const { worlds, current, goToSpot, highlightedRoom } = useTourInternal();
   return (
-    <nav aria-label="Jump to room" className="px-3 sm:px-4">
+    <nav aria-label="Jump to room" className="min-w-0">
       <ul className="pointer-events-auto flex w-fit max-w-full gap-1.5 overflow-x-auto rounded-xl bg-black/40 p-1.5 backdrop-blur [scrollbar-width:none]">
         {worlds.map((w) => {
           const active = w.id === current.id;
