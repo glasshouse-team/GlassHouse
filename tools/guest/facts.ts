@@ -86,13 +86,20 @@ export function resolveFactKey(
   return false;
 }
 
-/** Where a reason comes from, for the chip: "Seen in photo 4", "Listed amenity", "Listing details". */
+/**
+ * Where a reason comes from, for the chip: "Seen in 2 photos", "Listed amenity", "Listing details".
+ * X-ray evidence holds `listing_photos.id` uuids (GH-9), so count them rather than read a number.
+ */
 export function sourceLabel(factKey: string, candidate: Candidate): string {
   const [kind, ...rest] = factKey.split(":");
   if (kind === "fact") {
-    const evidence = candidate.facts?.facts.find((f) => f.key === rest.join(":"))?.evidence[0];
-    const photo = evidence?.match(/(\d+)/)?.[1];
-    return photo ? `Seen in photo ${Number(photo)}` : "Seen in photos";
+    const count =
+      candidate.facts?.facts.find((f) => f.key === rest.join(":"))?.evidence.length ?? 0;
+    return count === 1
+      ? "Seen in 1 photo"
+      : count > 1
+        ? `Seen in ${count} photos`
+        : "Seen in photos";
   }
   return kind === "amenity" ? "Listed amenity" : "Listing details";
 }

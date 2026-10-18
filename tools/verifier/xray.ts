@@ -5,6 +5,7 @@
  */
 import { generateText, NoObjectGeneratedError, Output, type LanguageModel } from "ai";
 import sharp from "sharp";
+import { asData } from "@/agents/data";
 import { loadPrompt } from "@/agents/load-prompt";
 import { agentModel, bulkModel } from "@/lib/claude";
 import type { Tables } from "@/lib/database.types";
@@ -106,6 +107,16 @@ export async function prepareImage(url: string): Promise<Buffer> {
     .toBuffer();
 }
 
+/** "photo_04 (living room):". The room comes from the host's file name: letters, digits, spaces only. */
+export function roomTag(label: string, room: string | null): string {
+  const clean = room
+    ?.replace(/[^\p{L}\p{N} -]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 40);
+  return clean ? `${label} (${clean}):` : `${label}:`;
+}
+
 function addUsage(total: XrayUsage, usage: { inputTokens?: number; outputTokens?: number }) {
   total.inputTokens += usage.inputTokens ?? 0;
   total.outputTokens += usage.outputTokens ?? 0;
@@ -119,11 +130,11 @@ export async function askVerifier(
   images: Buffer[],
 ): Promise<{ raw: XrayResult; usage: XrayUsage }> {
   const content = [
-    { type: "text" as const, text: JSON.stringify(listingClaims(listing)) },
+    { type: "text" as const, text: asData("listing", listingClaims(listing)) },
     ...labeled.flatMap(({ label, photo }, i) => [
       {
         type: "text" as const,
-        text: photo.room_label ? `${label} (${photo.room_label}):` : `${label}:`,
+        text: roomTag(label, photo.room_label),
       },
       { type: "file" as const, mediaType: "image/jpeg", data: images[i] },
     ]),

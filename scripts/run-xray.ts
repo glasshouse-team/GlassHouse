@@ -9,6 +9,8 @@
  *   --price 1,5   USD per million input,output tokens, to print the cost
  *
  * Default model: Sonnet on the hero homes, Haiku elsewhere.
+ * Measured (GH-9, hero-2, 18 photos at 1024 px): about 20,600 input and 1,100-2,400 output
+ * tokens per run on either model, about 25 s.
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
