@@ -116,13 +116,13 @@ export async function searchListings(filters: ListingFilters = {}): Promise<List
   }));
 }
 
-/** The host's listings for the dashboard. */
+/** The host's listings for the dashboard (by slug, so hero-1 comes first). */
 export async function getHostListings(hostId: string) {
   const { data, error } = await supabaseAdmin()
     .from("listings")
     .select("id, slug, title, city, base_price_cents, cleaning_fee_cents")
     .eq("host_id", hostId)
-    .order("title");
+    .order("slug");
   check(error, "host listings");
   return data ?? [];
 }
