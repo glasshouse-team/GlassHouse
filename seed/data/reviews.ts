@@ -57,7 +57,7 @@ export const SEED_REVIEWS: Record<string, SeedReview[]> = {
       author: "Tamar",
       rating: 5,
       sub: [5, 5, 5, 5, 5, 5],
-      body: "Bright, quiet flat and a real desk with two monitors in the living room. Ten minutes to Rustaveli on foot.",
+      body: "Bright, quiet flat and a real desk with a big monitor in the living room. Ten minutes to Rustaveli on foot.",
       month: "2026-09",
     },
     {
@@ -71,7 +71,7 @@ export const SEED_REVIEWS: Record<string, SeedReview[]> = {
       author: "Nika",
       rating: 5,
       sub: [5, 5, 5, 5, 4, 5],
-      body: "Fast internet, coffee on the balcony in the morning, easy check-in.",
+      body: "Fast internet, coffee at the big dining table in the morning, easy check-in.",
       month: "2026-06",
     },
     {

@@ -5,7 +5,7 @@
     "entrySpot": "entrance",
     "versions": {
       "1": {
-        "$comment": "Gap demo version: the kitchen ring without photos 1019 and 1020 (the photo-frame wall), so Marble invented that wall: a door, an air conditioner and hanging cables that are not there. v2 shows the real plain wall with the photo frame.",
+        "$comment": "Gap demo version: the kitchen ring without photos 1019 and 1020 (the photo-frame wall), so Marble invented that wall: a door, an air conditioner and hanging cables that are not there. v2 shows the real plain wall with the photo frame. Version 1 has only the kitchen spot: links to spots missing from a version get no arrow (GH-10, GH-11).",
         "spots": {
           "kitchen": "6aae85e6-9837-42d2-98a8-1c07ab332da8"
         }
