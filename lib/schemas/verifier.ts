@@ -114,3 +114,26 @@ export const RoomLabelsSchema = z.object({
   ),
 });
 export type RoomLabels = z.infer<typeof RoomLabelsSchema>;
+
+// ---------- GH-24 Review claims ----------
+
+export const ClaimSentiment = z.enum(["positive", "negative", "neutral"]);
+export type ClaimSentiment = z.infer<typeof ClaimSentiment>;
+
+/** Haiku's split of a listing's reviews: one entry per claim about the home. */
+export const ReviewClaimsResultSchema = z.object({
+  claims: z.array(
+    z.object({
+      /** The review's label from the input, e.g. "r2". */
+      review: z.string(),
+      /** The claim in a few words, close to the reviewer's own: "the walk-in shower is great". */
+      claim: z.string(),
+      sentiment: ClaimSentiment,
+      /** The room it is about, or null for the whole home, the area or the host. */
+      room: z.string().nullable(),
+      /** The thing it is about ("desk", "shower"), or null. */
+      object: z.string().nullable(),
+    }),
+  ),
+});
+export type ReviewClaimsResult = z.infer<typeof ReviewClaimsResultSchema>;

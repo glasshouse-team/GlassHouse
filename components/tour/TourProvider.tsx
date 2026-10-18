@@ -20,6 +20,7 @@ import {
 } from "react";
 import { Vector3, type Camera, type Object3D, type Scene } from "three";
 import type { Anchor, Gap, Vec3, World } from "@/lib/schemas/world";
+import { placePins, type PlacedPin, type ReviewPin } from "./review-pins";
 import { TourContext, type TourApi } from "./TourContext";
 import {
   ARRIVAL_PITCH,
@@ -65,6 +66,10 @@ export interface TourInternal {
   spotLoaded(worldId: string): void;
   spotFailed(worldId: string, message: string): void;
   setProgress(fraction: number): void;
+  /** Review claims placed at the version's anchors (GH-24); filter by worldId per spot. */
+  reviewPins: PlacedPin[];
+  showReviews: boolean;
+  setShowReviews(show: boolean): void;
 }
 
 const InternalContext = createContext<TourInternal | null>(null);
@@ -83,8 +88,12 @@ export interface TourProviderProps {
   gaps: Gap[];
   startAnchorId?: string | null;
   anchorMode?: boolean;
+  /** The listing's review claims (components/tour/data.ts loadReviewPins). */
+  reviewPins?: ReviewPin[];
   children: ReactNode;
 }
+
+const NO_PINS: ReviewPin[] = [];
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -105,9 +114,12 @@ export function TourProvider({
   gaps: allGaps,
   startAnchorId = null,
   anchorMode = false,
+  reviewPins: claims = NO_PINS,
   children,
 }: TourProviderProps) {
   const [allAnchors, setAllAnchorsState] = useState(initialAnchors);
+  const [showReviews, setShowReviews] = useState(true);
+  const reviewPins = useMemo(() => placePins(claims, allAnchors), [claims, allAnchors]);
   const start = startAnchorId ? initialAnchors.find((a) => a.id === startAnchorId) : undefined;
   const startWorld = start ? worlds.find((w) => w.id === start.world_id) : undefined;
   const [currentSpot, setCurrentSpot] = useState(startWorld?.spot ?? entrySpot);
@@ -358,8 +370,13 @@ export function TourProvider({
       spotLoaded,
       spotFailed,
       setProgress,
+      reviewPins,
+      showReviews,
+      setShowReviews,
     }),
     [
+      reviewPins,
+      showReviews,
       listingId,
       worlds,
       current,

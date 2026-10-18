@@ -16,7 +16,7 @@ Applied in GH-5. Generated types: `lib/database.types.ts` (rerun `pnpm db:types`
 | ------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `core.ts`     | Beka   | `Cents`, `IsoDate`, `EventInputSchema`, `ListingSchema`, `HostPolicySchema`, `TripBriefSchema`, `QuoteSchema`, `DealSchema`, `DealMessageSchema` (types include `rejected`), `OfferTermsSchema`, `Amenity`, `ReviewSubRatingsSchema`, `ReviewSchema` |
 | `world.ts`    | Temuri | `Vec3Schema`, `WorldSchema`, `AnchorSchema`, `GapSchema`, `FloorPlanSchema`, `CaptureSchema` (meters, floor at y = 0)                                                                                                                                |
-| `verifier.ts` | Temuri | `XrayResultSchema`, `GapCheckResultSchema` (+ `ViewCheckSchema`, `GapConfirmSchema`, D-047), `RoomLabelsSchema`, `KNOWN_FACT_KEYS`                                                                                                                                                                 |
+| `verifier.ts` | Temuri | `XrayResultSchema`, `GapCheckResultSchema` (+ `ViewCheckSchema`, `GapConfirmSchema`, D-047), `RoomLabelsSchema`, `KNOWN_FACT_KEYS`, `ReviewClaimsResultSchema` and `ClaimSentiment` (GH-24)                                                          |
 
 ## 3. Activity feed: `lib/events.ts` (Beka)
 
@@ -159,3 +159,4 @@ The only Marble-to-three transform; the viewer, floor plan and gap check all use
 | 2026-10-18 | Section 14: `floorHeight` takes the lowest large layer below the camera, so a big ceiling or a bed top is not the floor (D-009); signature unchanged    | Temuri       |
 | 2026-10-18 | Migration 0002 (D-009): `worlds` gains `spot`, `spot_label`, `links`, unique on (listing, version, spot); `captures.kind` adds `ring`                   | Beka, Temuri |
 | 2026-10-18 | Section 13: `TourExtensions` mounts `AskSpacePanel`; `/api/ask-space` body and tool output documented (additive, GH-20)                                 | Beka         |
+| 2026-10-18 | `verifier.ts` adds `ReviewClaimsResultSchema` and `ClaimSentiment` (additive, GH-24); `review_claims` columns unchanged                                 | Temuri       |
