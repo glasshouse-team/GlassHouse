@@ -6,6 +6,7 @@ import { GapTasks } from "@/components/gaps/GapTasks";
 import { approvalPrompt } from "@/components/deal/format";
 import { AgentRulesForm } from "@/components/host/AgentRulesForm";
 import { ApprovalsQueue } from "@/components/host/ApprovalsQueue";
+import { ListingDraft } from "@/components/host/ListingDraft";
 import { WorldVersions } from "@/components/tour/WorldVersions";
 import { RoleSwitcher } from "@/components/ui/role-switcher";
 import { stayRangeLabel } from "@/lib/booking";
@@ -103,6 +104,21 @@ export default async function HostDashboardPage() {
                 <CaptureLauncher listingId={listing.id} />
               </div>
             </div>
+            <ListingDraft
+              listingId={listing.id}
+              current={{
+                id: listing.id,
+                title: listing.title,
+                description: listing.description,
+                property_type: listing.property_type,
+                max_guests: listing.max_guests,
+                bedrooms: listing.bedrooms,
+                beds: listing.beds,
+                baths: listing.baths,
+                amenities: listing.amenities,
+                house_rules: listing.house_rules,
+              }}
+            />
           </section>
         );
       })}

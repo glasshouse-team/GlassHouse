@@ -8,6 +8,7 @@ import { type CoverageWorld, type ListingCoverage, publishedCoverage } from "@/l
 import type { Tables } from "@/lib/database.types";
 import { stayNights } from "@/lib/pricing";
 import { HouseRulesSchema } from "@/lib/schemas/core";
+import { XrayResultSchema, type XrayResult } from "@/lib/schemas/verifier";
 import { supabaseAdmin } from "@/lib/supabase";
 
 export type ListingRow = Tables<"listings">;
@@ -47,6 +48,17 @@ export const getListing = cache(async (idOrSlug: string): Promise<ListingView | 
   check(error, `listing ${idOrSlug}`);
   return data ? toView(data) : null;
 });
+
+/** Any listing by uuid, whatever its status (draft or archived too): for host-only routes. */
+export async function getListingById(id: string): Promise<ListingView | null> {
+  const { data, error } = await supabaseAdmin()
+    .from("listings")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  check(error, `listing ${id}`);
+  return data ? toView(data) : null;
+}
 
 export async function getListingPhotos(listingId: string): Promise<PhotoRow[]> {
   const { data, error } = await supabaseAdmin()
@@ -149,11 +161,29 @@ export async function getListingCoverage(
 export async function getHostListings(hostId: string) {
   const { data, error } = await supabaseAdmin()
     .from("listings")
-    .select("id, slug, title, city, base_price_cents, cleaning_fee_cents")
+    .select(
+      "id, slug, title, description, city, property_type, max_guests, bedrooms, beds, baths, base_price_cents, cleaning_fee_cents, amenities, house_rules",
+    )
     .eq("host_id", hostId)
     .order("slug");
   check(error, "host listings");
-  return data ?? [];
+  return (data ?? []).map((row) => ({
+    ...row,
+    amenities: AmenityList.parse(row.amenities),
+    house_rules: Rules.parse(row.house_rules),
+  }));
+}
+
+/** The Verifier's X-ray for one home (GH-9), or null when it has not run or does not parse. */
+export async function getListingXray(listingId: string): Promise<XrayResult | null> {
+  const { data, error } = await supabaseAdmin()
+    .from("listing_facts")
+    .select("facts, contradictions, missing_photos")
+    .eq("listing_id", listingId)
+    .maybeSingle();
+  check(error, "listing facts");
+  const parsed = XrayResultSchema.safeParse(data);
+  return parsed.success ? parsed.data : null;
 }
 
 /**

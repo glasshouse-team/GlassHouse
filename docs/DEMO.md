@@ -33,7 +33,7 @@ Demo brief: _"4 friends, Kazbegi or Tbilisi, early November, about $60 each per 
 | How long and how much per 3D home? | About 6-9 minutes and 1,600 World Labs credits per room, rooms in parallel (GH-3); each is generated once and saved.                                                                                 |
 | How accurate is the floor plan?    | Approximate: the scale comes from the 3D model's metric estimate, and the host can calibrate with one known width.                                                                                   |
 | Why not just Airbnb's AI?          | Airbnb's AI ranks and summarizes. Ours acts for both sides, negotiates within rules, and checks each listing against its own photos (add "and verifies the home at check-in" only if GH-23 shipped). |
-| Privacy?                           | Owners consent, personal items are removed before filming, check-in videos stay in a private bucket.                                                                                                 |
+| Privacy?                           | Owners consent, personal items are removed before filming, the check-in video never leaves the guest's phone: only a few frames go to the Verifier.                                                  |
 | What did you build vs use?         | We used Marble for reconstruction. We built the agents, validators, pipeline, gap check, floor plan geometry, capture flow and Verifier.                                                             |
 
 ## Slides (5 at most)
