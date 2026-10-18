@@ -8,9 +8,15 @@
 import type { Point2, Segment2 } from "./slice";
 import { dominantAngle, rotatePoint, type Wall } from "./walls";
 
+/** "11.2 m²" (one decimal). */
+export function formatArea(m2: number): string {
+  return `${(Math.round(m2 * 10) / 10).toFixed(1)} m²`;
+}
+
 export interface PlanShape {
   walls: Wall[];
-  rooms: { name: string; label: Point2; polygon: Point2[] | null }[];
+  /** area_m2 (v2) is drawn under the name; already calibrated when the plan is. */
+  rooms: { name: string; label: Point2; polygon: Point2[] | null; area_m2?: number | null }[];
 }
 
 export interface PlanLayout {
@@ -113,6 +119,12 @@ export interface RenderOptions {
   gaps?: { at: Point2; radius_m: number }[];
   /** Pixels per meter for the intrinsic width and height. */
   pxPerMeter?: number;
+  /** Real meters per 3D meter (host calibration): the scale bar shows one real meter. */
+  scale?: number;
+  /** Footer note, e.g. "Calibrated from: Bedroom width 3.2 m" (default "Plan is approximate"). */
+  note?: string;
+  /** Total floor area for the footer (m2). */
+  totalArea?: number | null;
 }
 
 /** The floor plan as a standalone SVG document. */
@@ -160,22 +172,34 @@ export function renderPlanSvg(plan: PlanShape, options: RenderOptions = {}): str
   for (const room of plan.rooms) {
     const [x, y] = layout.toView(room.label);
     const current = room.name === options.highlight;
+    const area = room.area_m2 ?? null;
+    const nameY = area === null ? y : y - 0.16;
     out.push(
-      `<text x="${fmt(x)}" y="${fmt(y)}" font-size="0.28" text-anchor="middle" dominant-baseline="middle" fill="${c.text}"${current ? ' font-weight="600"' : ""}>${escapeXml(room.name)}</text>`,
+      `<text x="${fmt(x)}" y="${fmt(nameY)}" font-size="0.28" text-anchor="middle" dominant-baseline="middle" fill="${c.text}"${current ? ' font-weight="600"' : ""}>${escapeXml(room.name)}</text>`,
     );
+    if (area !== null) {
+      out.push(
+        `<text x="${fmt(x)}" y="${fmt(y + 0.18)}" font-size="0.22" text-anchor="middle" dominant-baseline="middle" fill="${c.muted}">${formatArea(area)}</text>`,
+      );
+    }
   }
 
-  // 1 m scale bar, bottom left; note, bottom right.
+  // Scale bar of one real meter (1 / scale in the 3D's meters), bottom left; note, bottom right.
   const baseY = viewBox.y + viewBox.height - 0.35;
   const left = viewBox.x + MARGIN;
+  const bar = 1 / (options.scale && options.scale > 0 ? options.scale : 1);
   out.push(
-    `<g stroke="${c.text}" stroke-width="0.04"><line x1="${fmt(left)}" y1="${fmt(baseY)}" x2="${fmt(left + 1)}" y2="${fmt(baseY)}"/><line x1="${fmt(left)}" y1="${fmt(baseY - 0.08)}" x2="${fmt(left)}" y2="${fmt(baseY + 0.08)}"/><line x1="${fmt(left + 1)}" y1="${fmt(baseY - 0.08)}" x2="${fmt(left + 1)}" y2="${fmt(baseY + 0.08)}"/></g>`,
+    `<g stroke="${c.text}" stroke-width="0.04"><line x1="${fmt(left)}" y1="${fmt(baseY)}" x2="${fmt(left + bar)}" y2="${fmt(baseY)}"/><line x1="${fmt(left)}" y1="${fmt(baseY - 0.08)}" x2="${fmt(left)}" y2="${fmt(baseY + 0.08)}"/><line x1="${fmt(left + bar)}" y1="${fmt(baseY - 0.08)}" x2="${fmt(left + bar)}" y2="${fmt(baseY + 0.08)}"/></g>`,
+  );
+  const total =
+    options.totalArea !== undefined && options.totalArea !== null
+      ? ` · total ${formatArea(options.totalArea)}`
+      : "";
+  out.push(
+    `<text x="${fmt(left + bar + 0.12)}" y="${fmt(baseY)}" font-size="0.2" dominant-baseline="middle" fill="${c.text}">1 m${total}</text>`,
   );
   out.push(
-    `<text x="${fmt(left + 1.12)}" y="${fmt(baseY)}" font-size="0.2" dominant-baseline="middle" fill="${c.text}">1 m</text>`,
-  );
-  out.push(
-    `<text x="${fmt(viewBox.x + viewBox.width - MARGIN)}" y="${fmt(baseY)}" font-size="0.18" text-anchor="end" dominant-baseline="middle" fill="${c.muted}">Plan is approximate</text>`,
+    `<text x="${fmt(viewBox.x + viewBox.width - MARGIN)}" y="${fmt(baseY)}" font-size="0.18" text-anchor="end" dominant-baseline="middle" fill="${c.muted}">${escapeXml(options.note ?? "Plan is approximate")}</text>`,
   );
   out.push(`</svg>`);
   return out.join("\n");

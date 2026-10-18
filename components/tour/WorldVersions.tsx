@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { CalibrateFloorPlan } from "@/components/floorplan/CalibrateFloorPlan";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -172,6 +173,12 @@ export function WorldVersions({ listingId }: { listingId: string }) {
                   </Button>
                 )}
               </div>
+              {(v.status === "published" || v.status === "ready") && (
+                <CalibrateFloorPlan
+                  worldId={v.publishRowId}
+                  rooms={v.spots.map((s) => s.spot_label ?? s.spot)}
+                />
+              )}
             </div>
           </li>
         ))}

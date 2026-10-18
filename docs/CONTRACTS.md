@@ -160,3 +160,4 @@ The only Marble-to-three transform; the viewer, floor plan and gap check all use
 | 2026-10-18 | Migration 0002 (D-009): `worlds` gains `spot`, `spot_label`, `links`, unique on (listing, version, spot); `captures.kind` adds `ring`                   | Beka, Temuri |
 | 2026-10-18 | Section 13: `TourExtensions` mounts `AskSpacePanel`; `/api/ask-space` body and tool output documented (additive, GH-20)                                 | Beka         |
 | 2026-10-18 | `verifier.ts` adds `ReviewClaimsResultSchema` and `ClaimSentiment` (additive, GH-24); `review_claims` columns unchanged                                 | Temuri       |
+| 2026-10-18 | `world.ts` adds `FloorPlanCalibrationSchema`; `FloorPlanSchema.rooms[]` gains optional `calibration` (additive, GH-18 v2, D-049); columns unchanged     | Temuri       |

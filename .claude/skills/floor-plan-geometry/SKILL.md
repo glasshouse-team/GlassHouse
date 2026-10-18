@@ -14,6 +14,8 @@ Already in the starter: `lib/geometry/slice.ts` (`sliceTriangle`, `sliceMesh`, `
 
 `lib/geometry/walls.ts` (slices + vote grid + straighten), `plan.ts` (footprints, poses, spot-graph placement), `home-plan.ts` (one plan per spot in its own frame), `svg.ts` (SVG + `planLayout` shared with the UI), `store-floorplans.ts` (storage, rows, anchors). `pnpm floorplans [--listing hero-2] [--version 2] [--dry-run --out dir]`. Room names come from `spot_label`; the top-down labeling step below is optional and unused in v1. UI: `components/floorplan/FloorPlanCard.tsx`, `FloorPlanView.tsx`, `Minimap.tsx` (`getPose={() => cameraPose(camera)}`), `data.ts` (`getListingFloorPlans`, `getWorldFloorPlan`).
 
+v2 as built (D-049): `rooms.ts` outlines each room around its spot (walls turned onto the axes, doorway gaps up to 1.2 m closed by bridging collinear pieces and running wall ends on to a perpendicular wall, 5 cm grid, flood fill from the spot, outer boundary traced, edges snapped back onto the wall lines, steps under 10 cm straightened). Order: "walls" (the walls close a loop), "bounded" (walls inside the v1 footprint, its sides closing what the scan left open, kept when at least 70% of the footprint), "box" (the footprint). Areas by the shoelace formula, 2-80 m2. The footprint still places the rooms. `calibrate.ts`: one host measurement (`POST /api/worlds/[id]/floorplan/calibrate { room, axis?: "width" | "length", meters }`), scale = meters / the room's width or length along its own axes, limited to 0.5-2; stored as `calibration` on the measured room in `floor_plans.rooms` with `scale_source: "host-calibrated"`; areas, total, the SVG scale bar and note use it, geometry stays in the 3D's meters; `pnpm floorplans` re-applies it to rebuilt outlines. Host control: `components/floorplan/CalibrateFloorPlan.tsx` inside WorldVersions.
+
 ## v1 (build this first, 2-3 h)
 
 1. **Load** the stored collider mesh in Node with `colliderToThree(bytes, metric_scale_factor)` (lib/geometry/collider.ts): it reads the GLB, applies `marbleToThree` + `floorHeight` from `lib/geometry/frame.ts` and returns merged triangles in meters with the floor at y = 0, matching the viewer exactly. GH-3: Marble colliders are uncompressed trimesh GLBs (130-215k triangles, no Draco, no node transforms), so no GLTFLoader or Draco decoder is needed. Each spot world (D-009) has its own collider: build one plan per spot; a whole-home plan needs the spots placed relative to each other.
@@ -28,7 +30,7 @@ Already in the starter: `lib/geometry/slice.ts` (`sliceTriangle`, `sliceMesh`, `
 
 - Close door openings: dilate the wall grid by about 0.5 m (closes 1 m gaps), flood-fill free space, keep regions over 2 m2, erode back. Doors are where the dilation added cells.
 - Polygons: d3-contour on each region, then simplify-js; area with the shoelace formula; total area.
-- Calibration: the host taps a door on the plan and enters its real width; store the ratio and apply it to the plan and the 3D (`scale_source: "host-calibrated"`).
+- Calibration: the host enters one real width or length of one room; store the ratio and apply it to the areas, scale bar and note of every plan of the version (`scale_source: "host-calibrated"`). The 3D and plan geometry keep the 3D's meters (D-049; was: tap a door and enter its width, scale the 3D too).
 
 ## Fallbacks
 
