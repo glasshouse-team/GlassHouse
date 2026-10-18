@@ -81,3 +81,7 @@ The Airbnb-like shell that every feature plugs into. It looks familiar, works on
 ## Notes for Claude Code
 
 Use shadcn components (Card, Sheet, Dialog, Calendar, Tabs). Ask for the booking box and `computeQuote` + tests first, then the pages.
+
+## Decision updates
+
+- 2026-10-18 D-043: Hosts add a home from the dashboard ("Add a home" dialog, `POST /api/listings`), published at once with default agent rules, then the capture page (was: listings only from the seed). Jira: pending
