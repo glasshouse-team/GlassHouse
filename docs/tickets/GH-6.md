@@ -73,4 +73,4 @@ Temuri writes the listing copy and house manual for both hero homes, since he sa
 
 ## Decision updates
 
-- 2026-10-18 D-009: Photograph each hero home as one 8-photo ring per room spot (middle of the room, chest height, 0.5x lens, turning right about 45 degrees; big rooms get 2 spots) plus a photo of each doorway, then `pnpm worlds generate --images ... --azimuths 0,45,...,315 --reconstruct`. About 5 spots per home: 8,000 credits, 6-9 minutes in parallel. Hero 1 v2 is the kitchen spot re-shot with the corner covered (was: a 60-90 s walkthrough video, about 5 minutes a world). Jira: pending
+- 2026-10-18 D-009: Photograph each hero home as one 8-photo ring per room spot (middle of the room, chest height, 0.5x lens, turning right about 45 degrees; big rooms get 2 spots) plus a photo of each doorway, then `pnpm worlds generate --images ... --azimuths 0,45,...,315 --reconstruct`. About 5 spots per home: 8,000 credits, 6-9 minutes in parallel. Hero 1 v2 is the kitchen spot re-shot with the corner covered (was: a 60-90 s walkthrough video, about 5 minutes a world). Jira: updated

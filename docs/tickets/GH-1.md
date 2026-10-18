@@ -138,4 +138,4 @@ Not judged: business model, pricing, global expansion. Spend no time on them.
 
 ## Decision updates
 
-- 2026-10-18 D-009: The 3D is a per-spot tour: one Marble world per room spot from an 8-photo ring; visitors look around from each spot and our doorway arrows switch rooms, like Zillow (was: a walkable whole-house 3D model). Jira: pending
+- 2026-10-18 D-009: The 3D is a per-spot tour: one Marble world per room spot from an 8-photo ring; visitors look around from each spot and our doorway arrows switch rooms, like Zillow (was: a walkable whole-house 3D model). Jira: updated
