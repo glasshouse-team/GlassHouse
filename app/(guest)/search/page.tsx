@@ -6,7 +6,7 @@ import { searchListings } from "@/lib/data/listings";
 
 export const metadata = { title: "Find a home · Glasshouse" };
 
-// Trip brief box (GH-14 wires the guest agent) above the card grid and simple filters. Owner: Beka.
+// Trip brief box (the guest agent's shortlist, GH-14) above the card grid and simple filters. Owner: Beka.
 export default async function SearchPage(props: PageProps<"/search">) {
   const filters = parseSearchFilters(await props.searchParams);
   const listings = await searchListings(filters);
@@ -15,6 +15,7 @@ export default async function SearchPage(props: PageProps<"/search">) {
     <div className="space-y-6">
       <h1 className="sr-only">Find a home</h1>
       <BriefBox />
+      <h2 className="pt-4 text-lg font-semibold">All homes</h2>
       <SearchFilters city={filters.city} guests={filters.guests} />
       <p className="text-sm text-muted-foreground">
         {listings.length === 1 ? "1 home" : `${listings.length} homes`}
