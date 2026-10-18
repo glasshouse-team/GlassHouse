@@ -15,6 +15,7 @@ import {
   BriefDraftSchema,
   briefLabel,
   matchCities,
+  nightlyBudgetCents,
   priceCeilingCents,
   toTripBrief,
 } from "@/tools/guest/brief";
@@ -67,15 +68,29 @@ export async function POST(request: Request) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      const send = (line: SearchLine) =>
-        controller.enqueue(encoder.encode(`${JSON.stringify(line)}\n`));
+      let open = true;
+      const send = (line: SearchLine) => {
+        if (!open || request.signal.aborted) return;
+        try {
+          controller.enqueue(encoder.encode(`${JSON.stringify(line)}\n`));
+        } catch {
+          open = false;
+        }
+      };
       try {
-        await search(text, send, started);
+        await search(text, send, started, request.signal);
       } catch (error) {
-        console.error("[search]", error);
-        send(fail("The guest agent couldn't finish this search. Try again in a moment."));
+        if (!request.signal.aborted) {
+          console.error("[search]", error);
+          send(fail("The guest agent couldn't finish this search. Try again in a moment."));
+        }
       } finally {
-        controller.close();
+        open = false;
+        try {
+          controller.close();
+        } catch {
+          // The guest already left.
+        }
       }
     },
   });
@@ -84,7 +99,12 @@ export async function POST(request: Request) {
   });
 }
 
-async function search(text: string, send: (line: SearchLine) => void, started: number) {
+async function search(
+  text: string,
+  send: (line: SearchLine) => void,
+  started: number,
+  signal: AbortSignal,
+) {
   const elapsed = () => Date.now() - started;
   if (text.length < 3) {
     send(
@@ -104,6 +124,7 @@ async function search(text: string, send: (line: SearchLine) => void, started: n
     prompt: asData("trip brief", text),
     output: Output.object({ schema: BriefDraftSchema }),
     providerOptions: { anthropic: { effort: "low", thinking: { type: "disabled" } } },
+    abortSignal: signal,
   });
   const mapped = toTripBrief(parsed.output);
   if ("problem" in mapped) {
@@ -133,6 +154,7 @@ async function search(text: string, send: (line: SearchLine) => void, started: n
     checkOut: brief.check_out,
     maxNightlyCents: priceCeilingCents(brief),
   };
+  const nightly = nightlyBudgetCents(brief);
   const [saved, candidates] = await Promise.all([
     db
       .from("trip_briefs")
@@ -168,11 +190,17 @@ async function search(text: string, send: (line: SearchLine) => void, started: n
     thinking: "off",
     effort: "low",
     maxSteps: 4,
-    logInputs: { search_listings: ["cities", "guests"], get_listing_facts: ["listingId"] },
+    logInputs: { search_listings: ["cities"], get_listing_facts: ["listingId"] },
   });
   const result = await agent.generate({
+    abortSignal: signal,
     prompt: [
       asData("trip brief", brief),
+      asData("budget in dollars", {
+        group_budget_per_night_usd: nightly === null ? null : nightly / 100,
+        searched_up_to_per_night_usd:
+          filters.maxNightlyCents === null ? null : filters.maxNightlyCents / 100,
+      }),
       asData("candidate homes", candidates.map(candidateCard)),
       "Rank the best homes for this brief, and say in a few words why the others are not on the list.",
     ].join("\n\n"),

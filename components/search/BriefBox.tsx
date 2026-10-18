@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, Mic, MicOff, Sparkles } from "lucide-react";
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { readLines, type SearchLine } from "@/components/search/search-stream";
 import { SearchResults } from "@/components/search/SearchResults";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ interface Recognition {
   continuous: boolean;
   onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
   onend: (() => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((event: { error?: string }) => void) | null;
   start(): void;
   stop(): void;
 }
@@ -44,6 +44,13 @@ export function BriefBox() {
   const [listening, setListening] = useState(false);
   const abort = useRef<AbortController | null>(null);
   const recognition = useRef<Recognition | null>(null);
+  useEffect(
+    () => () => {
+      abort.current?.abort();
+      recognition.current?.stop();
+    },
+    [],
+  );
   const canSpeak = useSyncExternalStore(
     noop,
     () => recognitionClass() !== undefined,
@@ -69,6 +76,7 @@ export function BriefBox() {
       if (!response.ok || !response.body) throw new Error("search failed");
       const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
       let buffer = "";
+      let answered = false;
       for (;;) {
         const { value, done } = await reader.read();
         if (done) break;
@@ -77,10 +85,15 @@ export function BriefBox() {
         buffer = rest;
         for (const line of lines) {
           if (line.type === "step") setSteps((current) => [...current, line.text]);
-          else if (line.type === "result") setResult(line);
-          else setError(line.message);
+          else {
+            answered = true;
+            if (line.type === "result") setResult(line);
+            else setError(line.message);
+          }
         }
       }
+      if (!answered && !controller.signal.aborted)
+        setError("The search ended before an answer came back. Try again.");
     } catch (caught) {
       if ((caught as Error).name !== "AbortError")
         setError("The search didn't go through. Check your connection and try again.");
@@ -109,7 +122,14 @@ export function BriefBox() {
       if (said) setBrief(before ? `${before} ${said}` : said);
     };
     r.onend = () => setListening(false);
-    r.onerror = () => setListening(false);
+    r.onerror = (event) => {
+      setListening(false);
+      setError(
+        event.error === "not-allowed"
+          ? "Allow the microphone in your browser to speak your brief."
+          : "Couldn't hear that. Try again or type your brief.",
+      );
+    };
     recognition.current = r;
     setListening(true);
     r.start();
@@ -150,7 +170,7 @@ export function BriefBox() {
                 size="icon"
                 onClick={toggleMic}
                 aria-pressed={listening}
-                aria-label={listening ? "Stop listening" : "Speak your brief"}
+                aria-label="Speak your brief"
               >
                 {listening ? <MicOff /> : <Mic />}
               </Button>

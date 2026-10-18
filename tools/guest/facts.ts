@@ -53,12 +53,31 @@ const CITABLE_FIELDS = new Set([
   "review_count",
 ]);
 
-/** True when the cited source exists on this listing. */
-export function resolveFactKey(factKey: string, candidate: Candidate): boolean {
+/** X-ray confidence a fact needs before it can back a reason. */
+const MIN_REASON_CONFIDENCE = 0.5;
+
+function supports(value: string | number | boolean): boolean {
+  if (typeof value === "string") return !/^(|false|no|none|0)$/i.test(value.trim());
+  return value !== false && value !== 0;
+}
+
+/**
+ * True when the cited source exists on this listing. As a reason, an X-ray fact must also be
+ * true (not false, 0, "no" or "none") and fairly sure; a concern may cite any fact.
+ */
+export function resolveFactKey(
+  factKey: string,
+  candidate: Candidate,
+  use: "reason" | "concern" = "reason",
+): boolean {
   const [kind, ...rest] = factKey.trim().split(":");
   const key = rest.join(":");
   if (!key) return false;
-  if (kind === "fact") return candidate.facts?.facts.some((f) => f.key === key) ?? false;
+  if (kind === "fact") {
+    const fact = candidate.facts?.facts.find((f) => f.key === key);
+    if (!fact) return false;
+    return use === "concern" || (supports(fact.value) && fact.confidence >= MIN_REASON_CONFIDENCE);
+  }
   if (kind === "amenity") return candidate.listing.amenities.includes(key);
   if (kind === "field") {
     const value = (candidate.listing as unknown as Record<string, unknown>)[key];
@@ -177,7 +196,8 @@ export function cleanShortlist(draft: ShortlistDraft, known: Map<string, Candida
     const concerns = item.concerns
       .filter((c) => c.text.trim())
       .map((c) => {
-        const cited = c.factKey && resolveFactKey(c.factKey, candidate) ? c.factKey.trim() : null;
+        const cited =
+          c.factKey && resolveFactKey(c.factKey, candidate, "concern") ? c.factKey.trim() : null;
         return {
           text: c.text.trim(),
           factKey: cited,

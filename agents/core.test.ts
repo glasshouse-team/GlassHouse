@@ -121,6 +121,12 @@ describe("createAgent", () => {
     expect(mock.doGenerateCalls[0].providerOptions).toMatchObject({ anthropic: { effort: "low" } });
   });
 
+  it("refuses to turn thinking off on Sonnet, which always thinks", () => {
+    expect(() =>
+      createAgent({ name: "guest", system: "Test agent", tools: { echo }, thinking: "off" }),
+    ).toThrow(/needs model: "bulk"/);
+  });
+
   it("can turn thinking off for fast answers on the bulk model", async () => {
     const mock = twoStepModel();
     await createAgent({

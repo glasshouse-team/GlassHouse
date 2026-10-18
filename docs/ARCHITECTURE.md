@@ -29,7 +29,7 @@ flowchart TB
 
 ## Request flows
 
-- **Search:** page sends the brief to `/api/search`; the guest agent parses it (Haiku), filters in SQL, ranks with X-ray facts (Sonnet), returns cited reasons; tool calls land in `events`.
+- **Search:** page sends the brief to `/api/search`; the guest agent parses it (Haiku), filters in SQL, ranks with X-ray facts (Haiku, thinking off, D-026), returns cited reasons; tool calls land in `events`.
 - **3D:** host uploads a walkthrough, `/api/captures` prepares it, `/api/worlds` starts a Marble job, the host page polls `/api/worlds/[id]/status`, which copies assets into `media/worlds/{id}/` when done; the host publishes; guests load the splat and collider mesh from our storage.
 - **Negotiation:** `/api/deals` opens a deal (list total from `computeQuote`, secrets in `deal_secrets`); `/api/deals/[id]/run` alternates agent turns, each money action checked by `validateOffer`; messages stream to the deal room through Realtime; `/api/deals/[id]/approve` creates the reservation.
 - **Verifier:** scripts or routes send images to Claude with Zod output schemas; results go to `listing_facts`, `gaps`, `anchors`, `floor_plans`.

@@ -102,21 +102,19 @@ export async function findCandidates(filters: CandidateFilters): Promise<Candida
 /** `search_listings`: widen the search (other cities, more budget); new homes join `known`. */
 export function searchListingsTool(
   known: Map<string, Candidate>,
-  base: Pick<CandidateFilters, "checkIn" | "checkOut">,
+  base: Pick<CandidateFilters, "checkIn" | "checkOut" | "guests">,
 ) {
   return tool({
     description:
-      "Search more homes, only to widen the search: other cities or a higher price. Returns homes not seen yet.",
+      "Search more homes, only to widen the search: other cities or a higher price. The group size stays the brief's. Returns homes not seen yet.",
     inputSchema: z.object({
       cities: z.array(z.enum(SEARCH_CITIES)),
-      guests: z.number().int().min(1).max(16),
       maxPricePerNightUsd: z.number().nullable(),
     }),
-    execute: async ({ cities, guests, maxPricePerNightUsd }) => {
+    execute: async ({ cities, maxPricePerNightUsd }) => {
       const found = await findCandidates({
         ...base,
         cities,
-        guests,
         maxNightlyCents:
           maxPricePerNightUsd === null ? null : Math.round(maxPricePerNightUsd * 100),
         limit: 10,

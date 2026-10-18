@@ -97,6 +97,8 @@ export function createAgent<TOOLS extends ToolSet, OUTPUT extends OutputInterfac
   options: CreateAgentOptions<TOOLS, OUTPUT>,
 ) {
   const display = AGENT_DISPLAY_NAME[options.name];
+  if (options.thinking === "off" && options.model !== "bulk")
+    throw new Error('thinking: "off" needs model: "bulk" (Sonnet 5.5 always thinks)');
 
   const onToolExecutionEnd: OnToolExecutionEndCallback<ToolSet> = async ({
     toolCall,

@@ -68,6 +68,25 @@ describe("resolveFactKey", () => {
     expect(resolveFactKey("photo:4", hero)).toBe(false);
   });
 
+  it("won't let a reason cite a false or unsure fact, but a concern may", () => {
+    const facts = {
+      facts: [
+        { key: "fireplace", value: false, evidence: ["photo_02"], confidence: 0.9 },
+        { key: "view_type", value: "none", evidence: ["photo_05"], confidence: 0.8 },
+        { key: "has_desk", value: true, evidence: ["photo_03"], confidence: 0.3 },
+        { key: "beds_counted", value: 3, evidence: ["photo_06"], confidence: 0.9 },
+      ],
+      contradictions: [],
+      missing_photos: [],
+    };
+    const checked = { ...hero, facts };
+    expect(resolveFactKey("fact:fireplace", checked)).toBe(false);
+    expect(resolveFactKey("fact:view_type", checked)).toBe(false);
+    expect(resolveFactKey("fact:has_desk", checked)).toBe(false);
+    expect(resolveFactKey("fact:beds_counted", checked)).toBe(true);
+    expect(resolveFactKey("fact:fireplace", checked, "concern")).toBe(true);
+  });
+
   it("labels the source for the chip", () => {
     expect(sourceLabel("fact:desk_near_window", hero)).toBe("Seen in photo 4");
     expect(sourceLabel("amenity:fireplace", hero)).toBe("Listed amenity");
