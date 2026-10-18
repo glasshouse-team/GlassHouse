@@ -6,10 +6,10 @@
  * and collider are disposed). Browser only: loaded through next/dynamic with ssr: false.
  */
 import { CameraControls, CameraControlsImpl, Html } from "@react-three/drei";
-import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
+import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Box3, DoubleSide, Shape, Vector3 } from "three";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Box3, DoubleSide, Shape, Vector3, type Group } from "three";
 import type { Vec3, World } from "@/lib/schemas/world";
 import { fetchBytes, preload } from "./assets";
 import {
@@ -115,7 +115,7 @@ function Controls() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const controls = ref.current;
-      const el = e.target as HTMLElement | null;
+      const el = e.target instanceof Element ? e.target : null;
       if (!controls || el?.closest("input, textarea, select, [contenteditable]")) return;
       const step = 0.25;
       const turn = 0.2;
@@ -301,6 +301,37 @@ function useChevron() {
   }, []);
 }
 
+/**
+ * drei <Html> that hides while its point is behind the camera (Html alone mirrors such
+ * points onto the screen, so a doorway behind you would show its label ahead).
+ */
+function FrontHtml({
+  position,
+  children,
+}: {
+  position: [number, number, number];
+  children: ReactNode;
+}) {
+  const point = useRef<Group>(null);
+  const el = useRef<HTMLDivElement>(null);
+  const [toPoint, view] = useMemo(() => [new Vector3(), new Vector3()], []);
+  useFrame(({ camera }) => {
+    if (!point.current || !el.current) return;
+    point.current.getWorldPosition(toPoint).sub(camera.position);
+    camera.getWorldDirection(view);
+    el.current.style.visibility = toPoint.dot(view) > 0.05 ? "visible" : "hidden";
+  });
+  return (
+    <group ref={point} position={position}>
+      <Html center zIndexRange={[20, 10]}>
+        <div ref={el} style={{ visibility: "hidden" }}>
+          {children}
+        </div>
+      </Html>
+    </group>
+  );
+}
+
 /** A doorway arrow on the floor plus a tappable label above it. */
 function Arrow({
   arrow,
@@ -315,6 +346,8 @@ function Arrow({
   const [hover, setHover] = useState(false);
   const yaw = (-arrow.azimuth * Math.PI) / 180; // (0,0,-1) turned by -az is (sin az, 0, -cos az)
   const active = hover || highlighted;
+  // An arrow unmounted under the pointer (room switch) must not leave the hand cursor behind.
+  useEffect(() => () => void (document.body.style.cursor = ""), []);
   return (
     <group position={[arrow.position.x, 0.03, arrow.position.z]} rotation={[0, yaw, 0]}>
       <mesh
@@ -345,7 +378,7 @@ function Arrow({
           side={DoubleSide}
         />
       </mesh>
-      <Html position={[0, 0.9, 0]} center zIndexRange={[20, 10]}>
+      <FrontHtml position={[0, 0.9, 0]}>
         <button
           type="button"
           onClick={onGo}
@@ -355,7 +388,7 @@ function Arrow({
         >
           {arrow.label} →
         </button>
-      </Html>
+      </FrontHtml>
     </group>
   );
 }
@@ -375,11 +408,11 @@ function AnchorMarkers({ worldId }: { worldId: string }) {
                 <sphereGeometry args={[0.05, 12, 12]} />
                 <meshBasicMaterial color="#2f6fde" depthTest={false} />
               </mesh>
-              <Html center position={[0, 0.12, 0]} zIndexRange={[20, 10]}>
+              <FrontHtml position={[0, 0.12, 0]}>
                 <span className="rounded bg-black/70 px-1.5 py-0.5 text-xs whitespace-nowrap text-white">
                   {a.name}
                 </span>
-              </Html>
+              </FrontHtml>
             </group>
           );
         })}
