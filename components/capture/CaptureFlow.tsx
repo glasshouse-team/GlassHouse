@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ClipRecorder, type ClipResult } from "./ClipRecorder";
-import { FallbackUpload, type FallbackClip } from "./FallbackUpload";
+import { FallbackUpload, type FallbackClip, type FallbackRing } from "./FallbackUpload";
 import { generationReadiness, roomStates, type Readiness, type RoomState } from "./logic/readiness";
 import { CLIP_MAX_SECONDS } from "./logic/recording";
 import { RingCapture, type RingResult } from "./RingCapture";
@@ -190,6 +190,24 @@ export function CaptureFlow({
     if (step === "intro") setStep("hub");
   }
 
+  // A ring picked from the gallery (D-045): no compass, so no heading per photo.
+  function onFallbackRing(ring: FallbackRing) {
+    const idx = Math.max(0, cleanRooms.indexOf(ring.room));
+    submit(
+      `${ring.room}: ${ring.photos.length} photos from the gallery`,
+      {
+        listingId,
+        kind: "ring",
+        roomMarkers: [{ room: ring.room, t: 0 }],
+        headingTrack: [],
+        qualityFlags: ["no_compass"],
+      },
+      ring.photos,
+      [idx],
+    );
+    if (step === "intro") setStep("hub");
+  }
+
   if (step === "capture" && stream && !allDone) {
     return mode === "ring" ? (
       <RingCapture
@@ -359,7 +377,11 @@ export function CaptureFlow({
       )}
 
       {(cameraError || step === "hub") && !allDone && (
-        <FallbackUpload rooms={cleanRooms} onClip={onFallback} />
+        <FallbackUpload
+          rooms={cleanRooms}
+          onClip={onFallback}
+          onRing={gap ? undefined : onFallbackRing}
+        />
       )}
 
       <UploadPanel jobs={jobs} />
