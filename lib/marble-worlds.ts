@@ -217,27 +217,67 @@ export interface ImportWorldInput extends SpotImport {
   log?: (line: string) => void;
 }
 
+/**
+ * Copying one asset into our storage failed. `permanent` errors (a required file over the
+ * 50 MB limit, a 4xx from the CDN) will fail the same way on every retry, so finalizeWorld
+ * marks the row `failed`; the others (network, CDN 5xx, a storage hiccup) are retried by
+ * the next poll.
+ */
+export class AssetCopyError extends Error {
+  constructor(
+    message: string,
+    public readonly permanent: boolean,
+  ) {
+    super(message);
+    this.name = "AssetCopyError";
+  }
+}
+
+/** A required asset (web splat or collider) is over the Supabase file limit (D-020). */
+export class AssetTooLargeError extends AssetCopyError {
+  constructor(
+    public readonly file: string,
+    public readonly bytes: number,
+  ) {
+    super(`${file} is ${(bytes / 1048576).toFixed(1)} MB, over the 50 MB limit (D-020)`, true);
+    this.name = "AssetTooLargeError";
+  }
+}
+
+/** A CDN status that will not change on a retry (4xx except timeout and rate limit). */
+function isPermanentHttpStatus(status: number): boolean {
+  return status >= 400 && status < 500 && status !== 408 && status !== 429;
+}
+
 async function downloadAndUpload(
   asset: AssetCopy,
   path: string,
   log: (line: string) => void,
 ): Promise<boolean> {
-  const res = await fetch(asset.url);
-  if (!res.ok) throw new Error(`Download of ${asset.file} failed (HTTP ${res.status})`);
-  const bytes = new Uint8Array(await res.arrayBuffer());
-  if (bytes.length > STORAGE_FILE_LIMIT) {
-    if (asset.required) {
-      throw new Error(
-        `${asset.file} is ${(bytes.length / 1048576).toFixed(1)} MB, over the 50 MB limit (D-020)`,
+  let bytes: Uint8Array;
+  try {
+    const res = await fetch(asset.url);
+    if (!res.ok) {
+      throw new AssetCopyError(
+        `Download of ${asset.file} failed (HTTP ${res.status})`,
+        isPermanentHttpStatus(res.status),
       );
     }
+    bytes = new Uint8Array(await res.arrayBuffer());
+  } catch (error) {
+    if (error instanceof AssetCopyError) throw error;
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new AssetCopyError(`Download of ${asset.file} failed: ${reason}`, false);
+  }
+  if (bytes.length > STORAGE_FILE_LIMIT) {
+    if (asset.required) throw new AssetTooLargeError(asset.file, bytes.length);
     log(`    skip ${asset.file}: ${(bytes.length / 1048576).toFixed(1)} MB is over 50 MB (D-020)`);
     return false;
   }
   const { error } = await supabaseAdmin()
     .storage.from(BUCKETS.media)
     .upload(path, bytes, { contentType: asset.contentType, upsert: true });
-  if (error) throw new Error(`Upload of ${path} failed: ${error.message}`);
+  if (error) throw new AssetCopyError(`Upload of ${path} failed: ${error.message}`, false);
   log(`    uploaded ${asset.file} (${(bytes.length / 1048576).toFixed(1)} MB)`);
   return true;
 }
@@ -540,7 +580,9 @@ export interface FinalizeResult {
  * saves `marble_world_id` as soon as it appears (operations expire; after that only
  * getWorld is used), copies every asset into OUR storage like importWorld, then sets
  * `ready` with `.eq("status", "generating")` and logs only when a row changed, so two
- * pollers never log twice. A failed generation becomes `failed` with its message.
+ * pollers never log twice. A failed generation, or an asset copy that can never succeed
+ * (AssetCopyError.permanent, e.g. a required file over 50 MB), becomes `failed` with its
+ * message and one `world.failed` event; a transient copy error is a pollError.
  * Never calls World Labs for a row that is not generating, or in demo mode.
  */
 export async function finalizeWorld(
@@ -646,7 +688,12 @@ export async function finalizeWorld(
     }
     return { row: (await load()) ?? row, changed, progress: 1, pollError: null };
   } catch (error) {
-    if (error instanceof MarbleError) {
+    // A copy that can never succeed (a required file over 50 MB, a 4xx from the CDN): the
+    // credits are spent either way, so say so once instead of a 500 on every poll.
+    if (error instanceof AssetCopyError && error.permanent) {
+      return fail(`Could not store the world: ${error.message}`);
+    }
+    if (error instanceof MarbleError || error instanceof AssetCopyError) {
       return {
         row: (await load()) ?? row,
         changed: false,

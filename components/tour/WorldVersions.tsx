@@ -52,13 +52,17 @@ export function WorldVersions({ listingId }: { listingId: string }) {
   const [publishing, setPublishing] = useState<number | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/worlds?listingId=${listingId}`, { cache: "no-store" });
-    if (!res.ok) {
-      setError(await readError(res));
-      return;
+    try {
+      const res = await fetch(`/api/worlds?listingId=${listingId}`, { cache: "no-store" });
+      if (!res.ok) {
+        setError(await readError(res));
+        return;
+      }
+      setPanel((await res.json()) as Panel);
+      setError(null);
+    } catch {
+      setError("Could not load the 3D versions. Check the connection and reload.");
     }
-    setPanel((await res.json()) as Panel);
-    setError(null);
   }, [listingId]);
 
   useEffect(() => {
@@ -71,25 +75,41 @@ export function WorldVersions({ listingId }: { listingId: string }) {
   const pollKey = pollIds.join(",");
   useEffect(() => {
     if (!pollKey) return;
-    const timer = setInterval(async () => {
-      await Promise.all(
+    // One round at a time: a status call that copies a finished world's splats can take
+    // minutes (maxDuration 300), so the next round is scheduled only after this one ends.
+    // Overlapping rounds would download and upload the same files twice.
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const round = async () => {
+      // allSettled: one failed status call must not skip the reload or go unhandled.
+      await Promise.allSettled(
         pollKey.split(",").map((id) => fetch(`/api/worlds/${id}/status`, { cache: "no-store" })),
       );
+      if (stopped) return;
       await load();
-    }, POLL_MS);
-    return () => clearInterval(timer);
+      if (!stopped) timer = setTimeout(round, POLL_MS);
+    };
+    timer = setTimeout(round, POLL_MS);
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
   }, [pollKey, load]);
 
   async function publish(version: VersionSummary) {
     setPublishing(version.version);
-    const res = await fetch(`/api/worlds/${version.publishRowId}/publish`, { method: "POST" });
-    if (!res.ok) setError(await readError(res));
+    try {
+      const res = await fetch(`/api/worlds/${version.publishRowId}/publish`, { method: "POST" });
+      if (!res.ok) setError(await readError(res));
+    } catch {
+      setError("Could not publish. Check the connection and try again.");
+    }
     await load();
     setPublishing(null);
   }
 
   return (
-    <section className="rounded-xl border p-4 text-sm">
+    <section className="min-w-0 rounded-xl border p-4 text-sm">
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-semibold">3D versions</h2>
         {panel?.demo && <Badge variant="secondary">Demo mode: saved worlds only</Badge>}
@@ -107,7 +127,7 @@ export function WorldVersions({ listingId }: { listingId: string }) {
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={v.thumbnailUrl}
-                alt={`Version ${v.version} thumbnail`}
+                alt={`Version ${v.version}${v.thumbnailSpot ? `: ${v.thumbnailSpot}` : ""}`}
                 className="h-16 w-24 shrink-0 rounded object-cover"
               />
             ) : (
@@ -125,7 +145,9 @@ export function WorldVersions({ listingId }: { listingId: string }) {
                 {v.done} of {v.total} room spots done
                 {v.status === "generating" && " · checks every 15 s, about 6-9 minutes a spot"}
               </p>
-              <p className="mt-1 truncate text-xs text-neutral-500">
+              {/* Wraps, never nowrap: on one line it stretched the dashboard column on
+                  phones and the whole page scrolled sideways (GH-10 QA). */}
+              <p className="mt-1 text-xs text-neutral-500 [overflow-wrap:anywhere]">
                 {v.spots
                   .map(
                     (s) =>
@@ -133,13 +155,15 @@ export function WorldVersions({ listingId }: { listingId: string }) {
                   )
                   .join(" · ")}
               </p>
-              <div className="mt-2 flex gap-2">
-                <Button asChild size="xs" variant="outline">
+              {/* 44 px tall on phones (touch target), compact from sm up. */}
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button asChild size="sm" variant="outline" className="h-11 sm:h-8">
                   <Link href={previewHref(listingId, v.version)}>Preview</Link>
                 </Button>
                 {v.status !== "published" && (
                   <Button
-                    size="xs"
+                    size="sm"
+                    className="h-11 sm:h-8"
                     disabled={v.status !== "ready" && v.status !== "archived"}
                     onClick={() => publish(v)}
                   >

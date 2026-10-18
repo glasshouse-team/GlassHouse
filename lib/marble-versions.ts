@@ -32,8 +32,14 @@ export interface VersionSummary {
   /** Spots finished (ready, published or archived) out of all spots. */
   done: number;
   total: number;
-  /** Thumbnail of the entry spot, else of the first spot that has one. */
+  /**
+   * A thumbnail that tells this version apart: the entry spot's when no other version
+   * shows that image, else the first spot whose image is this version's own (the re-shot
+   * room, since copied spots share files, D-031), else the entry spot's.
+   */
   thumbnailUrl: string | null;
+  /** The label of the spot the thumbnail shows. */
+  thumbnailSpot: string | null;
   createdAt: string;
   /** Credits this version cost (copied spots cost 0, D-031). */
   credits: number;
@@ -62,9 +68,18 @@ export function summarizeVersions(
   entrySpot?: string | null,
 ): VersionSummary[] {
   const byVersion = new Map<number, WorldVersionRow[]>();
+  /** Thumbnail URL -> the versions that show it. */
+  const thumbVersions = new Map<string, Set<number>>();
   for (const row of rows) {
     byVersion.set(row.version, [...(byVersion.get(row.version) ?? []), row]);
+    if (row.thumbnail_url) {
+      const versions = thumbVersions.get(row.thumbnail_url) ?? new Set<number>();
+      versions.add(row.version);
+      thumbVersions.set(row.thumbnail_url, versions);
+    }
   }
+  const ownThumb = (s: WorldVersionRow) =>
+    !!s.thumbnail_url && thumbVersions.get(s.thumbnail_url)?.size === 1;
   return [...byVersion.entries()]
     .sort(([a], [b]) => b - a)
     .map(([version, spots]) => {
@@ -74,14 +89,18 @@ export function summarizeVersions(
           a.spot.localeCompare(b.spot),
       );
       const entry = sorted[0];
+      const thumb =
+        sorted.find(ownThumb) ??
+        (entry.thumbnail_url ? entry : sorted.find((s) => s.thumbnail_url)) ??
+        null;
       return {
         version,
         status: versionStatus(sorted.map((s) => s.status)),
         spots: sorted,
         done: sorted.filter((s) => FINISHED.includes(s.status)).length,
         total: sorted.length,
-        thumbnailUrl:
-          entry.thumbnail_url ?? sorted.find((s) => s.thumbnail_url)?.thumbnail_url ?? null,
+        thumbnailUrl: thumb?.thumbnail_url ?? null,
+        thumbnailSpot: thumb ? (thumb.spot_label ?? thumb.spot) : null,
         createdAt: sorted.map((s) => s.created_at).sort()[sorted.length - 1],
         credits: sorted.reduce((n, s) => n + (s.cost_credits ?? 0), 0),
         publishRowId: entry.id,
