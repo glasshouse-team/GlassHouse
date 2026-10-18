@@ -30,31 +30,27 @@ function fakeTour(): TourApi {
 }
 
 describe("runTourAction", () => {
-  it("flies to known anchors and ignores unknown ones", async () => {
+  it("hands fly_to to the tour, which switches spots for anchors elsewhere", async () => {
     const tour = fakeTour();
     await runTourAction(tour, { type: "fly_to", anchorId: desk.id });
-    await runTourAction(tour, { type: "fly_to", anchorId: "missing" });
-    expect(tour.flyTo).toHaveBeenCalledTimes(1);
+    await runTourAction(tour, { type: "fly_to", anchorId: "33333333-3333-4333-8333-333333333333" });
+    expect(tour.flyTo).toHaveBeenNthCalledWith(1, desk.id);
+    expect(tour.flyTo).toHaveBeenNthCalledWith(2, "33333333-3333-4333-8333-333333333333");
   });
 
-  it("looks toward an anchor's look_at point", async () => {
+  it("looks toward an anchor in this spot", async () => {
     const tour = fakeTour();
     await runTourAction(tour, { type: "look_toward", anchorId: desk.id });
     expect(tour.lookAt).toHaveBeenCalledWith(desk.look_at);
+    expect(tour.flyTo).not.toHaveBeenCalled();
   });
 
   it("moves to another spot instead of aiming across worlds (D-009)", async () => {
+    // tour.anchors holds the current spot only, so the other spot's anchor is not in it.
     const tour = fakeTour();
-    const balcony: Anchor = {
-      ...desk,
-      id: "33333333-3333-4333-8333-333333333333",
-      world_id: "44444444-4444-4444-8444-444444444444",
-      name: "balcony door",
-      room: "Bedroom",
-    };
-    tour.anchors.push(balcony);
-    await runTourAction(tour, { type: "look_toward", anchorId: balcony.id });
-    expect(tour.flyTo).toHaveBeenCalledWith(balcony.id);
+    const otherSpot = "33333333-3333-4333-8333-333333333333";
+    await runTourAction(tour, { type: "look_toward", anchorId: otherSpot });
+    expect(tour.flyTo).toHaveBeenCalledWith(otherSpot);
     expect(tour.lookAt).not.toHaveBeenCalled();
   });
 
