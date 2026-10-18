@@ -43,7 +43,8 @@ flowchart TB
 | `/api/host-policies/[listingId]` | PUT           | Host saves the agent rules form                | GH-8   |
 | `/api/search`                    | POST          | Trip brief to ranked shortlist                 | GH-14  |
 | `/api/xray/[listingId]`          | POST          | Verifier facts and contradictions              | GH-9   |
-| `/api/captures`                  | POST          | Register upload, quality checks, prepare video | GH-10  |
+| `/api/captures`                  | POST          | Register a ring or clip and get signed uploads | GH-22  |
+| `/api/captures/[id]`             | PATCH         | Confirm the upload, log it                     | GH-22  |
 | `/api/worlds`                    | POST          | Start a Marble generation (new version)        | GH-10  |
 | `/api/worlds/[id]/status`        | GET           | Poll; download and store assets when done      | GH-10  |
 | `/api/worlds/[id]/publish`       | POST          | Publish a version                              | GH-10  |
@@ -78,7 +79,8 @@ flowchart TB
 media/listings/{listing_id}/photos/NN-{room}.jpg   (NN = sort order, e.g. 03-kitchen.jpg)
 media/worlds/{world_id}/scene-web.spz | scene-hq.spz | collider.glb | pano.jpg | floorplan.svg
 media/worlds/{world_id}/screens/{view_id}.jpg
-captures/{listing_id}/{capture_id}/raw.(webm|mp4)      (private)
+captures/{listing_id}/{capture_id}/raw.(webm|mp4|mov)  (private)
+captures/{listing_id}/{capture_id}/ring/NN.jpg         (private, ring + doorway photos)
 media/captures/{listing_id}/{capture_id}/prepared.mp4  (public, fetched by World Labs)
 ```
 

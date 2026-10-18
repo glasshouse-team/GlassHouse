@@ -209,7 +209,7 @@ export const SEED_LISTINGS: SeedListing[] = [
     host: "ana",
     title: "Family house with a garden, sleeps 6",
     description:
-      "A family house in Sighnaghi's old town with a walled garden and a barbecue. Sleeps 6 comfortably, a short walk from the town walls and the view over the Alazani Valley.",
+      "A family house in Sighnaghi's old town with a walled garden and a barbecue. Sleeps 6 comfortably, a short walk from the town walls, with the Alazani Valley below.",
     city: "Sighnaghi",
     neighborhood: "Old Town",
     property_type: "house",
@@ -492,7 +492,7 @@ export const SEED_LISTINGS: SeedListing[] = [
     host: "ana",
     title: "Old Tbilisi flat with a carved wooden balcony",
     description:
-      "A one-bedroom flat in a 19th-century house with a carved wooden balcony over a busy old-town street, a few minutes from the sulphur baths.",
+      "A one-bedroom flat in a 19th-century house with a carved wooden balcony over an old-town street, a few minutes from the sulphur baths.",
     city: "Tbilisi",
     neighborhood: "Old Tbilisi",
     property_type: "apartment",

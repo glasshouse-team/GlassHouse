@@ -222,7 +222,7 @@ Hero manuals are placeholders until Temuri sends the real ones (GH-7 data item 4
 
 ### Photos, reviews and availability
 
-- **Photos:** heroes use Temuri's own photos (with the owners' consent). The other ten use free-licence stock photos (Unsplash or Pexels licence), 4-6 per listing, named `NN-<room>.jpg` with the room in the name, credits recorded by GH-7. Never Airbnb photos.
+- **Photos:** heroes use Temuri's own photos (with the owners' consent). The other ten use free-licence stock photos (CC0, public domain, CC BY or CC BY-SA from Openverse or Wikimedia Commons, D-038), 4-6 per listing, named `NN-<room>.jpg` with the room in the name, credits recorded by GH-7. Never Airbnb photos.
 - **Reviews:** 4-6 per listing; `rating` and the six `sub_ratings` are integers 1-5; `listings.rating` is the average (one decimal) and `review_count` the count. Write them in plain English, varied in length.
   - Hero-1 claims that can be pinned in 3D (GH-24 needs at least 5): complaints "the shower pressure in the bathroom is weak", "the small bedroom gets cold at night; the fireplace only heats the living room", "the sofa in the living room is too short to sleep on"; praise "woke up to Mount Kazbek from the bedroom window", "the desk by the living-room window was perfect for video calls".
   - Elsewhere: `tbilisi-old-town-balcony-flat` "the bedroom window faces a noisy street".

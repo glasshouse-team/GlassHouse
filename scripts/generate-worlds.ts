@@ -9,6 +9,12 @@
  *   pnpm worlds wait <operation_id> [--timeout <minutes>]   (default 60; also for generate --wait)
  *   pnpm worlds get <world_id>
  *   pnpm worlds inspect <world_id> [--json]   (asset sizes, collider format, floor vs ground_plane_offset)
+ *   pnpm worlds --import hero-2 [--no-publish]   (same as `pnpm worlds import hero-2`; GH-10)
+ *     Imports every version of a hero home in docs/hero-worlds.json: GETs each spot world (no
+ *     generation), copies its assets into media/worlds/{row id}/, upserts one worlds row per
+ *     spot, then publishes the newest version. Idempotent: a re-run uploads nothing new.
+ *   pnpm worlds import <world_id> --listing <uuid> --version <n> --spot <key> [--label "..."] [--links '[...]']
+ *   pnpm worlds verify <hero-2 | listing uuid>   (rows, our-storage URLs return 200, collider floor)
  *
  * A generation takes about 6-9 minutes and 1,600 credits. Videos must be 30 s or shorter, so
  * prepare them first with `pnpm video:prepare` (sped up to 29 s, under 20 MB; GH-3). Local
@@ -20,6 +26,16 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { isDemoMode, settings } from "@/lib/env";
+import {
+  HeroHomeSchema,
+  heroImportPlan,
+  importVersion,
+  importWorld,
+  isOurStorageUrl,
+  publishVersion,
+} from "@/lib/marble-worlds";
+import { SpotLinkSchema } from "@/lib/schemas/world";
+import { supabaseAdmin } from "@/lib/supabase";
 import { probeVideo, VIDEO_MAX_SECONDS } from "@/lib/media";
 import {
   generateWorld,
@@ -234,6 +250,133 @@ async function inspect(worldId: string, asJson: boolean) {
   );
 }
 
+const HERO_WORLDS = path.join(process.cwd(), "docs/hero-worlds.json");
+
+async function heroHome(key: string) {
+  const file = JSON.parse(await readFile(HERO_WORLDS, "utf8")) as Record<string, unknown>;
+  if (!file[key]) throw new Error(`${key} is not in docs/hero-worlds.json`);
+  return HeroHomeSchema.parse(file[key]);
+}
+
+/** GH-10: imports every version of a hero home, newest first so older ones share its files (D-031). */
+async function importHero(key: string, publish: boolean) {
+  const home = await heroHome(key);
+  const plan = heroImportPlan(home);
+  console.log(`Importing ${key}: versions ${plan.map((v) => v.version).join(", ")}`);
+  for (const version of [...plan].reverse()) {
+    await importVersion(home.listingId, version, console.log);
+  }
+  if (!publish) return;
+  const latest = plan[plan.length - 1].version;
+  const { entryWorldId, changed } = await publishVersion(home.listingId, latest, home.entrySpot);
+  console.log(
+    `${changed ? "Published" : "Already published:"} v${latest}; listings.published_world_id = ${entryWorldId} (${home.entrySpot})`,
+  );
+}
+
+const URL_COLUMNS = [
+  "spz_url",
+  "spz_hq_url",
+  "collider_mesh_url",
+  "hq_mesh_url",
+  "pano_url",
+  "thumbnail_url",
+] as const;
+
+/**
+ * Checks what a page view will load: every asset URL is in our storage and returns 200, and
+ * each collider parses (colliderToThree) with a floor 0.5-2.5 m below the ring's camera.
+ * Makes no World Labs call, so it runs in DEMO_MODE too.
+ */
+async function verify(target: string) {
+  process.noDeprecation = true;
+  const { ceilingHeight, colliderToThree } = await import("@/lib/geometry/collider");
+  const listingId = /^[0-9a-f-]{36}$/i.test(target) ? target : (await heroHome(target)).listingId;
+  const db = supabaseAdmin();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  const { data: listing } = await db
+    .from("listings")
+    .select("slug,published_world_id")
+    .eq("id", listingId)
+    .single();
+  const { data: rows, error } = await db
+    .from("worlds")
+    .select("*")
+    .eq("listing_id", listingId)
+    .order("version")
+    .order("spot");
+  if (error) throw new Error(error.message);
+  console.log(
+    `${listing?.slug ?? listingId}: ${rows.length} worlds rows; published_world_id ${listing?.published_world_id}`,
+  );
+  console.table(
+    rows.map((r) => ({
+      id: r.id,
+      v: r.version,
+      spot: r.spot,
+      label: r.spot_label,
+      status: r.status,
+      links: (r.links as Array<{ to: string; azimuth: number }>)
+        .map((l) => `${l.to}@${l.azimuth}`)
+        .join(" "),
+      scale: r.metric_scale_factor?.toFixed(3),
+      gpo: r.ground_plane_offset?.toFixed(3),
+      cost: r.cost_credits,
+      files: r.spz_url?.includes(`/worlds/${r.id}/`) ? "own" : "shared",
+    })),
+  );
+
+  const failures: string[] = [];
+  const checked = new Map<string, number>();
+  for (const r of rows) {
+    const where = `v${r.version} ${r.spot}`;
+    for (const column of URL_COLUMNS) {
+      const url = r[column];
+      if (!url) {
+        if (column === "spz_url" || column === "collider_mesh_url")
+          failures.push(`${where}: no ${column}`);
+        continue;
+      }
+      if (!isOurStorageUrl(url, supabaseUrl))
+        failures.push(`${where}: ${column} is not in our storage: ${url}`);
+      if (!checked.has(url)) {
+        const res = await fetch(url, { method: "HEAD" }).catch(() => null);
+        checked.set(url, res?.status ?? 0);
+      }
+      if (checked.get(url) !== 200) failures.push(`${where}: ${column} HTTP ${checked.get(url)}`);
+    }
+  }
+  const ok = [...checked.values()].filter((s) => s === 200).length;
+  console.log(`\n${checked.size} distinct asset URLs in our storage checked, ${ok} return 200`);
+
+  console.log("\nColliders (three.js meters; floorY is the floor below the ring camera)");
+  const seen = new Set<string>();
+  for (const r of rows) {
+    if (!r.collider_mesh_url || seen.has(r.collider_mesh_url)) continue;
+    seen.add(r.collider_mesh_url);
+    const res = await fetch(r.collider_mesh_url);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    const { positions, index, floorY } = colliderToThree(bytes, r.metric_scale_factor ?? 1);
+    const ceiling = ceilingHeight(positions, index);
+    const gap = r.ground_plane_offset == null ? null : (floorY + r.ground_plane_offset) * 100;
+    const sane = floorY <= -0.5 && floorY >= -2.5 && ceiling > 1.8 && ceiling < 4.5;
+    console.log(
+      `  v${r.version} ${r.spot.padEnd(9)} ${(bytes.length / 1048576).toFixed(1)} MB, ${(index.length / 3).toLocaleString()} triangles, floorY ${floorY.toFixed(3)} m (gap to -ground_plane_offset ${gap == null ? "?" : `${gap.toFixed(1)} cm`}), ceiling ${ceiling.toFixed(2)} m: ${sane ? "ok" : "CHECK"}`,
+    );
+    if (!sane) {
+      failures.push(
+        `v${r.version} ${r.spot}: floor ${floorY.toFixed(2)} m, ceiling ${ceiling.toFixed(2)} m`,
+      );
+    }
+  }
+  if (failures.length) {
+    console.error(`\n${failures.length} problems:\n  ${failures.join("\n  ")}`);
+    process.exitCode = 1;
+  } else {
+    console.log("\nAll good: every asset is served from our storage.");
+  }
+}
+
 /** marble-1.1-plus on a 90-110 s walkthrough takes over 20 minutes; operations expire after 3 h. */
 const DEFAULT_TIMEOUT_MINUTES = 60;
 
@@ -281,13 +424,21 @@ async function main() {
       force: { type: "boolean", default: false },
       json: { type: "boolean", default: false },
       timeout: { type: "string" },
+      import: { type: "string" },
+      "no-publish": { type: "boolean", default: false },
+      listing: { type: "string" },
+      version: { type: "string" },
+      spot: { type: "string" },
+      label: { type: "string" },
+      links: { type: "string" },
     },
   });
-  const [command, id] = positionals;
+  // `pnpm worlds --import hero-2` is `pnpm worlds import hero-2`.
+  const [command, id] = values.import ? ["import", values.import] : positionals;
   const timeoutMinutes = Number(values.timeout ?? DEFAULT_TIMEOUT_MINUTES);
   if (!(timeoutMinutes > 0)) throw new Error(`--timeout must be a positive number of minutes`);
   // DEMO_MODE means no World Labs calls at all (CLAUDE.md), not only no paid ones.
-  if (command && isDemoMode() && !values.force) {
+  if (command && command !== "verify" && isDemoMode() && !values.force) {
     throw new Error(
       "DEMO_MODE=true: no World Labs calls. Use the saved versions, or pass --force.",
     );
@@ -300,6 +451,25 @@ async function main() {
   if (command === "wait" && id) return wait(id, timeoutMinutes);
   if (command === "get" && id) return printWorld(await getWorld(id));
   if (command === "inspect" && id) return inspect(id, values.json);
+  if (command === "verify" && id) return verify(id);
+  if (command === "import" && id) {
+    if (!values.listing) return importHero(id, !values["no-publish"]);
+    const version = Number(values.version);
+    if (!values.spot || !(version > 0)) {
+      throw new Error("Pass --listing <uuid> --version <n> --spot <key> [--label] [--links]");
+    }
+    const row = await importWorld({
+      listingId: values.listing,
+      version,
+      spot: values.spot,
+      spotLabel: values.label ?? values.spot,
+      links: SpotLinkSchema.array().parse(JSON.parse(values.links ?? "[]")),
+      marbleWorldId: id,
+      log: console.log,
+    });
+    console.log(JSON.stringify(row, null, 2));
+    return;
+  }
   if (command === "upload" && id) {
     const kind = /\.(mp4|mov|webm)$/i.test(id) ? "video" : "image";
     await sourceFor(id, kind);
@@ -363,6 +533,9 @@ async function main() {
   console.log("       pnpm worlds status|wait <operation_id>");
   console.log("       pnpm worlds get <world_id>");
   console.log("       pnpm worlds inspect <world_id> [--json]");
+  console.log("       pnpm worlds --import <hero key> [--no-publish]   (docs/hero-worlds.json)");
+  console.log("       pnpm worlds import <world_id> --listing <uuid> --version <n> --spot <key>");
+  console.log("       pnpm worlds verify <hero key | listing uuid>");
   process.exitCode = 1;
 }
 

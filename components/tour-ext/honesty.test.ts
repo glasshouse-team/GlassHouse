@@ -12,7 +12,7 @@ function gap(over: Partial<Gap> = {}): Gap {
     world_id: "22222222-2222-4222-8222-222222222222",
     room: "Kitchen",
     issue: "blank",
-    description: "The corner left of the cooktop is blank.",
+    description: "The photo-frame wall is AI-filled.",
     severity: 2,
     position: { x: 1.2, y: 0.9, z: -2 },
     view_dir: null,
