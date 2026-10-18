@@ -10,6 +10,8 @@ export interface UploadJob {
   error?: string;
   flags: string[];
   retry: () => void;
+  /** Set once the upload is confirmed; POST /api/worlds takes these ids (GH-10). */
+  captureId?: string;
 }
 
 function flagText(flag: string): string {
