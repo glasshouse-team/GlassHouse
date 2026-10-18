@@ -60,6 +60,8 @@ export function toTripBrief(draft: BriefDraft): {
   assumptions: string[];
   /** False when the group size is a guess: then it ranks but doesn't filter. */
   guestsStated: boolean;
+  /** Places the guest named that have no homes (Paris): the route says where it searched. */
+  elsewhere: string[];
 } {
   const assumptions: string[] = [];
   const named = cleanList(draft.destinations);
@@ -74,10 +76,6 @@ export function toTripBrief(draft: BriefDraft): {
     : named.filter((d) => matchCities([d]).length === 0 && vibeCities(d).length === 0);
   const destinations =
     seeded.length > 0 ? seeded : anywhere ? named : fitting.length > 0 ? fitting : [ANYWHERE];
-  if (elsewhere.length > 0)
-    assumptions.push(
-      `Glasshouse has no homes in ${elsewhere.join(" or ")} yet, only in ${SEARCH_CITIES.join(", ")}, so I searched ${seeded.length > 0 ? seeded.join(" and ") : "those"}.`,
-    );
   const stated = validGuests(draft.guests);
   const guessed = validGuests(draft.guests_guess);
   const guests = stated ?? guessed ?? DEFAULT_GUESTS;
@@ -104,6 +102,7 @@ export function toTripBrief(draft: BriefDraft): {
   return {
     assumptions,
     guestsStated: stated !== null,
+    elsewhere,
     brief: {
       destinations,
       check_in,
@@ -120,8 +119,16 @@ export function toTripBrief(draft: BriefDraft): {
       work_needs: draft.work_needs?.trim() || null,
       pets: Math.max(0, Math.round(draft.pets ?? 0)),
       accessibility: cleanList(draft.accessibility),
+      guests_assumed: stated === null,
     },
   };
+}
+
+/** The note for places with no homes, naming the cities actually searched ([] = everywhere). */
+export function elsewhereNote(elsewhere: string[], searched: string[]): string | null {
+  if (elsewhere.length === 0) return null;
+  const where = searched.length > 0 ? searched.join(" and ") : "all of Georgia";
+  return `Glasshouse has no homes in ${elsewhere.join(" or ")} yet (only Tbilisi, Kazbegi, Batumi and Sighnaghi), so I searched ${where}.`;
 }
 
 /** The whole group's budget per night in cents, or null when the brief has none. */

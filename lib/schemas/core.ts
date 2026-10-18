@@ -155,6 +155,8 @@ export const TripBriefSchema = z.object({
   work_needs: z.string().nullable(),
   pets: z.number().int().nonnegative(),
   accessibility: z.array(z.string()),
+  /** True when the group size was guessed from a vague brief, not stated (D-048). */
+  guests_assumed: z.boolean().optional(),
 });
 export type TripBrief = z.infer<typeof TripBriefSchema>;
 

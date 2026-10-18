@@ -14,6 +14,7 @@ import { formatCents } from "@/lib/utils";
 import {
   BriefDraftSchema,
   briefLabel,
+  elsewhereNote,
   nightlyBudgetCents,
   priceCeilingCents,
   searchCities,
@@ -133,7 +134,7 @@ async function search(
     abortSignal: signal,
   });
   // A vague brief is searched, not refused (D-048): assumptions go next to the results.
-  const { brief, assumptions, guestsStated } = toTripBrief(parsed.output);
+  const { brief, assumptions, guestsStated, elsewhere } = toTripBrief(parsed.output);
   const guest = DEMO_PROFILES.nino;
 
   const db = supabaseAdmin();
@@ -159,8 +160,7 @@ async function search(
       .insert({
         guest_id: guest.id,
         body: text,
-        // A guessed group size is marked, so later agents don't read it as stated.
-        parsed: { ...brief, guests_assumed: !guestsStated } as unknown as Json,
+        parsed: brief as unknown as Json,
       })
       .select("id")
       .single(),
@@ -193,6 +193,9 @@ async function search(
     }
   }
   const known = new Map<string, Candidate>(candidates.map((c) => [c.listing.id, c]));
+  // Named places with no homes: say where the search actually went, after any widening.
+  const placeNote = elsewhereNote(elsewhere, filters.cities);
+  if (placeNote) notes.unshift(placeNote);
   const where = filters.cities.length > 0 ? filters.cities.join(" and ") : "all of Georgia";
   send({ type: "step", text: `Checking ${candidates.length} homes in ${where}` });
   // Written while the agent ranks, so the feed shows the search start without adding time.

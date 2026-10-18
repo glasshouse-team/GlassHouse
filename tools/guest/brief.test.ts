@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ANYWHERE,
+  elsewhereNote,
   matchCities,
   searchCities,
   vibeCities,
@@ -55,6 +56,8 @@ describe("toTripBrief", () => {
     const family = toTripBrief({ ...demo, guests: null, guests_guess: 4 });
     expect(family.brief.guests).toBe(4);
     expect(family.guestsStated).toBe(false);
+    expect(family.brief.guests_assumed).toBe(true);
+    expect(toTripBrief(demo).brief.guests_assumed).toBe(false);
     expect(toTripBrief(demo).guestsStated).toBe(true);
     expect(family.assumptions[0]).toMatch(/Searched for 4 guests/);
     expect(toTripBrief({ ...demo, guests: null }).brief.guests).toBe(2);
@@ -107,12 +110,15 @@ describe("places we have no homes in", () => {
   it("searches the seeded cities instead and says so; the label and saved brief never say Paris", () => {
     const paris = toTripBrief({ ...demo, destinations: ["Paris"], fitting_cities: [] });
     expect(paris.brief.destinations).toEqual([ANYWHERE]);
-    expect(paris.assumptions[0]).toBe(
-      "Glasshouse has no homes in Paris yet, only in Tbilisi, Kazbegi, Batumi, Sighnaghi, so I searched those.",
+    expect(paris.elsewhere).toEqual(["Paris"]);
+    expect(elsewhereNote(paris.elsewhere, [])).toBe(
+      "Glasshouse has no homes in Paris yet (only Tbilisi, Kazbegi, Batumi and Sighnaghi), so I searched all of Georgia.",
     );
+    expect(elsewhereNote(["Paris"], ["Sighnaghi"])).toMatch(/so I searched Sighnaghi\.$/);
+    expect(elsewhereNote([], ["Tbilisi"])).toBeNull();
     const both = toTripBrief({ ...demo, destinations: ["Paris", "Tbilisi"], fitting_cities: [] });
     expect(both.brief.destinations).toEqual(["Tbilisi"]);
-    expect(both.assumptions[0]).toMatch(/no homes in Paris yet.*so I searched Tbilisi\.$/);
+    expect(both.elsewhere).toEqual(["Paris"]);
   });
 
   it("treats vibe words as hints, not unknown places, and drops unknown fitting cities", () => {
@@ -121,7 +127,7 @@ describe("places we have no homes in", () => {
       destinations: ["the mountains"],
       fitting_cities: ["Kazbegi", "Rome"],
     });
-    expect(hills.assumptions).toEqual([]);
+    expect(hills.elsewhere).toEqual([]);
     expect(hills.brief.destinations).toEqual(["Kazbegi"]);
     expect(toTripBrief({ ...demo, destinations: ["Georgia"] }).brief.destinations).toEqual([
       "Georgia",
