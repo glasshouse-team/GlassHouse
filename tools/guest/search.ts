@@ -24,7 +24,7 @@ export interface CandidateFilters {
 }
 
 const COLUMNS =
-  "id, slug, title, city, neighborhood, property_type, max_guests, bedrooms, beds, baths, base_price_cents, weekend_price_cents, cleaning_fee_cents, amenities, house_rules, description, rating, review_count, listing_photos(url, sort)";
+  "id, slug, title, city, neighborhood, property_type, max_guests, bedrooms, beds, baths, base_price_cents, weekend_price_cents, cleaning_fee_cents, amenities, house_rules, description, rating, review_count, listing_photos!inner(url, sort)";
 const Amenities = z.array(z.string()).catch([]);
 const Rules = HouseRulesSchema.catch({});
 
@@ -32,7 +32,10 @@ function check(error: { message: string } | null, what: string) {
   if (error) throw new Error(`Could not load ${what}: ${error.message}`);
 }
 
-/** Published homes that fit, best rated first, without homes booked or blocked on the dates. */
+/**
+ * Published homes that fit, best rated first, without homes booked or blocked on the dates.
+ * Only homes with at least one photo (the inner join): a just-added home (D-043) isn't ranked.
+ */
 export async function findCandidates(filters: CandidateFilters): Promise<Candidate[]> {
   const db = supabaseAdmin();
   let query = db

@@ -7,6 +7,8 @@ import { approvalPrompt } from "@/components/deal/format";
 import { AddHomeDialog } from "@/components/host/AddHomeDialog";
 import { AgentRulesForm } from "@/components/host/AgentRulesForm";
 import { ApprovalsQueue } from "@/components/host/ApprovalsQueue";
+import { HomeTabs } from "@/components/host/HomeTabs";
+import { initialHome } from "@/components/host/home-tabs";
 import { ListingDraft } from "@/components/host/ListingDraft";
 import { WorldVersions } from "@/components/tour/WorldVersions";
 import { RoleSwitcher } from "@/components/ui/role-switcher";
@@ -20,7 +22,7 @@ export const metadata = { title: "Host dashboard · Glasshouse" };
 
 // The host's dashboard (GH-8, Beka): what needs the host today, then one block per home.
 // The slot components are Temuri's (GH-5 contract): render them with real ids only.
-export default async function HostDashboardPage() {
+export default async function HostDashboardPage(props: PageProps<"/host/dashboard">) {
   const viewer = await getViewer();
   if (viewer.role !== "host") {
     return (
@@ -37,7 +39,10 @@ export default async function HostDashboardPage() {
     );
   }
 
-  const listings = await getHostListings(viewer.profileId);
+  const [listings, { home }] = await Promise.all([
+    getHostListings(viewer.profileId),
+    props.searchParams,
+  ]);
   const [policies, approvals] = await Promise.all([
     Promise.all(listings.map((listing) => getHostPolicy(listing.id))),
     getPendingApprovals(viewer.profileId),
@@ -74,60 +79,65 @@ export default async function HostDashboardPage() {
           You have no homes listed yet. Use Add a home to list your first one.
         </p>
       )}
-      {listings.map((listing, i) => {
-        const policy = policies[i];
-        return (
-          <section key={listing.id} className="space-y-4">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-lg font-semibold">{listing.title}</h2>
-              <Link
-                href={`/listing/${listing.slug}`}
-                className="text-sm text-brand underline-offset-4 hover:underline"
-              >
-                View listing
-              </Link>
-            </div>
-            <div className="grid gap-4 lg:grid-cols-2">
-              <AgentRulesForm
-                listingId={listing.id}
-                basePriceCents={listing.base_price_cents}
-                initial={
-                  policy && {
-                    negotiable: policy.negotiable,
-                    floor_nightly_cents: policy.floor_nightly_cents,
-                    max_discount_pct: policy.max_discount_pct,
-                    auto_accept_total_cents: policy.auto_accept_total_cents,
-                    allowed_terms: policy.allowed_terms.filter(
-                      (t): t is "late_checkout" | "early_checkin" =>
-                        t === "late_checkout" || t === "early_checkin",
-                    ),
-                  }
-                }
-              />
-              <div className="space-y-4">
-                <WorldVersions listingId={listing.id} />
-                <GapTasks listingId={listing.id} />
-                <CaptureLauncher listingId={listing.id} />
+      <HomeTabs
+        homes={listings.map(({ id, slug, title }) => ({ id, slug, title }))}
+        initial={initialHome(listings, home)}
+      >
+        {listings.map((listing, i) => {
+          const policy = policies[i];
+          return (
+            <section key={listing.id} className="space-y-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 className="text-lg font-semibold">{listing.title}</h2>
+                <Link
+                  href={`/listing/${listing.slug}`}
+                  className="text-sm text-brand underline-offset-4 hover:underline"
+                >
+                  View listing
+                </Link>
               </div>
-            </div>
-            <ListingDraft
-              listingId={listing.id}
-              current={{
-                id: listing.id,
-                title: listing.title,
-                description: listing.description,
-                property_type: listing.property_type,
-                max_guests: listing.max_guests,
-                bedrooms: listing.bedrooms,
-                beds: listing.beds,
-                baths: listing.baths,
-                amenities: listing.amenities,
-                house_rules: listing.house_rules,
-              }}
-            />
-          </section>
-        );
-      })}
+              <div className="grid gap-4 lg:grid-cols-2">
+                <AgentRulesForm
+                  listingId={listing.id}
+                  basePriceCents={listing.base_price_cents}
+                  initial={
+                    policy && {
+                      negotiable: policy.negotiable,
+                      floor_nightly_cents: policy.floor_nightly_cents,
+                      max_discount_pct: policy.max_discount_pct,
+                      auto_accept_total_cents: policy.auto_accept_total_cents,
+                      allowed_terms: policy.allowed_terms.filter(
+                        (t): t is "late_checkout" | "early_checkin" =>
+                          t === "late_checkout" || t === "early_checkin",
+                      ),
+                    }
+                  }
+                />
+                <div className="space-y-4">
+                  <WorldVersions listingId={listing.id} />
+                  <GapTasks listingId={listing.id} />
+                  <CaptureLauncher listingId={listing.id} />
+                </div>
+              </div>
+              <ListingDraft
+                listingId={listing.id}
+                current={{
+                  id: listing.id,
+                  title: listing.title,
+                  description: listing.description,
+                  property_type: listing.property_type,
+                  max_guests: listing.max_guests,
+                  bedrooms: listing.bedrooms,
+                  beds: listing.beds,
+                  baths: listing.baths,
+                  amenities: listing.amenities,
+                  house_rules: listing.house_rules,
+                }}
+              />
+            </section>
+          );
+        })}
+      </HomeTabs>
 
       <ActivityFeed filter="all" listingIds={listings.map((listing) => listing.id)} />
     </div>
