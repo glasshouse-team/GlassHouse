@@ -58,7 +58,9 @@ export function AgentRulesForm({ listingId, initial, basePriceCents }: AgentRule
       allowed_terms: terms,
     });
     if (!parsed.success) {
-      toast.error("Check the numbers: whole dollars or cents, and a discount from 0 to 100%.");
+      toast.error(
+        "Check the numbers: prices above $0 in dollars and cents, a discount from 0 to 100%.",
+      );
       return;
     }
     setSaving(true);

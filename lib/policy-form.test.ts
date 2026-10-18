@@ -15,8 +15,9 @@ describe("PolicyFormSchema", () => {
     expect(PolicyFormSchema.safeParse(form).success).toBe(true);
   });
 
-  it("rejects a zero floor, a discount above 100%, fractional cents and unknown extras", () => {
+  it("rejects a zero floor or auto-accept, a discount above 100%, fractional cents and unknown extras", () => {
     expect(PolicyFormSchema.safeParse({ ...form, floor_nightly_cents: 0 }).success).toBe(false);
+    expect(PolicyFormSchema.safeParse({ ...form, auto_accept_total_cents: 0 }).success).toBe(false);
     expect(PolicyFormSchema.safeParse({ ...form, max_discount_pct: 101 }).success).toBe(false);
     expect(PolicyFormSchema.safeParse({ ...form, floor_nightly_cents: 100.5 }).success).toBe(false);
     expect(PolicyFormSchema.safeParse({ ...form, allowed_terms: ["free_breakfast"] }).success).toBe(

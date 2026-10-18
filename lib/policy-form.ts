@@ -17,8 +17,11 @@ export const PolicyFormSchema = z.object({
   negotiable: z.boolean(),
   floor_nightly_cents: Cents.refine((v) => v > 0, "The floor must be above zero"),
   max_discount_pct: z.number().int().min(0).max(100),
-  /** null: always ask the host before booking. */
-  auto_accept_total_cents: Cents.nullable(),
+  /** null: always ask the host before booking. The database also requires > 0. */
+  auto_accept_total_cents: Cents.refine(
+    (v) => v > 0,
+    "Leave it empty or use a price above zero",
+  ).nullable(),
   allowed_terms: z.array(TermKey),
 });
 export type PolicyForm = z.infer<typeof PolicyFormSchema>;
