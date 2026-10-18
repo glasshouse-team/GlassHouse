@@ -3,16 +3,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { TourClient } from "@/components/tour/TourClient";
-import { loadTour } from "@/components/tour/data";
+import { loadTour, loadTourPlans } from "@/components/tour/data";
+import { spotFromSearch } from "@/components/tour/minimap";
 import { startAnchor } from "@/components/tour/spots";
 
 export const metadata: Metadata = { title: "3D tour · Glasshouse" };
 
 const Version = z.coerce.number().int().positive();
 
-// Per-spot 3D tour (GH-11, D-009): `?version=n` previews a version, `?anchor=<id>` starts at
-// an anchor, `?anchors=1` (dev only) turns on anchor mode. Assets come from our storage only;
-// nothing here calls World Labs. Beka's add-ons mount inside via <TourExtensions>.
+// Per-spot 3D tour (GH-11, D-009): `?version=n` previews a version, `?spot=<spot>` opens in that
+// room (FloorPlanCard links), `?anchor=<id>` starts at an anchor (wins over ?spot=), `?anchors=1`
+// (dev only) turns on anchor mode. The minimap's plans are GH-18 floor_plans rows. Assets come
+// from our storage only; nothing here calls World Labs. Beka's add-ons mount via <TourExtensions>.
 export default async function TourPage(props: PageProps<"/tour/[listingId]">) {
   const { listingId } = await props.params;
   const search = await props.searchParams;
@@ -39,6 +41,7 @@ export default async function TourPage(props: PageProps<"/tour/[listingId]">) {
   }
 
   const anchor = startAnchor(data.anchors, data.tour.worlds, one(search.anchor) ?? null);
+  const plans = await loadTourPlans(data.tour.worlds);
   return (
     <TourClient
       listingId={listingId}
@@ -46,7 +49,8 @@ export default async function TourPage(props: PageProps<"/tour/[listingId]">) {
       version={data.tour.version}
       preview={data.tour.preview}
       worlds={data.tour.worlds}
-      entrySpot={data.tour.entrySpot}
+      entrySpot={spotFromSearch(search.spot, data.tour.worlds) ?? data.tour.entrySpot}
+      plans={plans}
       anchors={data.anchors}
       gaps={data.gaps}
       startAnchorId={anchor?.id ?? null}

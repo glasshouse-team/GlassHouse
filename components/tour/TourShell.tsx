@@ -12,6 +12,7 @@ import { TourExtensions } from "@/components/tour-ext";
 import type { Anchor, Gap, World } from "@/lib/schemas/world";
 import { AnchorPanel } from "./AnchorPanel";
 import { useTour } from "./TourContext";
+import type { TourPlans } from "./minimap";
 import { TourOverlay } from "./TourOverlay";
 import { TourProvider } from "./TourProvider";
 import { Viewer, type AnchorPick } from "./Viewer";
@@ -28,6 +29,8 @@ export interface TourShellProps {
   gaps: Gap[];
   startAnchorId: string | null;
   anchorMode: boolean;
+  /** Floor plan per world id for the minimap (GH-18); rooms without one show no minimap. */
+  plans?: TourPlans;
 }
 
 function hasWebGL(): boolean {
@@ -62,7 +65,12 @@ export function TourShell(props: TourShellProps) {
             <Viewer onPick={props.anchorMode ? setPick : undefined} />
           </div>
         </ViewerBoundary>
-        <TourOverlay title={props.title} preview={props.preview} version={props.version} />
+        <TourOverlay
+          title={props.title}
+          preview={props.preview}
+          version={props.version}
+          plans={props.plans}
+        />
         {props.anchorMode && <AnchorPanel pick={pick} onDone={() => setPick(null)} />}
         <Extensions listingId={props.listingId} />
       </div>

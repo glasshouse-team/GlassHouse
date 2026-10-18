@@ -1,6 +1,6 @@
 /**
  * Server-side reads for the tour page and its launcher card (GH-11). Server only: uses the
- * service-role client, but returns only public-read tables (worlds, anchors, gaps).
+ * service-role client, but returns only public-read tables (worlds, anchors, gaps, floor_plans).
  * Asset URLs are our storage copies; the viewer never touches World Labs.
  */
 import {
@@ -11,8 +11,10 @@ import {
   type Gap,
   type World,
 } from "@/lib/schemas/world";
+import { getWorldFloorPlan } from "@/components/floorplan/data";
 import { hasSupabaseEnv, supabaseAdmin } from "@/lib/supabase";
 import { pickTourVersion, type TourVersion } from "./spots";
+import type { TourPlans } from "./minimap";
 
 export interface TourData {
   listing: { id: string; title: string };
@@ -67,6 +69,23 @@ export async function loadTour(
     anchors: parseRows<Anchor>(anchors, AnchorSchema),
     gaps: parseRows<Gap>(gaps, GapSchema),
   };
+}
+
+/**
+ * The minimap's floor plans (GH-18 floor_plans rows, newest ready one per spot world), keyed
+ * by world id. Spots without a plan are left out; a failed read means no minimap, not an error.
+ */
+export async function loadTourPlans(worlds: Pick<World, "id">[]): Promise<TourPlans> {
+  if (!hasSupabaseEnv()) return {};
+  const rows = await Promise.all(
+    worlds.map((w) =>
+      getWorldFloorPlan(w.id).catch((error: unknown) => {
+        console.error("[tour] floor plan", w.id, error);
+        return null;
+      }),
+    ),
+  );
+  return Object.fromEntries(rows.flatMap((plan) => (plan ? [[plan.world_id, plan]] : [])));
 }
 
 export interface LauncherData {
