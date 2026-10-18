@@ -29,6 +29,7 @@ import { loadPrompt } from "./load-prompt";
 export interface HostContext {
   listing: Listing;
   facts: XrayResult | null;
+  /** The house manual in "qa" mode; blank in "negotiate" mode (D-025). */
   houseManual: string;
   /** Present only when mode = "negotiate". */
   policy?: HostPolicy;
@@ -77,7 +78,9 @@ export interface HostContextRows {
 }
 
 export function toHostContext(rows: HostContextRows, mode: "qa" | "negotiate"): HostContext {
-  const listing = ListingSchema.parse(rows.listing);
+  const parsed = ListingSchema.parse(rows.listing);
+  // A negotiating host agent talks to the guest agent before any booking: no door codes (D-025).
+  const listing = mode === "negotiate" ? { ...parsed, house_manual: "" } : parsed;
   const context: HostContext = {
     listing,
     facts: parseFacts(rows.facts),
@@ -178,10 +181,21 @@ export async function buildGuestContext(dealId: string): Promise<GuestContext> {
 
 // ---------- System prompts from a context ----------
 
+/** A display name safe for a system prompt: no placeholders, tags or line breaks, 60 chars. */
+function promptName(name: string): string {
+  return (
+    name
+      .replace(/[{}<>\r\n]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 60) || "this person"
+  );
+}
+
 /** The host agent's negotiation prompt. It names allowed terms, never a policy number (D-019). */
 export function hostPrompt(context: HostContext, hostName: string): string {
   return loadPrompt("host", {
-    host_name: hostName,
+    host_name: promptName(hostName),
     listing_title: context.listing.title,
     allowed_terms: context.policy?.allowed_terms.join(", ") || "none",
   });
@@ -190,7 +204,7 @@ export function hostPrompt(context: HostContext, hostName: string): string {
 /** The guest agent's negotiation prompt, with the guest's own private target and maximum. */
 export function guestPrompt(context: GuestContext, guestName: string): string {
   return loadPrompt("guest", {
-    guest_name: guestName,
+    guest_name: promptName(guestName),
     target: context.guestTargetCents === null ? "not set" : formatCents(context.guestTargetCents),
     max: formatCents(context.guestMaxCents),
   });

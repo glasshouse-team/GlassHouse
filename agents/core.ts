@@ -75,7 +75,9 @@ type Settings<TOOLS extends ToolSet, OUTPUT extends OutputInterface> = ToolLoopA
 export function loggableInput(input: unknown, fields: string[] | undefined) {
   if (!fields?.length || !input || typeof input !== "object") return undefined;
   const source = input as Record<string, unknown>;
-  return Object.fromEntries(fields.filter((f) => f in source).map((f) => [f, source[f]]));
+  return Object.fromEntries(
+    fields.filter((f) => Object.hasOwn(source, f)).map((f) => [f, source[f]]),
+  );
 }
 
 function summaryFrom(output: unknown): string | null {
