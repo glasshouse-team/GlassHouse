@@ -102,7 +102,7 @@ askHome(input: {
 }>
 ```
 
-Server only. `/api/qa` and Beka's guest-agent tool `ask_host` (GH-14, GH-15) both call it; the stub exists so their code compiles before GH-16.
+Server only. `/api/qa` and Beka's guest-agent tool `ask_host` (GH-14, GH-15) both call it; built in GH-16. A declined price or private-setting question returns fixed text with `sources: []` and `forwarded: false` (D-036). With `askedBy: "guest_agent"` the feed shows "Guest agent asked the host agent a question" (no question text, D-024) and the host agent's reply. The host's reply to a forwarded question: `POST /api/qa/reply { messageId, answer, saveToManual }`.
 
 ## 10. Browser uploads: `createSignedUpload()` in `lib/supabase.ts` (Beka)
 
