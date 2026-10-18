@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ClipRecorder, type ClipResult } from "./ClipRecorder";
 import { FallbackUpload, type FallbackClip } from "./FallbackUpload";
+import { generationReadiness, roomStates, type Readiness, type RoomState } from "./logic/readiness";
 import { CLIP_MAX_SECONDS } from "./logic/recording";
 import { RingCapture, type RingResult } from "./RingCapture";
 import { RoomChecklist } from "./RoomChecklist";
@@ -28,6 +29,14 @@ const TIPS = [
   "Hold the phone level at chest height and move slowly.",
   "Stand in the middle of each room and turn a full circle.",
 ];
+
+const ROOM_STATE_TEXT: Record<RoomState, string> = {
+  todo: "To do",
+  uploading: "Uploading",
+  uploaded: "Uploaded",
+  failed: "Upload failed",
+  skipped: "Skipped",
+};
 
 /**
  * Guided capture on a phone (GH-22): instructions and permission, room checklist, then per spot
@@ -56,7 +65,6 @@ export function CaptureFlow({
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [motionDenied, setMotionDenied] = useState(false);
   const [starting, setStarting] = useState(false);
-  const [done, setDone] = useState<Set<number>>(new Set());
   const [skipped, setSkipped] = useState<Set<number>>(new Set());
   const [jobs, setJobs] = useState<UploadJob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -64,7 +72,10 @@ export function CaptureFlow({
   useEffect(() => () => streamRef.current?.getTracks().forEach((t) => t.stop()), []);
 
   const cleanRooms = rooms.map((r) => r.trim()).filter(Boolean);
-  const nextRoom = cleanRooms.findIndex((_, i) => !done.has(i));
+  // A room is handled once its upload runs or finishes, or it was skipped; a failed upload makes
+  // it the next room again (the job can also be retried from the upload list).
+  const states = roomStates(cleanRooms.length, jobs, skipped);
+  const nextRoom = states.findIndex((s) => s === "todo" || s === "failed");
   const allDone = nextRoom === -1;
 
   function allow() {
@@ -94,18 +105,22 @@ export function CaptureFlow({
     const run = () => {
       updateJob(key, { status: "uploading", progress: 0, error: undefined });
       uploadCapture(request, files, (p) => updateJob(key, { progress: p }))
-        .then(() => {
-          updateJob(key, { status: "done", progress: 1 });
-          setDone((prev) => new Set([...prev, ...roomIdx]));
-        })
+        .then((captureId) => updateJob(key, { status: "done", progress: 1, captureId }))
         .catch((e: Error) => updateJob(key, { status: "failed", error: e.message }));
     };
+    // The job starts as "uploading", so the host can go on to the next room right away.
     setJobs((prev) => [
       ...prev,
-      { key, label, progress: 0, status: "uploading", flags: request.qualityFlags, retry: run },
+      {
+        key,
+        label,
+        progress: 0,
+        status: "uploading",
+        flags: request.qualityFlags,
+        rooms: roomIdx,
+        retry: run,
+      },
     ]);
-    // Mark the rooms as captured now so the host can go on; a failed upload can be retried.
-    setDone((prev) => new Set([...prev, ...roomIdx]));
     run();
   }
 
@@ -179,7 +194,6 @@ export function CaptureFlow({
         onDone={onRing}
         onSkip={() => {
           setSkipped((prev) => new Set([...prev, nextRoom]));
-          setDone((prev) => new Set([...prev, nextRoom]));
           setStep("hub");
         }}
         onCancel={() => setStep("hub")}
@@ -198,14 +212,17 @@ export function CaptureFlow({
     );
   }
 
-  const uploading = jobs.some((j) => j.status === "uploading");
-  const uploaded = jobs.filter((j) => j.status === "done").length;
+  const captureIds = jobs.flatMap((j) => (j.status === "done" && j.captureId ? [j.captureId] : []));
+  const readiness = generationReadiness(cleanRooms, states);
 
   return (
     <div className="mx-auto max-w-xl space-y-6 px-4 py-6">
       <header className="space-y-1">
         <p className="text-sm text-muted-foreground">
-          <Link href="/host/dashboard" className="underline-offset-4 hover:underline">
+          <Link
+            href="/host/dashboard"
+            className="-my-2 inline-flex min-h-11 items-center underline-offset-4 hover:underline"
+          >
             Host dashboard
           </Link>{" "}
           / Capture
@@ -311,14 +328,16 @@ export function CaptureFlow({
                 <span>
                   {i + 1}. {r}
                 </span>
-                <span className={done.has(i) ? "text-brand" : "text-muted-foreground"}>
-                  {skipped.has(i)
-                    ? "Skipped"
-                    : done.has(i)
-                      ? "Captured"
-                      : i === nextRoom
-                        ? "Next"
-                        : "To do"}
+                <span
+                  className={
+                    states[i] === "uploaded"
+                      ? "text-brand"
+                      : states[i] === "failed"
+                        ? "text-destructive"
+                        : "text-muted-foreground"
+                  }
+                >
+                  {states[i] === "todo" && i === nextRoom ? "Next" : ROOM_STATE_TEXT[states[i]!]}
                 </span>
               </li>
             ))}
@@ -339,9 +358,10 @@ export function CaptureFlow({
 
       {step === "hub" && (
         <GenerateStep
+          listingId={listingId}
           demoMode={demoMode}
-          ready={allDone && uploaded > 0 && !uploading}
-          uploaded={uploaded}
+          readiness={readiness}
+          captureIds={captureIds}
         />
       )}
     </div>
@@ -375,38 +395,78 @@ function ModeCard({
   );
 }
 
+type GeneratePhase =
+  | { name: "idle" }
+  | { name: "sending" }
+  | { name: "requested"; count: number }
+  | { name: "error"; message: string };
+
 /**
- * "Generate my 3D home". TODO(GH-10): POST /api/worlds is still a 501 stub on main, so this step
- * does not start a generation yet. When GH-10 lands, call it here with the uploaded capture ids
- * (never in DEMO_MODE, and never on a page view: only from this button).
+ * "Generate my 3D home": POST /api/worlds with the uploaded capture ids, only from this button
+ * (never on a page view) and never in DEMO_MODE. D-038: the route records the request and a
+ * person runs the generation (credits); the new version shows on the host dashboard to preview
+ * and publish (GH-10).
  */
 function GenerateStep({
+  listingId,
   demoMode,
-  ready,
-  uploaded,
+  readiness,
+  captureIds,
 }: {
+  listingId: string;
   demoMode: boolean;
-  ready: boolean;
-  uploaded: number;
+  readiness: Readiness;
+  captureIds: string[];
 }) {
+  const [phase, setPhase] = useState<GeneratePhase>({ name: "idle" });
+
+  async function generate() {
+    setPhase({ name: "sending" });
+    try {
+      const res = await fetch("/api/worlds", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ listingId, captureIds }),
+      });
+      const json = (await res.json().catch(() => null)) as { message?: string } | null;
+      if (!res.ok) throw new Error(json?.message ?? `HTTP ${res.status}`);
+      setPhase({ name: "requested", count: captureIds.length });
+    } catch (e) {
+      setPhase({ name: "error", message: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
+  const count = captureIds.length;
   return (
     <section className="space-y-2 rounded-xl border p-4">
       <h2 className="font-semibold">Generate my 3D home</h2>
       {demoMode ? (
         <p className="text-sm text-muted-foreground">
           Demo mode: 3D generation is off, so the saved 3D tour stays in place. Your{" "}
-          {uploaded === 1 ? "capture is" : `${uploaded} captures are`} stored for later.
+          {count === 1 ? "capture is" : `${count} captures are`} stored for later.
+        </p>
+      ) : phase.name === "requested" ? (
+        <p className="text-sm text-brand" role="status">
+          Requested from {phase.count === 1 ? "1 capture" : `${phase.count} captures`}. The new 3D
+          version appears on your host dashboard to preview before guests see it.
         </p>
       ) : (
-        <p className="text-sm text-muted-foreground">
-          {ready
-            ? "All rooms are uploaded. 3D generation starts from the host dashboard once it is switched on (GH-10)."
-            : "Capture and upload every room first."}
+        <p className="text-sm text-muted-foreground">{readiness.message}</p>
+      )}
+      {phase.name === "error" && (
+        <p className="text-sm text-destructive" role="alert">
+          {phase.message}
         </p>
       )}
-      <Button disabled className="w-full">
-        Generate my 3D home
-      </Button>
+      {!demoMode && phase.name !== "requested" && (
+        <Button
+          className="w-full"
+          onClick={() => void generate()}
+          disabled={!readiness.ready || !count || phase.name === "sending"}
+        >
+          {phase.name === "sending" ? "Sending..." : "Generate my 3D home"}
+        </Button>
+      )}
     </section>
   );
 }

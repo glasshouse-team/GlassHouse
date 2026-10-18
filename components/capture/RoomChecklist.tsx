@@ -38,7 +38,13 @@ export function RoomChecklist({
               maxLength={60}
               onChange={(e) => onChange(rooms.map((r, k) => (k === i ? e.target.value : r)))}
             />
-            <Button variant="ghost" size="icon-sm" aria-label="Move up" onClick={() => move(i, -1)}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Move ${room || `room ${i + 1}`} up`}
+              onClick={() => move(i, -1)}
+              disabled={i === 0}
+            >
               ↑
             </Button>
             <Button

@@ -9,6 +9,10 @@ export interface UploadJob {
   status: "uploading" | "done" | "failed";
   error?: string;
   flags: string[];
+  /** Indexes of the rooms this capture covers. */
+  rooms: number[];
+  /** Set once the upload is confirmed (PATCH /api/captures/{id}). */
+  captureId?: string;
   retry: () => void;
 }
 

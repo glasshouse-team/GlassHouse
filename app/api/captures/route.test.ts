@@ -6,6 +6,7 @@ const state = vi.hoisted(() => ({
   listing: null as unknown,
   capture: null as unknown,
   files: [] as string[],
+  gapListing: null as string | null,
 }));
 vi.mock("@/lib/viewer", () => ({ getViewer: async () => state.viewer }));
 vi.mock("@/lib/data/listings", () => ({ getListing: async () => state.listing }));
@@ -15,6 +16,7 @@ vi.mock("./store", () => ({
   getCapture: async () => state.capture,
   setCaptureStatus: vi.fn(async () => {}),
   listCaptureFiles: async () => state.files,
+  gapListingId: async () => state.gapListing,
   signUploads: async (paths: string[]) =>
     paths.map((path) => ({
       bucket: "captures",
@@ -76,6 +78,7 @@ beforeEach(() => {
   state.listing = hero;
   state.capture = null;
   state.files = [];
+  state.gapListing = null;
   vi.mocked(insertCapture).mockClear();
   vi.mocked(setCaptureStatus).mockClear();
   vi.mocked(logEvent).mockClear();
@@ -117,6 +120,19 @@ describe("POST /api/captures", () => {
     state.listing = null;
     expect((await post(ring)).status).toBe(404);
     expect(insertCapture).not.toHaveBeenCalled();
+  });
+
+  it("only attaches a fill-in to a gap of this listing", async () => {
+    const fillIn = { ...clip, kind: "fill_in", gapId: "55555555-5555-4555-8555-555555555555" };
+    expect((await post(fillIn)).status).toBe(404);
+    state.gapListing = HERO_LISTINGS.hero2.id;
+    const other = await post(fillIn);
+    expect(other.status).toBe(403);
+    expect(other.json.error).toBe("not_your_gap");
+    expect(insertCapture).not.toHaveBeenCalled();
+    state.gapListing = hero.id;
+    expect((await post(fillIn)).status).toBe(201);
+    expect(vi.mocked(insertCapture).mock.calls[0]![0].gap_id).toBe(fillIn.gapId);
   });
 
   it("rejects a 90 s clip (World Labs takes 30 s, D-015)", async () => {
