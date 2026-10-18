@@ -107,9 +107,10 @@ export function RingCapture({
     }
   }
 
-  function finish() {
+  function finish(tapAt: number) {
     // Ignore a double tap that lands on "Save spot" right after the last photo.
-    if (busyRef.current || performance.now() - lastShotRef.current < 600) return;
+    // `tapAt` is the event's timeStamp, on the same clock as performance.now().
+    if (busyRef.current || tapAt - lastShotRef.current < 600) return;
     busyRef.current = true;
     const ordered = [...ring, ...doors];
     const withHeading = ordered.every((p) => p.heading !== null);
@@ -200,7 +201,7 @@ export function RingCapture({
                   Doorway photo
                 </Button>
               )}
-              <Button size="lg" onClick={finish}>
+              <Button size="lg" onClick={(e) => finish(e.timeStamp)}>
                 Save spot
               </Button>
             </>

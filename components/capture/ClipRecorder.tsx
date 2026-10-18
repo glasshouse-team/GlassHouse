@@ -125,11 +125,18 @@ export function ClipRecorder({
     };
     recorder.onstop = () => {
       setRecording(false);
-      const durationS = Math.min(
-        CLIP_MAX_SECONDS,
-        Math.round(((performance.now() - startRef.current) / 1000) * 10) / 10,
+      const durationS = Math.max(
+        0.1,
+        Math.min(
+          CLIP_MAX_SECONDS,
+          Math.round(((performance.now() - startRef.current) / 1000) * 10) / 10,
+        ),
       );
       const blob = new Blob(chunksRef.current, { type: baseMimeType(mimeType) });
+      if (blob.size === 0) {
+        setError("Nothing was recorded. Try again, or upload a clip instead.");
+        return;
+      }
       const flags: string[] = qualityFlags(historyRef.current);
       if (!samplesRef.current.length) flags.push("no_compass");
       onDone(
