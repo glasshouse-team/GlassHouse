@@ -1,7 +1,7 @@
 "use client";
 
 import { Eye, EyeOff } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { useTour } from "@/components/tour/TourContext";
 import { cn } from "@/lib/utils";
 import { markedGaps, showGapSpheres } from "./honesty";
@@ -15,13 +15,20 @@ import { markedGaps, showGapSpheres } from "./honesty";
 export function HonestyOverlay({ className }: { className?: string }) {
   const { ready, worldId, gaps, addOverlay } = useTour();
   const [on, setOn] = useState(false);
-  const count = markedGaps(gaps).length;
+  const marked = markedGaps(gaps);
+  const count = marked.length;
+  // Rebuild only when what is drawn changes, not when the provider hands out a new array
+  // or function with the same content (no flicker on provider re-renders).
+  const gapsKey = marked
+    .map((g) => `${g.id}@${g.position.x},${g.position.y},${g.position.z}r${g.radius_m}`)
+    .join("|");
+  const show = useEffectEvent(() => showGapSpheres(gaps, addOverlay));
 
   useEffect(() => {
     if (!on || !ready) return;
-    return showGapSpheres(gaps, addOverlay);
-    // worldId: a new spot means new gaps and a new scene, even if the arrays look alike.
-  }, [on, ready, worldId, gaps, addOverlay]);
+    return show();
+    // worldId: a new spot means a new scene, even if its gaps look alike.
+  }, [on, ready, worldId, gapsKey]);
 
   return (
     <div
