@@ -5,11 +5,11 @@
  * and invisible collider mount in <SpotScene>; switching spots remounts it (the old SplatMesh
  * and collider are disposed). Browser only: loaded through next/dynamic with ssr: false.
  */
-import { CameraControls, CameraControlsImpl, Html } from "@react-three/drei";
-import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
+import { CameraControls, CameraControlsImpl } from "@react-three/drei";
+import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
 import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Box3, DoubleSide, Shape, Vector3, type Group } from "three";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Box3, DoubleSide, Shape, Vector3 } from "three";
 import type { Vec3, World } from "@/lib/schemas/world";
 import { fetchBytes, preload } from "./assets";
 import {
@@ -19,6 +19,8 @@ import {
   splatPose,
   type SpotCollider,
 } from "./collider-mesh";
+import { FrontHtml } from "./FrontHtml";
+import { ReviewPins } from "./ReviewPins";
 import { LOOK_DISTANCE, useTourInternal } from "./TourProvider";
 import {
   EYE_HEIGHT,
@@ -281,7 +283,7 @@ function SpotWorld({
           onGo={() => void goToSpot(arrow.to)}
         />
       ))}
-      {anchorMode && <AnchorMarkers worldId={world.id} />}
+      {anchorMode ? <AnchorMarkers worldId={world.id} /> : <ReviewPins worldId={world.id} />}
     </>
   );
 }
@@ -299,37 +301,6 @@ function useChevron() {
     s.closePath();
     return s;
   }, []);
-}
-
-/**
- * drei <Html> that hides while its point is behind the camera (Html alone mirrors such
- * points onto the screen, so a doorway behind you would show its label ahead).
- */
-function FrontHtml({
-  position,
-  children,
-}: {
-  position: [number, number, number];
-  children: ReactNode;
-}) {
-  const point = useRef<Group>(null);
-  const el = useRef<HTMLDivElement>(null);
-  const [toPoint, view] = useMemo(() => [new Vector3(), new Vector3()], []);
-  useFrame(({ camera }) => {
-    if (!point.current || !el.current) return;
-    point.current.getWorldPosition(toPoint).sub(camera.position);
-    camera.getWorldDirection(view);
-    el.current.style.visibility = toPoint.dot(view) > 0.05 ? "visible" : "hidden";
-  });
-  return (
-    <group ref={point} position={position}>
-      <Html center zIndexRange={[20, 10]}>
-        <div ref={el} style={{ visibility: "hidden" }}>
-          {children}
-        </div>
-      </Html>
-    </group>
-  );
 }
 
 /** A doorway arrow on the floor plus a tappable label above it. */

@@ -1,11 +1,11 @@
 "use client";
 
 /**
- * HTML around the 3D view (GH-11): back link, room badge, Jump to room, HQ toggle, loading
- * and fade screens, errors, and the floor-plan minimap (top right). The bottom corners stay
+ * HTML around the 3D view (GH-11): back link, room badge, Jump to room, Reviews toggle (GH-24),
+ * HQ toggle, loading and fade screens, errors, and the floor-plan minimap (top right). The bottom corners stay
  * free for Beka's tour-ext: honesty toggle bottom left, Ask the space bottom right.
  */
-import { ArrowLeft, ImageOff, Sparkles, Video } from "lucide-react";
+import { ArrowLeft, ImageOff, MessageSquareQuote, Sparkles, Video } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -92,6 +92,7 @@ export function TourOverlay({
             </p>
           )}
           <RoomList />
+          <ReviewsToggle />
         </div>
         {/* Top right: HQ toggle and the floor-plan minimap. The bottom corners are tour-ext's. */}
         <div className="flex shrink-0 items-start gap-2">
@@ -150,6 +151,47 @@ function RoomList() {
         })}
       </ul>
     </nav>
+  );
+}
+
+/**
+ * Reviews toggle (GH-24): shows or hides the review pins. Top left under Jump to room, clear
+ * of the minimap (top right) and tour-ext's bottom corners. Hidden when the home has no pins.
+ */
+function ReviewsToggle() {
+  const { reviewPins, showReviews, setShowReviews, current, anchorMode } = useTourInternal();
+  if (anchorMode || reviewPins.length === 0) return null;
+  const here = reviewPins.filter((p) => p.worldId === current.id);
+  const count = (s: string) => here.filter((p) => p.pin.sentiment === s).length;
+  const parts = [
+    [count("positive"), "praise"],
+    [count("negative"), "to know"],
+    [count("neutral"), "noted"],
+  ] as const;
+  return (
+    <button
+      type="button"
+      aria-pressed={showReviews}
+      onClick={() => setShowReviews(!showReviews)}
+      className={cn(
+        PANEL,
+        "inline-flex h-9 w-fit items-center gap-2 px-3 text-sm font-medium hover:bg-black/75 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none",
+        showReviews && "bg-white text-neutral-900 hover:bg-white/90",
+      )}
+      title={showReviews ? "Hide review pins" : "Show what guests said, where they said it"}
+    >
+      <MessageSquareQuote className="size-4" aria-hidden />
+      Reviews
+      {/* Phones: the minimap (top right) leaves room for the word only. */}
+      <span className="hidden text-xs font-normal opacity-75 sm:inline">
+        {here.length === 0
+          ? "none in this room"
+          : parts
+              .filter(([n]) => n > 0)
+              .map(([n, word]) => `${n} ${word}`)
+              .join(" · ")}
+      </span>
+    </button>
   );
 }
 

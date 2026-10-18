@@ -1,6 +1,7 @@
-import { CircleAlert, Eye, ImageOff, ScanSearch } from "lucide-react";
+import { CircleAlert, Eye, ImageOff, MessageSquareWarning, ScanSearch } from "lucide-react";
 import Image from "next/image";
 import { z } from "zod";
+import { firstName } from "@/components/tour/review-pins";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getListingPhotos } from "@/lib/data/listings";
 import { ContradictionSchema, FactSchema } from "@/lib/schemas/verifier";
@@ -60,14 +61,43 @@ function Thumbs({ ids, photos, size }: { ids: string[]; photos: PhotoUrls; size:
   );
 }
 
+interface Complaint {
+  claim: string;
+  room: string | null;
+  author: string;
+}
+
+/**
+ * Negative review claims (GH-24, `pnpm reviews:split`): counted and listed, not matched to the
+ * listing text. No table or a failed read means none.
+ */
+async function reviewComplaints(listingId: string): Promise<Complaint[]> {
+  try {
+    const { data, error } = await supabaseAdmin()
+      .from("reviews")
+      .select("author_name, review_claims(claim, room, sentiment)")
+      .eq("listing_id", listingId)
+      .order("created_at");
+    if (error) return [];
+    return (data ?? []).flatMap((r) =>
+      (r.review_claims ?? [])
+        .filter((c) => c.sentiment === "negative")
+        .map((c) => ({ claim: c.claim, room: c.room, author: firstName(r.author_name) })),
+    );
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Listing page slot (GH-5 contract, built in GH-9). What the neutral Verifier saw in the photos:
  * facts with evidence, contradictions with the text, and what no photo shows.
  */
 export async function XrayPanel({ listingId }: { listingId: string }) {
-  const [{ data: row }, photoRows] = await Promise.all([
+  const [{ data: row }, photoRows, complaints] = await Promise.all([
     supabaseAdmin().from("listing_facts").select("*").eq("listing_id", listingId).maybeSingle(),
     getListingPhotos(listingId),
+    reviewComplaints(listingId),
   ]);
 
   const facts = Facts.parse(row?.facts ?? []);
@@ -171,6 +201,24 @@ export async function XrayPanel({ listingId }: { listingId: string }) {
           <ul className="list-disc space-y-0.5 pl-5 text-sm text-muted-foreground">
             {missing.map((item) => (
               <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {complaints.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="flex items-center gap-1.5 text-sm font-medium">
+            <MessageSquareWarning className="size-4" aria-hidden />
+            {complaints.length} {complaints.length === 1 ? "thing" : "things"} guests flagged in
+            reviews
+          </h3>
+          <ul className="space-y-0.5 pl-5 text-sm text-muted-foreground">
+            {complaints.map((c, i) => (
+              <li key={i} className="list-disc">
+                {c.room && <span className="font-medium text-foreground">{c.room}: </span>}
+                {c.claim} <span className="text-xs">({c.author})</span>
+              </li>
             ))}
           </ul>
         </div>
