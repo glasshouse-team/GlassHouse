@@ -36,7 +36,6 @@ export async function FloorPlanCard({ listingId }: { listingId: string }) {
         plan={plan}
         svgUrl={plan.svg_url}
         title={`Floor plan with ${rooms.join(", ")}`}
-        highlight={start.name}
         roomHrefs={roomHrefs}
       />
       <ul className="flex flex-wrap gap-2 text-sm">
