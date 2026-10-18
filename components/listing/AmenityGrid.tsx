@@ -80,12 +80,12 @@ function AmenityItem({ amenity }: { amenity: string }) {
   );
 }
 
-/** What this home offers: the first ten as an icon grid, the rest in a dialog. */
+/** Amenities: the first ten as an icon grid, the rest in a dialog. */
 export function AmenityGrid({ amenities }: { amenities: string[] }) {
   if (amenities.length === 0) return null;
   return (
     <section className="space-y-4">
-      <h2 className="text-lg font-semibold">What this home offers</h2>
+      <h2 className="text-lg font-semibold">Amenities</h2>
       <ul className="grid gap-3 sm:grid-cols-2">
         {amenities.slice(0, SHOWN).map((a) => (
           <AmenityItem key={a} amenity={a} />
@@ -98,7 +98,7 @@ export function AmenityGrid({ amenities }: { amenities: string[] }) {
           </DialogTrigger>
           <DialogContent className="max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>What this home offers</DialogTitle>
+              <DialogTitle>All {amenities.length} amenities</DialogTitle>
             </DialogHeader>
             <ul className="grid gap-3">
               {amenities.map((a) => (

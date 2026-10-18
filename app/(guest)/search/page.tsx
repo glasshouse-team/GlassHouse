@@ -13,6 +13,7 @@ export default async function SearchPage(props: PageProps<"/search">) {
 
   return (
     <div className="space-y-6">
+      <h1 className="sr-only">Find a home</h1>
       <BriefBox />
       <SearchFilters city={filters.city} guests={filters.guests} />
       <p className="text-sm text-muted-foreground">

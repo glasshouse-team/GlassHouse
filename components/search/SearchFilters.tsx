@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { SEARCH_CITIES } from "@/components/search/filters";
 
 const fieldClass =
-  "h-9 rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none";
+  "h-9 rounded-md border border-input bg-background px-3 text-base shadow-xs sm:text-sm focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none";
 
 /** City and guests filters: a plain GET form, so it works before any JavaScript loads. */
 export function SearchFilters({ city, guests }: { city?: string; guests?: number }) {

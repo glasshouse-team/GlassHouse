@@ -25,7 +25,7 @@ export function RoleSwitcher({ viewer }: { viewer: Viewer }) {
             value={role}
             aria-pressed={active}
             className={cn(
-              "rounded-full px-3 py-1.5 font-medium transition-colors",
+              "rounded-full px-3 py-2 font-medium transition-colors",
               active
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",

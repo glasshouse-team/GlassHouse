@@ -18,7 +18,6 @@ function Photo({ photo, title, sizes }: { photo: PhotoRow; title: string; sizes:
       src={photo.url}
       alt={photo.room_label ? `${title}: ${photo.room_label}` : title}
       fill
-      unoptimized
       sizes={sizes}
       className="object-cover"
     />

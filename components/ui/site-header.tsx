@@ -3,7 +3,7 @@ import Link from "next/link";
 import { RoleSwitcher } from "@/components/ui/role-switcher";
 import type { Viewer } from "@/lib/viewer";
 
-const linkClass = "text-muted-foreground hover:text-foreground";
+const linkClass = "py-2 text-muted-foreground hover:text-foreground";
 
 /** Logo, search entry, the host's dashboard link and the role switcher. */
 export function SiteHeader({ viewer }: { viewer: Viewer }) {
