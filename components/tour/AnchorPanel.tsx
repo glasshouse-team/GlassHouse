@@ -68,7 +68,7 @@ export function AnchorPanel({ pick, onDone }: { pick: AnchorPick | null; onDone:
   }
 
   return (
-    <aside className="pointer-events-auto absolute right-3 bottom-3 z-40 w-72 max-w-[calc(100vw-1.5rem)] space-y-2 rounded-xl bg-white/95 p-3 text-sm text-neutral-900 shadow-lg">
+    <aside className="pointer-events-auto absolute top-16 right-3 z-40 w-72 max-w-[calc(100vw-1.5rem)] space-y-2 rounded-xl bg-white/95 p-3 text-sm text-neutral-900 shadow-lg">
       <p className="font-semibold">Anchor mode: {spotLabel(current)}</p>
       {pick ? (
         <form onSubmit={save} className="space-y-2">
