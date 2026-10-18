@@ -21,6 +21,7 @@ vi.mock("@/lib/supabase", async (importOriginal) => ({
   supabaseAdmin: () => state.fake.client,
 }));
 vi.mock("@/lib/viewer", () => ({ getViewer: async () => state.viewer }));
+vi.mock("@/lib/events", () => ({ logEvent: vi.fn(async () => {}) }));
 vi.mock("@/lib/data/listings", () => ({
   getListing: async (id: string) =>
     id === LISTING ? { id: LISTING, host_id: HOST, title: "Tbilisi flat" } : null,
@@ -68,6 +69,7 @@ vi.mock("@/tools/verifier/gaps", async (importOriginal) => {
   };
 });
 
+import { logEvent } from "@/lib/events";
 import { checkSpotWorld, saveSpotCheck } from "@/tools/verifier/gaps";
 import { POST } from "./route";
 
@@ -77,6 +79,7 @@ const call = (id: string, body?: string) =>
 
 beforeEach(() => {
   vi.mocked(checkSpotWorld).mockClear();
+  vi.mocked(logEvent).mockClear();
   state.fake = createFakeSupabase();
   state.fake.tables.worlds = [{ id: WORLD, listing_id: LISTING, version: 1, spot: "kitchen" }];
   state.viewer = { role: "host", profileId: HOST, name: "Giorgi" };
@@ -119,5 +122,39 @@ describe("POST /api/worlds/[id]/gaps", () => {
     expect((await call(UNKNOWN)).status).toBe(404);
     expect((await call("nope")).status).toBe(404);
     expect(checkSpotWorld).not.toHaveBeenCalled();
+  });
+
+  it("logs one Verifier feed event per run, marked as a dry run", async () => {
+    expect((await call(WORLD)).status).toBe(200);
+    expect(logEvent).toHaveBeenCalledTimes(1);
+    const event = vi.mocked(logEvent).mock.calls[0]![0];
+    expect(event).toMatchObject({
+      action: "gaps.checked",
+      actor_name: "Verifier",
+      agent: "verifier",
+      listing_id: LISTING,
+      payload: { worldId: WORLD, spot: "kitchen", gaps: 1, dropped: 1, dryRun: true },
+    });
+    expect(event.summary).toContain("1 found");
+  });
+
+  it("logs nothing when the caller is refused or the world is unknown", async () => {
+    state.viewer = { role: "guest", profileId: HOST, name: "Nino" };
+    expect((await call(WORLD)).status).toBe(403);
+    state.viewer = { role: "host", profileId: HOST, name: "Giorgi" };
+    expect((await call(UNKNOWN)).status).toBe(404);
+    expect(logEvent).not.toHaveBeenCalled();
+  });
+
+  it("logs gaps.checked.failed and returns 500 when the check throws", async () => {
+    vi.mocked(checkSpotWorld).mockRejectedValueOnce(new Error("vision call failed"));
+    const res = await call(WORLD);
+    expect(res.status).toBe(500);
+    expect(logEvent).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(logEvent).mock.calls[0]![0]).toMatchObject({
+      action: "gaps.checked.failed",
+      actor_name: "Verifier",
+      listing_id: LISTING,
+    });
   });
 });
