@@ -24,6 +24,10 @@ Labels: ai, hours-3-5, must-have, verifier
 ## Needs from people
 
 - Seeded listings with photos (GH-7).
+- PR #37 review follow-ups (2026-10-18). `seed/PHOTOS.md` and `seed/data/` are Beka's (GH-7), so they are requested from him and not edited here:
+  - `tbilisi-sololaki-loft`: the description says "steep stairs up to the sleeping gallery", and the X-ray prompt treats a room named in the description that no photo supports as a contradiction. Since PR #37 the photo list has no gallery or stairs photo (04-sleeping-gallery was dropped for 04-kitchen and 05-rooftop-view). Fix it one of two ways: add a credited `06-sleeping-gallery.jpg` (Temuri uploads it, Beka adds the credit row), or Beka drops the stairs and gallery from the description and from the shot list's "must show". Then run `pnpm xray --listing tbilisi-sololaki-loft --runs 3` and confirm 0 contradictions.
+  - `tbilisi-vake-family-apartment` `05-desk.jpg`: Openverse lists it as rawpixel, CC0 1.0, with no named creator, so it does fit D-038. But it shows an office (whiteboard with a person's handwritten name, flag stand, wall TV), not a family flat. Proposed replacement: "The (Home)Office 2013" by PennPal, <https://www.flickr.com/photos/65225930@N00/8706643305>, CC BY 2.0 (via Openverse): a home desk under a window, no people. Temuri swaps the file in Storage (`media/listings/{id}/photos/05-desk.jpg`), and Beka updates the credit row.
+  - Beka still has to confirm the `seed/PHOTOS.md` edits Temuri made in PR #37; the PR was merged without his review.
 
 ---
 
