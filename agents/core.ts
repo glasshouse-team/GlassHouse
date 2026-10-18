@@ -105,8 +105,16 @@ export function createAgent<TOOLS extends ToolSet, OUTPUT extends OutputInterfac
     toolOutput,
     toolExecutionMs,
   }) => {
-    const ok = toolOutput.type === "tool-result";
-    const summary = ok
+    const returned = toolOutput.type === "tool-result";
+    // A tool may refuse with a normal result { ok: false } (D-019): log it as not ok, and keep
+    // its input out of the public feed, since a refused amount can bound a private limit.
+    const refused =
+      returned &&
+      typeof toolOutput.output === "object" &&
+      toolOutput.output !== null &&
+      (toolOutput.output as { ok?: unknown }).ok === false;
+    const ok = returned && !refused;
+    const summary = returned
       ? (summaryFrom(toolOutput.output) ?? `${display} used ${toolCall.toolName}`)
       : `${display}: ${toolCall.toolName} was refused or failed`;
     await logEvent({
@@ -120,7 +128,9 @@ export function createAgent<TOOLS extends ToolSet, OUTPUT extends OutputInterfac
       payload: {
         ok,
         ms: toolExecutionMs,
-        input: loggableInput(toolCall.input, options.logInputs?.[toolCall.toolName]),
+        input: ok
+          ? loggableInput(toolCall.input, options.logInputs?.[toolCall.toolName])
+          : undefined,
       },
     });
   };

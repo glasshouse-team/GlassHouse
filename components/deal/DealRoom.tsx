@@ -101,7 +101,24 @@ export function DealRoom(props: DealRoomProps) {
           if (row.success) setDeal(row.data);
         },
       )
-      .subscribe();
+      .subscribe(async (status) => {
+        if (status !== "SUBSCRIBED") return;
+        const [fresh, rows] = await Promise.all([
+          db.from("deals").select("*").eq("id", deal.id).maybeSingle(),
+          db.from("deal_messages").select("*").eq("deal_id", deal.id).order("created_at"),
+        ]);
+        const parsed = DealSchema.safeParse(fresh.data);
+        if (parsed.success) setDeal(parsed.data);
+        const loaded = (rows.data ?? []).flatMap((r) => {
+          const m = DealMessageViewSchema.safeParse(r);
+          return m.success ? [m.data] : [];
+        });
+        setMessages((current) => {
+          const ids = new Set(current.map((m) => m.id));
+          const merged = [...current, ...loaded.filter((m) => !ids.has(m.id))];
+          return merged.sort((a, b) => a.created_at.localeCompare(b.created_at));
+        });
+      });
     return () => {
       db.removeChannel(channel);
     };

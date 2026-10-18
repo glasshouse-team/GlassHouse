@@ -1,7 +1,7 @@
 import { after } from "next/server";
 import { z } from "zod";
 import { bookingProblem, stayRangeLabel } from "@/lib/booking";
-import { createDeal } from "@/lib/data/deals";
+import { createDeal, getLiveDealId } from "@/lib/data/deals";
 import { getAvailability, getListing } from "@/lib/data/listings";
 import { logEvent } from "@/lib/events";
 import { errorResponse, jsonError, parseJson } from "@/lib/http";
@@ -63,6 +63,16 @@ export async function POST(request: Request) {
         "Your target is already the list price: just book it.",
       );
 
+    const live = await getLiveDealId(listing.id, viewer.profileId);
+    if (live)
+      return Response.json(
+        {
+          error: "deal_exists",
+          id: live,
+          message: "You already have a negotiation for this home.",
+        },
+        { status: 409 },
+      );
     const id = await createDeal({
       listingId: listing.id,
       guestId: viewer.profileId,

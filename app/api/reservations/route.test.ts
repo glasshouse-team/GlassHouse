@@ -16,6 +16,7 @@ vi.mock("@/lib/data/listings", () => ({
 vi.mock("@/lib/data/reservations", () => ({
   hasOverlappingReservation: async () => state.overlap,
   createReservation: vi.fn(async () => "reservation-1"),
+  DatesTakenError: class DatesTakenError extends Error {},
 }));
 vi.mock("@/lib/events", () => ({ logEvent: vi.fn(async () => {}) }));
 
