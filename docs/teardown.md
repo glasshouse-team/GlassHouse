@@ -3,7 +3,7 @@
 Built from Airbnb's well-known public screens and flows, described in our own words. No screenshots were used, and none go in this repo. Nothing in the product copies Airbnb's name, logo, colors, photos or text: we copy patterns people recognize, not the brand or its wording.
 
 **Already in Airbnb with AI (never claim these as ours):** conversational search (with voice), review summaries, AI comparison of wishlisted homes, neighborhood pages, dynamic pricing, a top-rated-guest discount, AI listing summaries.
-**Only in Glasshouse:** agents acting for both sides, a neutral Verifier, walkable 3D homes with AI-filled areas flagged, floor plans from the 3D, check-in verification.
+**Only in Glasshouse:** agents acting for both sides, a neutral Verifier, a 3D tour of every room (one world per room spot, linked by doorway arrows) with AI-filled areas flagged, floor plans from the 3D, check-in verification.
 
 ## 1. Journey map
 
@@ -15,7 +15,7 @@ Built from Airbnb's well-known public screens and flows, described in our own wo
    3. Same page: **(agent)** a ranked shortlist of 3-5 cards, each with 2-3 reasons that cite the listing ("fireplace in the living room, photo 4", "100 Mbps fibre, house manual") and concerns ("no mountain view"). The normal card grid follows, with city and guests filters. Replaces: opening ten tabs and comparing by hand.
    4. Taps the top card: `/listing/[id]`.
    5. **(Verifier)** X-ray panel: facts seen in the photos, contradictions ("says sea view, no photo shows the sea") and missing photos ("no photo of the bathroom"). Replaces: squinting at photos and reading reviews to spot exaggerations.
-   6. "Walk through this home": `/tour/[listingId]`. Walk the 3D home, "Jump to room", AI-filled areas tinted amber. Replaces: a 30-photo lightbox.
+   6. "Walk through this home": `/tour/[listingId]`. Look around each room in 3D and follow the doorway arrows to the next (D-009), "Jump to room", AI-filled areas tinted amber. Replaces: a 30-photo lightbox.
    7. Floor plan card on the listing page (and the minimap in the tour): rooms with names and areas. Airbnb has none.
    8. Optional, in the tour: "Ask the space" ("Where would I work?"): **(agent)** the guest agent answers and flies the camera to the desk.
 2. **Guest decides**
@@ -26,14 +26,14 @@ Built from Airbnb's well-known public screens and flows, described in our own wo
    5. $480 is below the $490 auto-accept line, so the deal waits for the host (status `agreed_pending_host`).
    6. The host approves (journey 4, step 4). **(code)** A reservation is created from the deal with its price lines; the guest sees "Booked" and the trip page `/trip/[id]`. Payment is mocked with a "Confirm" dialog.
 3. **Host lists** (role switcher on Giorgi)
-   1. Host dashboard, "Capture": `/host/capture/[listingId]`. The phone records a 60-90 s walkthrough, room by room, with a coverage ring and brightness warnings. Replaces: a photographer or 30 phone photos.
+   1. Host dashboard, "Capture": `/host/capture/[listingId]`. The phone takes an 8-photo ring in the middle of each room (D-009), guided by a coverage ring and brightness warnings. Replaces: a photographer or 30 phone photos.
    2. The video is prepared and the 3D world is generated once per version (version 1), then stored in our Storage.
    3. **(Verifier)** Gap check: blank, smeared, stretched, invented or dark spots, pinned in 3D with screenshots. **(agent)** The host agent turns each gap into a task in plain words ("film the bathroom from the doorway for 10 seconds").
    4. The host films the fill-in clips; version 2 is generated and the coverage score goes up.
    5. **(Verifier)** X-ray on the photos and text before publishing ("you wrote 'sea view', but no photo shows the sea").
    6. **(code)** Floor plan from the 3D mesh; **(Verifier)** names the rooms.
    7. The host publishes a version; the listing page shows "Walk through this home" with the honesty overlay.
-   8. Nice to have: the host narrates the walkthrough and **(agent)** drafts the title, description and amenities (GH-25).
+   8. Nice to have: the host narrates each room and **(agent)** drafts the title, description and amenities (GH-25).
 4. **Host manages**
    1. `/host/dashboard`: a "Needs you" list at the top: deals waiting for approval, questions waiting, gap tasks.
    2. **(agent)** Routine questions (dog, parking, wifi, check-in time) were already answered with sources. The host answers only the forwarded ones and can tick "Save to house manual", so the agent knows next time. Replaces: answering the same five questions for every booking.

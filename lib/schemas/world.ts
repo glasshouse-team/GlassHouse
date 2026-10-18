@@ -8,7 +8,16 @@ import { z } from "zod";
 export const Vec3Schema = z.object({ x: z.number(), y: z.number(), z: z.number() });
 export type Vec3 = z.infer<typeof Vec3Schema>;
 
-// ---------- Worlds (one row per generated version of a whole house) ----------
+// ---------- Worlds (one row per room spot of a generated version, D-009) ----------
+
+/** A doorway arrow: the spot it leads to and its direction from this spot, in degrees
+ * clockwise from the spot's first ring photo. In three.js after marbleToThree it points
+ * along (sin az, 0, -cos az). */
+export const SpotLinkSchema = z.object({
+  to: z.string().min(1),
+  azimuth: z.number().min(0).max(360),
+});
+export type SpotLink = z.infer<typeof SpotLinkSchema>;
 
 export const WorldStatus = z.enum([
   "queued",
@@ -26,6 +35,12 @@ export const WorldSchema = z.object({
   id: z.uuid(),
   listing_id: z.uuid(),
   version: z.number().int().positive(),
+  /** Room spot key within the version, e.g. "kitchen"; unique per (listing, version). */
+  spot: z.string().min(1),
+  /** Label for arrows and Jump to room, e.g. "Kitchen". */
+  spot_label: z.string().nullable(),
+  /** Doorway arrows from this spot. */
+  links: z.array(SpotLinkSchema),
   status: WorldStatus,
   model: z.string().nullable(),
   input_kind: WorldInputKind.nullable(),
@@ -123,9 +138,9 @@ export const FloorPlanSchema = z.object({
 });
 export type FloorPlan = z.infer<typeof FloorPlanSchema>;
 
-// ---------- Captures (walkthroughs, fill-ins, check-ins) ----------
+// ---------- Captures (photo rings, walkthroughs, fill-ins, check-ins) ----------
 
-export const CaptureKind = z.enum(["walkthrough", "fill_in", "checkin"]);
+export const CaptureKind = z.enum(["walkthrough", "ring", "fill_in", "checkin"]);
 export const RoomMarkerSchema = z.object({ room: z.string(), t: z.number().nonnegative() });
 export const HeadingSampleSchema = z.object({
   t: z.number().nonnegative(),
