@@ -21,12 +21,15 @@ const RING_MAX_SIDE_PX = 4096;
  */
 async function toJpeg(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
-  const scale = Math.min(1, RING_MAX_SIDE_PX / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
+  try {
+    const scale = Math.min(1, RING_MAX_SIDE_PX / Math.max(bitmap.width, bitmap.height));
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  } finally {
+    bitmap.close();
+  }
   const blob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob(resolve, "image/jpeg", 0.9),
   );
@@ -118,7 +121,10 @@ export function FallbackUpload({
     // Taken one after another while turning: the capture time gives the turning order.
     files.sort((a, b) => a.lastModified - b.lastModified || a.name.localeCompare(b.name));
     try {
-      onRing({ photos: await Promise.all(files.map(toJpeg)), room });
+      // One photo at a time: eight 4096 px bitmaps at once can run a phone out of memory.
+      const photos: Blob[] = [];
+      for (const file of files) photos.push(await toJpeg(file));
+      onRing({ photos, room });
     } catch (e) {
       setError(`${(e as Error).message} Use JPEG photos.`);
     }
