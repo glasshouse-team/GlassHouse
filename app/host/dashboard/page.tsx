@@ -9,13 +9,14 @@ import { AgentRulesForm } from "@/components/host/AgentRulesForm";
 import { ApprovalsQueue } from "@/components/host/ApprovalsQueue";
 import { DeleteHomeButton } from "@/components/host/DeleteHomeButton";
 import { HomeTabs } from "@/components/host/HomeTabs";
+import { ListingPhotos } from "@/components/host/ListingPhotos";
 import { initialHome } from "@/components/host/home-tabs";
 import { ListingDraft } from "@/components/host/ListingDraft";
 import { WorldVersions } from "@/components/tour/WorldVersions";
 import { RoleSwitcher } from "@/components/ui/role-switcher";
 import { stayRangeLabel } from "@/lib/booking";
 import { getPendingApprovals } from "@/lib/data/deals";
-import { getHostListings } from "@/lib/data/listings";
+import { getHostListings, getListingPhotos } from "@/lib/data/listings";
 import { getHostPolicy } from "@/lib/data/policies";
 import { getViewer } from "@/lib/viewer";
 import { SEED_LISTINGS } from "@/seed/data/listings";
@@ -48,8 +49,9 @@ export default async function HostDashboardPage(props: PageProps<"/host/dashboar
     getHostListings(viewer.profileId),
     props.searchParams,
   ]);
-  const [policies, approvals] = await Promise.all([
+  const [policies, photos, approvals] = await Promise.all([
     Promise.all(listings.map((listing) => getHostPolicy(listing.id))),
+    Promise.all(listings.map((listing) => getListingPhotos(listing.id))),
     getPendingApprovals(viewer.profileId),
   ]);
 
@@ -106,6 +108,10 @@ export default async function HostDashboardPage(props: PageProps<"/host/dashboar
                   )}
                 </div>
               </div>
+              <ListingPhotos
+                listingId={listing.id}
+                photos={photos[i].map(({ id, url, room_label }) => ({ id, url, room_label }))}
+              />
               <div className="grid gap-4 lg:grid-cols-2">
                 <AgentRulesForm
                   listingId={listing.id}
