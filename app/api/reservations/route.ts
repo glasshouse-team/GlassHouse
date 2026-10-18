@@ -2,12 +2,12 @@ import { z } from "zod";
 import { bookingProblem, stayRangeLabel } from "@/lib/booking";
 import { getAvailability, getListing } from "@/lib/data/listings";
 import { createReservation, hasOverlappingReservation } from "@/lib/data/reservations";
-import { logEvent } from "@/lib/events";
 import { errorResponse, jsonError, parseJson } from "@/lib/http";
 import { computeQuote } from "@/lib/pricing";
 import { IsoDate } from "@/lib/schemas/core";
 import { formatCents } from "@/lib/utils";
 import { getViewer } from "@/lib/viewer";
+import { withEvent } from "@/tools/_withEvent";
 
 const BodySchema = z.object({
   listingId: z.uuid(),
@@ -44,7 +44,24 @@ export async function POST(request: Request) {
       checkOut: body.checkOut,
       overrides,
     });
-    const id = await createReservation({
+    const range = stayRangeLabel(body.checkIn, body.checkOut);
+    const book = withEvent<Parameters<typeof createReservation>, string>(
+      {
+        action: "reservation.created",
+        actorName: `${viewer.name} (guest)`,
+        actorType: "human",
+        summarize: () =>
+          `${viewer.name} booked ${listing.title}, ${range}, ${formatCents(quote.totalCents)}`,
+        scope: () => ({ listingId: listing.id }),
+        payload: (reservationId: string) => ({
+          reservationId,
+          nights: quote.nights,
+          totalCents: quote.totalCents,
+        }),
+      },
+      createReservation,
+    );
+    const id = await book({
       listing_id: listing.id,
       guest_id: viewer.profileId,
       check_in: body.checkIn,
@@ -58,14 +75,6 @@ export async function POST(request: Request) {
       status: "confirmed",
     });
 
-    await logEvent({
-      actor_type: "human",
-      actor_name: `${viewer.name} (guest)`,
-      action: "reservation.created",
-      listing_id: listing.id,
-      summary: `${viewer.name} booked ${listing.title}, ${stayRangeLabel(body.checkIn, body.checkOut)}, ${formatCents(quote.totalCents)}`,
-      payload: { reservationId: id, nights: quote.nights, totalCents: quote.totalCents },
-    });
     return Response.json({ id, quote }, { status: 201 });
   } catch (error) {
     return errorResponse(error);

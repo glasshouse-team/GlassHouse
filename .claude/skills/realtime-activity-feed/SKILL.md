@@ -14,6 +14,7 @@ when_to_use: The user mentions "activity feed", "log this action", "logEvent", "
 - Anything else: `logEvent({ actor_type, actor_name, agent?, action, summary, listing_id?, deal_id?, payload? })` from lib/events.ts, or wrap a function with `withEvent` (tools/_withEvent.ts). Server only; never throws.
 - `action`: dot-separated and stable, e.g. `deal.offer`, `deal.approved`, `world.ready`, `xray.done`, `qa.forwarded`, `gap.requested`.
 - `summary` style: actor first, past tense, concrete, at most 140 characters, no host secrets.
+- `payload` is public too: `events` is public-read and the feed drawer shows it to guests and hosts alike. Never put host policy numbers, guest limits or deal secrets in it.
   - "Guest agent offered $470 for Nov 9-13 (-$50)"
   - "Host agent countered at $495"
   - "Giorgi approved $480 for Nov 9-13"

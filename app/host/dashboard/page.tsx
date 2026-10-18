@@ -90,10 +90,7 @@ export default async function HostDashboardPage() {
         );
       })}
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Activity</h2>
-        <ActivityFeed filter="all" />
-      </section>
+      <ActivityFeed filter="all" listingIds={listings.map((listing) => listing.id)} />
     </div>
   );
 }
