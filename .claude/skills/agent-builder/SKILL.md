@@ -10,7 +10,7 @@ AI SDK is **v7** (`ai@7`, `@ai-sdk/anthropic@4`). Many examples online are v4/v5
 
 ## The pieces already in the repo
 
-- `createAgent` also takes `stopWhen` (extra stop rule next to `maxSteps`), `output` (`Output.object({ schema })` for a structured final answer) and `effort` ("low" for quick turns). Sonnet 5.5 ignores `temperature` and turns a forced `toolChoice` into "auto": check in code that the expected tool was called, and retry.
+- `createAgent` also takes `stopWhen` (extra stop rule next to `maxSteps`), `output` (`Output.object({ schema })` for a structured final answer) and `effort` ("low" for quick turns), and `thinking: "off"` (Haiku only; Sonnet 5.5 always thinks). Sonnet 5.5 ignores `temperature` and turns a forced `toolChoice` into "auto": check in code that the expected tool was called, and retry.
 
 - `createAgent({ name, system, tools, model, maxSteps, listingId, dealId, toolsContext })` in agents/core.ts wraps `ToolLoopAgent` (use `.generate()` in server loops, `.stream()` or `createAgentUIStreamResponse` for the UI). Every tool call is logged to the feed; a tool can set the feed line by returning `{ summary: "..." }`. Feed payloads are public, so tool inputs are logged only for fields listed in `logInputs` (D-024): never list a field that can hold a host limit or a guest maximum. Tested in agents/core.test.ts with a mock model.
 - `loadPrompt(name, vars)` in agents/load-prompt.ts fills `{{placeholders}}` in agents/prompts/*.md and throws if one is missing.
@@ -56,7 +56,7 @@ export const getListingFacts = tool({
 
 ## Ticket notes
 
-- **GH-14 search:** prompt `guest-search.md` (guest.md is for negotiation and needs `{{target}}`/`{{max}}`). Parse the brief with `bulkModel()` into `TripBriefSchema`; pre-filter in SQL (city, guests, availability, price up to 1.2x budget, max 30 rows); rank with `agentModel()` using `search_listings` and `get_listing_facts`; every reason cites a fact key or field; drop reasons without one. Under 10 s for the demo brief.
+- **GH-14 search:** prompt `guest-search.md` (guest.md is for negotiation and needs `{{target}}`/`{{max}}`). Parse the brief with `bulkModel()` into `TripBriefSchema`; pre-filter in SQL (city, guests, availability, price up to 1.2x budget, max 30 rows); rank with `bulkModel()` and `thinking: "off"` (D-026: Sonnet 5.5 always thinks and took 10-15 s) using `search_listings` and `get_listing_facts`; every reason cites a fact key or field; drop reasons without one. Under 10 s for the demo brief.
 - **GH-16 Q&A (Temuri):** `createAgent({ name: "host", system: loadPrompt("host-qa", { listing_title }), tools: { answer_question, forward_to_host } })` with `buildHostContext(id, "qa")`; facts, rules and manual go in the user message as JSON. Implement `askHome({ listingId, question, askedBy, ... })` in tools/host-qa/askHome.ts exactly as typed there (docs/CONTRACTS.md section 9) so the guest agent can ask (agent-to-agent).
 - **GH-20 Ask the space:** prompt `guest-space.md`. Tools return `{ summary, action, honestyNote? }` with `action` a `TourAction` (components/tour-ext/actions.ts) that the panel runs through `useTour()`; code, not the model, computes distances and the honesty note. Never name an object that has no anchor or fact. Mention open gaps near an anchor.
 - **GH-25 listing draft:** `draft_listing` with `bulkModel()` from transcript + frames + X-ray facts.
