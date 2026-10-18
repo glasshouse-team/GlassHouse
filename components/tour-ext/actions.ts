@@ -18,7 +18,11 @@ export const TourActionSchema = z.discriminatedUnion("type", [
 ]);
 export type TourAction = z.infer<typeof TourActionSchema>;
 
-/** Runs one action. Unknown anchors are ignored; the tool should not have returned them. */
+/**
+ * Runs one action. Unknown anchors are ignored; the tool should not have returned them.
+ * The tour is per spot (D-009): every spot is its own world, so an anchor in another spot's
+ * world is reached with flyTo, which switches spots and then turns to it.
+ */
 export async function runTourAction(tour: TourApi, action: TourAction): Promise<void> {
   switch (action.type) {
     case "fly_to":
@@ -26,7 +30,10 @@ export async function runTourAction(tour: TourApi, action: TourAction): Promise<
       return;
     case "look_toward": {
       const anchor = tour.anchors.find((a) => a.id === action.anchorId);
-      if (anchor) await tour.lookAt(anchor.look_at ?? anchor.position);
+      if (!anchor) return;
+      // Its coordinates belong to its own spot's world: aiming from here would point nowhere.
+      if (anchor.world_id !== tour.worldId) await tour.flyTo(anchor.id);
+      else await tour.lookAt(anchor.look_at ?? anchor.position);
       return;
     }
     case "highlight_room":

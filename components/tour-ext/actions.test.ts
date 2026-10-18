@@ -43,6 +43,21 @@ describe("runTourAction", () => {
     expect(tour.lookAt).toHaveBeenCalledWith(desk.look_at);
   });
 
+  it("moves to another spot instead of aiming across worlds (D-009)", async () => {
+    const tour = fakeTour();
+    const balcony: Anchor = {
+      ...desk,
+      id: "33333333-3333-4333-8333-333333333333",
+      world_id: "44444444-4444-4444-8444-444444444444",
+      name: "balcony door",
+      room: "Bedroom",
+    };
+    tour.anchors.push(balcony);
+    await runTourAction(tour, { type: "look_toward", anchorId: balcony.id });
+    expect(tour.flyTo).toHaveBeenCalledWith(balcony.id);
+    expect(tour.lookAt).not.toHaveBeenCalled();
+  });
+
   it("validates tool output before running it", () => {
     expect(TourActionSchema.safeParse({ type: "fly_to", anchorId: desk.id }).success).toBe(true);
     expect(TourActionSchema.safeParse({ type: "teleport" }).success).toBe(false);
