@@ -250,6 +250,45 @@ describe("roomOutline", () => {
     expect(own.area_m2).toBeCloseTo(12);
   });
 
+  it("uses a wall inside the box when it cuts the room down to a smaller rectangle", () => {
+    // The footprint runs 0.5 m past the real right wall (the next room seen through a door).
+    const walls: Wall[] = [
+      [-2, -1.5, 2, -1.5],
+      [1.5, -1.5, 1.5, 1.5],
+      [-2, 1.5, -2, -1.5], // the top side is open
+    ];
+    const fallback = { angle: 0, minX: -2, maxX: 2, minZ: -1.5, maxZ: 1.5 };
+    const o = roomOutline(walls, 0, { fallback })!;
+    expect(o.method).toBe("bounded");
+    expect(o.area_m2).toBeCloseTo(10.5, 2);
+  });
+
+  it("follows an L inside the box when the scan left one side open, turned or not", () => {
+    const open = lWalls().slice(0, -1); // no left wall
+    for (const deg of [0, 30]) {
+      const fallback = { angle: deg * DEG, minX: -2, maxX: 3, minZ: -2, maxZ: 2 };
+      const o = roomOutline(turn(open, deg * DEG), deg * DEG, { fallback })!;
+      expect(o.method).toBe("bounded");
+      expect(o.area_m2).toBeCloseTo(16, 2);
+    }
+  });
+
+  it("does not count the next room through a wide opening as part of this one", () => {
+    const walls: Wall[] = [
+      [-2, -1.5, 6, -1.5],
+      [-2, 1.5, 6, 1.5],
+      [-2, -1.5, -2, 1.5],
+      [2, -1.5, 2, -1], // a 2 m opening into the room at +x
+      [2, 1, 2, 1.5],
+      [6, -1.5, 6, 1.5],
+    ];
+    expect(roomOutline(walls, 0)!.area_m2).toBeCloseTo(24, 2); // no footprint: both rooms
+    const fallback = { angle: 0, minX: -2, maxX: 2, minZ: -1.5, maxZ: 1.5 };
+    const o = roomOutline(walls, 0, { fallback })!;
+    expect(o.method).not.toBe("walls");
+    expect(o.area_m2).toBeCloseTo(12, 2);
+  });
+
   it("falls back for degenerate input", () => {
     expect(roomOutline([], 0)).toBeNull();
     expect(roomOutline([[0, 0, 0, 0]], 0)).toBeNull();

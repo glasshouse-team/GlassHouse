@@ -95,6 +95,8 @@ export interface OrientedBox {
   maxZ: number;
 }
 
+const boxArea = (b: OrientedBox) => (b.maxX - b.minX) * (b.maxZ - b.minZ);
+
 export function boxCorners(b: OrientedBox): Point2[] {
   return (
     [
@@ -121,6 +123,8 @@ export interface OutlineOptions {
   maxArea: number;
   /** A "bounded" outline must keep at least this share of the box's area (else: the box). */
   minBoundedShare: number;
+  /** A "walls" outline bigger than this share of the given fallback box leaked into a neighbour. */
+  maxWallsShare: number;
   /** Steps in the outline shallower than this are straightened out (meters): scan noise. */
   minJog: number;
   /** Bounding box to fall back on (e.g. the v1 footprint); else the box of the wall points. */
@@ -135,6 +139,7 @@ export const DEFAULT_OUTLINE_OPTIONS: OutlineOptions = {
   minArea: 2,
   maxArea: 80,
   minBoundedShare: 0.7,
+  maxWallsShare: 1.3,
   minJog: 0.1,
 };
 
@@ -525,7 +530,8 @@ function boxLines(b: OrientedBox): { h: Line[]; v: Line[] } {
  * The room around the spot (see the file comment). `angle` is the room's main wall angle
  * (walls.ts). Tries, in order: (1) "walls": the walls alone close a loop around the spot; (2)
  * "bounded": the walls inside the fallback box, its sides closing what the scan left open, when
- * that keeps at least `minBoundedShare` of the box and is not just the box; (3) "box": the
+ * that keeps at least `minBoundedShare` of the box and is not just the box (a "walls" loop over
+ * `maxWallsShare` of a given fallback box leaked into the next room and goes this way too); (3) "box": the
  * fallback box itself, else the box of the wall points. Null only with nothing to fall back on.
  */
 export function roomOutline(
@@ -556,7 +562,11 @@ export function roomOutline(
   if (near.length >= 2) {
     const closers = closeGaps(h, v, opts.maxGap, opts.offsetTol);
     const closed = fillOutline([...h, ...closers.h], [...v, ...closers.v], other, opts);
-    if (closed) return result(toOuter(closed), "walls");
+    // With a footprint to compare against, a much bigger loop ran through a wide opening into
+    // the next room (an open kitchen and living room): use the footprint's walls instead.
+    const leaked =
+      closed && opts.fallback && polygonArea(closed) > opts.maxWallsShare * boxArea(opts.fallback);
+    if (closed && !leaked) return result(toOuter(closed), "walls");
   }
   if (!box) return null;
   // Bounded: only when the box is in the walls' turned frame (true for the v1 footprint).
@@ -567,8 +577,10 @@ export function roomOutline(
     const iv = [...v.filter((l) => within(l, box.minX, box.maxX)), ...sides.v];
     const closers = closeGaps(ih, iv, opts.maxGap, opts.offsetTol);
     const bounded = fillOutline([...ih, ...closers.h], [...iv, ...closers.v], other, opts);
-    const boxArea = (box.maxX - box.minX) * (box.maxZ - box.minZ);
-    if (bounded && bounded.length > 4 && polygonArea(bounded) >= opts.minBoundedShare * boxArea)
+    const area = bounded ? polygonArea(bounded) : 0;
+    // A smaller rectangle (a wall inside the box) counts; only the box itself does not.
+    const isBox = bounded?.length === 4 && Math.abs(area - boxArea(box)) < 1e-6;
+    if (bounded && !isBox && area >= opts.minBoundedShare * boxArea(box))
       return result(toOuter(bounded), "bounded");
   }
   return result(boxCorners(box), "box");
