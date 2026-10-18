@@ -7,7 +7,8 @@
     "humans": "needs-human-list",
     "needsHuman": "needs-human",
     "pr": "autopilot",
-    "hold": "autopilot-hold"
+    "hold": "autopilot-hold",
+    "ready": "ready-to-merge"
   },
   "contractFiles": [
     "supabase/migrations/0001_core.sql",
