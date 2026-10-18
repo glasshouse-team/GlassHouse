@@ -1,6 +1,6 @@
 # Glasshouse: instructions for Claude Code
 
-Glasshouse rebuilds Airbnb as if AI was there from day one: three agents (Guest, Host, neutral Verifier) search, check and negotiate for people, and every home has a walkable 3D model and a floor plan built from the host's own footage, with AI-filled areas flagged. 24-hour hackathon, Track 01 "Make it better". Two developers, each running Claude Code.
+Glasshouse rebuilds Airbnb as if AI was there from day one: three agents (Guest, Host, neutral Verifier) search, check and negotiate for people, and every home has a 3D tour of every room and a floor plan built from the host's own footage, with AI-filled areas flagged. 24-hour hackathon, Track 01 "Make it better". Two developers, each running Claude Code.
 
 Plan: docs/PLAN.md. Tickets: docs/tickets/INDEX.md (Jira project GH on hacktoberfest.atlassian.net). Architecture: docs/ARCHITECTURE.md.
 
