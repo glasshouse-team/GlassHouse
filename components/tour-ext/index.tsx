@@ -7,8 +7,10 @@
  * useTour() (components/tour/TourContext.tsx). Never edit components/tour/ from here.
  */
 import { AskSpacePanel } from "./AskSpacePanel";
+import { HonestyOverlay } from "./HonestyOverlay";
 
 export { AskSpacePanel } from "./AskSpacePanel";
+export { HonestyOverlay } from "./HonestyOverlay";
 
 export interface TourExtensionsProps {
   listingId: string;
@@ -16,6 +18,11 @@ export interface TourExtensionsProps {
 }
 
 export function TourExtensions({ listingId, worldId }: TourExtensionsProps) {
-  // GH-21 adds <HonestyOverlay /> here.
-  return <AskSpacePanel listingId={listingId} worldId={worldId} />;
+  // The honesty toggle sits bottom left; the Ask the space panel sits bottom right.
+  return (
+    <>
+      <HonestyOverlay className="fixed bottom-4 left-4 z-20" />
+      <AskSpacePanel listingId={listingId} worldId={worldId} />
+    </>
+  );
 }
