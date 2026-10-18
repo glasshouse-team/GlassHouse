@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { CountField, CurrentListing, ListingDraft as Draft } from "@/tools/host/draft";
@@ -126,6 +127,14 @@ export function ListingDraft({ listingId, current }: ListingDraftProps) {
   const [ms, setMs] = useState<number | null>(null);
   const [chosen, setChosen] = useState<ApplyField[]>([]);
   const [applying, setApplying] = useState(false);
+  // The host edits the drafted title and description before applying them.
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const valid: Record<ApplyField, boolean> = {
+    title: title.trim().length >= 3 && title.trim().length <= 80,
+    description: description.trim().length >= 20 && description.trim().length <= 1200,
+    amenities: true,
+  };
   const recognition = useRef<Recognition | null>(null);
   const abort = useRef<AbortController | null>(null);
   useEffect(
@@ -206,6 +215,8 @@ export function ListingDraft({ listingId, current }: ListingDraftProps) {
         return;
       }
       setDraft(body.draft);
+      setTitle(body.draft.title);
+      setDescription(body.draft.description);
       setMs(body.ms ?? null);
       setChosen([]);
     } catch (caught) {
@@ -216,12 +227,13 @@ export function ListingDraft({ listingId, current }: ListingDraftProps) {
   }
 
   async function apply() {
-    if (!draft || chosen.length === 0) return;
+    if (!draft || !chosen.some((f) => valid[f])) return;
     setApplying(true);
     try {
       const body: Record<string, unknown> = { listingId };
-      if (chosen.includes("title")) body.title = draft.title;
-      if (chosen.includes("description")) body.description = draft.description;
+      if (chosen.includes("title") && valid.title) body.title = title.trim();
+      if (chosen.includes("description") && valid.description)
+        body.description = description.trim();
       if (chosen.includes("amenities")) body.amenities = draft.amenities.map((a) => a.key);
       const response = await fetch("/api/listing-draft/apply", {
         method: "POST",
@@ -339,11 +351,31 @@ export function ListingDraft({ listingId, current }: ListingDraftProps) {
             <span>Host agent draft{ms !== null && ` (${(ms / 1000).toFixed(1)} s)`}</span>
           </div>
           <div className="space-y-3">
-            <DiffRow label="Title" now={current.title} draft={draft.title} />
+            <DiffRow
+              label="Title"
+              now={current.title}
+              draft={
+                <Input
+                  aria-label="Drafted title"
+                  maxLength={80}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+              }
+            />
             <DiffRow
               label="Description"
               now={<span className="line-clamp-6">{current.description}</span>}
-              draft={draft.description}
+              draft={
+                <Textarea
+                  aria-label="Drafted description"
+                  rows={7}
+                  maxLength={1200}
+                  className="resize-y bg-background"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              }
               note={
                 draft.unsupportedClaims.length > 0
                   ? `The photos don't show: ${draft.unsupportedClaims.join("; ")}`
@@ -471,7 +503,8 @@ export function ListingDraft({ listingId, current }: ListingDraftProps) {
                   <input
                     type="checkbox"
                     className="size-4 accent-[var(--brand)]"
-                    checked={chosen.includes(field)}
+                    checked={chosen.includes(field) && valid[field]}
+                    disabled={!valid[field]}
                     onChange={(e) =>
                       setChosen((c) =>
                         e.target.checked ? [...c, field] : c.filter((f) => f !== field),
@@ -483,12 +516,13 @@ export function ListingDraft({ listingId, current }: ListingDraftProps) {
               ))}
             </div>
             <p className="text-xs text-muted-foreground">
-              Counts, house rules and manual lines stay a preview for now.
+              Edit the title and description above before applying. Counts, house rules and manual
+              lines stay a preview for now.
             </p>
             <Button
               type="button"
               variant="outline"
-              disabled={applying || chosen.length === 0}
+              disabled={applying || !chosen.some((f) => valid[f])}
               onClick={apply}
             >
               {applying && <Loader2 className="animate-spin" aria-hidden />}

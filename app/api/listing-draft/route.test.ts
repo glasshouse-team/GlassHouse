@@ -11,7 +11,7 @@ const state = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/viewer", () => ({ getViewer: async () => state.viewer }));
 vi.mock("@/lib/data/listings", () => ({
-  getListing: async () => state.listing,
+  getListingById: async () => state.listing,
   getListingXray: async () => state.xray,
   getListingPhotos: async () => [
     {

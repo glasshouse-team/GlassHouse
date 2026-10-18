@@ -194,6 +194,10 @@ describe("isOurMediaUrl", () => {
       isOurMediaUrl("https://abc.supabase.co/storage/v1/object/sign/captures/a.mp4", base),
     ).toBe(false);
     expect(isOurMediaUrl("https://abc.supabase.co/x", undefined)).toBe(false);
+    expect(
+      isOurMediaUrl("https://abc.supabase.co/storage/v1/object/public/../../../auth/v1/user", base),
+    ).toBe(false);
+    expect(isOurMediaUrl("not a url", base)).toBe(false);
   });
 });
 

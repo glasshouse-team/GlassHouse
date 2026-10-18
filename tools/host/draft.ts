@@ -287,8 +287,18 @@ export function appliedFieldsLabel(fields: string[]): string {
 
 /** Only URLs in our own public storage, so the model never fetches anything else. */
 export function isOurMediaUrl(url: string, base = process.env.NEXT_PUBLIC_SUPABASE_URL): boolean {
-  const root = base?.replace(/\/$/, "");
-  return !!root && url.startsWith(`${root}/storage/v1/object/public/`);
+  if (!base) return false;
+  try {
+    // URL() resolves "..", so the path is checked after normalising.
+    const target = new URL(url);
+    return (
+      target.protocol === "https:" &&
+      target.origin === new URL(base).origin &&
+      target.pathname.startsWith("/storage/v1/object/public/")
+    );
+  } catch {
+    return false;
+  }
 }
 
 export interface DraftListingInput {

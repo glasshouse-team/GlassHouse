@@ -1,4 +1,4 @@
-import { getListing } from "@/lib/data/listings";
+import { getListingById } from "@/lib/data/listings";
 import { errorResponse, jsonError, parseJson } from "@/lib/http";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getViewer } from "@/lib/viewer";
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   try {
     const body = await parseJson(request, ApplyDraftSchema);
     const viewer = await getViewer();
-    const listing = await getListing(body.listingId);
+    const listing = await getListingById(body.listingId);
     if (!listing) return jsonError(404, "not_found", "This home does not exist.");
     if (viewer.role !== "host" || listing.host_id !== viewer.profileId)
       return jsonError(403, "not_your_listing", "Only this home's host can change its listing.");

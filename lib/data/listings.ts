@@ -49,6 +49,17 @@ export const getListing = cache(async (idOrSlug: string): Promise<ListingView | 
   return data ? toView(data) : null;
 });
 
+/** Any listing by uuid, whatever its status (draft or archived too): for host-only routes. */
+export async function getListingById(id: string): Promise<ListingView | null> {
+  const { data, error } = await supabaseAdmin()
+    .from("listings")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  check(error, `listing ${id}`);
+  return data ? toView(data) : null;
+}
+
 export async function getListingPhotos(listingId: string): Promise<PhotoRow[]> {
   const { data, error } = await supabaseAdmin()
     .from("listing_photos")

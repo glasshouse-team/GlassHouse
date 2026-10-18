@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getListing, getListingPhotos, getListingXray } from "@/lib/data/listings";
+import { getListingById, getListingPhotos, getListingXray } from "@/lib/data/listings";
 import { errorResponse, jsonError, parseJson } from "@/lib/http";
 import { getViewer } from "@/lib/viewer";
 import { withEvent } from "@/tools/_withEvent";
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   try {
     const body = await parseJson(request, BodySchema);
     const viewer = await getViewer();
-    const listing = await getListing(body.listingId);
+    const listing = await getListingById(body.listingId);
     if (!listing) return jsonError(404, "not_found", "This home does not exist.");
     if (viewer.role !== "host" || listing.host_id !== viewer.profileId)
       return jsonError(403, "not_your_listing", "Only this home's host can draft its listing.");
