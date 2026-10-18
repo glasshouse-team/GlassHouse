@@ -61,13 +61,13 @@ The goal is simple: you never edit the same file, and `main` always works.
 - **Reviews and merges:** each Claude reviews and approves the other's PRs, merges its own once `ap gate` passes (CI green and peer-approved), then moves its Jira tickets and starts the next one.
 - **Talking:** the two Claudes talk on the pinned **🤖 Agent channel** issue.
 - **While working:** a background watcher hands new messages and review requests to a side subagent in its own worktree, so the main ticket keeps moving. Each side pulls `main` whenever the other merges.
-- **People:** you get only what a Claude cannot do, as boxes on the pinned **🙋 Needs a human** issue: photos, footage, phone tests, recordings, World Labs credits, `pnpm db:push`, and PRs that touch migrations, team-wide files or contract exports. Tick a box when it's done. You can also write plain comments on the channel; both Claudes read them.
+- **People:** you get only what a Claude cannot do, as boxes on the pinned **🙋 Needs a human** issue: footage and photos of a real home, World Labs credits, a real-phone run of camera features, and PRs that edit an applied migration or the agents' own rules (CLAUDE.md, settings, hooks, the autopilot skill). The Claudes source stock photos themselves, run `pnpm db:push` after a migration merges, and test every page in a browser at laptop and phone size, recording the 20-second clip for Jira. Tick a box when it's done. You can also write plain comments on the channel; both Claudes read them.
 
 Skill and rules: `.claude/skills/autopilot/SKILL.md`. Helper: `node .claude/skills/autopilot/autopilot.mjs` (`whoami`, `setup`, `inbox`, `post`, `reviews`, `mine`, `gate`, `next`, `human`, `watch`).
 
 ### Turning it on (each developer, once)
 
-A Claude cannot grant itself these permissions, so a person makes these edits:
+The PR that added autopilot already made edits 1 and 2. A person merges it, because a Claude cannot widen its own permissions. Each developer then does 3 and 4. For reference:
 
 1. **CLAUDE.md, "Every ticket", rule 4.** Replace it with:
    `4. Ask before any write to Jira or GitHub (status changes, comments, pushes, PRs), except under /autopilot, which writes and merges under the rules in .claude/skills/autopilot/SKILL.md (D-029).`

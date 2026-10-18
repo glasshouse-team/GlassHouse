@@ -187,6 +187,7 @@ export function brokenExports(/** @type {string[]} */ lines) {
  *   files: string[],
  *   contractPatches: Record<string, string>,
  *   contractFiles: string[],
+ *   addedFiles?: string[],
  * }} pr
  * @returns {{ merge: boolean, reasons: string[], needsHuman: boolean }}
  */
@@ -223,41 +224,46 @@ export function mergeGate(pr) {
   for (const [who, state] of latest)
     if (state === "CHANGES_REQUESTED") reasons.push(`changes requested by ${who}`);
 
+  /** Commands the author's Claude runs right after merging. */
+  const afterMerge = [];
   const migrations = pr.files.filter((f) => f.startsWith("supabase/migrations/"));
-  if (migrations.length) {
+  const added = pr.addedFiles ?? [];
+  const edited = migrations.filter((f) => !added.includes(f));
+  if (edited.length) {
+    reasons.push(`edits an existing migration (${edited.join(", ")}): add a new 000N file instead`);
+    needsHuman = true;
+  }
+  if (migrations.length) afterMerge.push("pnpm db:push", "pnpm db:types");
+  if (pr.files.some((f) => f === "pnpm-lock.yaml" || f === "package.json"))
+    afterMerge.push("pnpm install");
+
+  const rules = pr.files.filter((f) => AGENT_RULES.some((p) => f === p || f.startsWith(p)));
+  if (rules.length) {
+    reasons.push(`changes the agents' own rules (${rules.join(", ")}): a person merges it`);
+    needsHuman = true;
+  }
+  const brokenContracts = pr.files
+    .filter((f) => pr.contractFiles.includes(f))
+    .filter((f) => brokenExports(exportChanges(pr.contractPatches[f] ?? "")).length > 0);
+  if (brokenContracts.length && !pr.files.includes("docs/CONTRACTS.md"))
     reasons.push(
-      `adds or changes a migration (${migrations.join(", ")}): a person applies it with pnpm db:push`,
+      `changes contract exports (${brokenContracts.join(", ")}) without a docs/CONTRACTS.md change-log row`,
     );
-    needsHuman = true;
-  }
-  const team = pr.files.filter((f) => TEAM_WIDE.some((p) => f === p || f.startsWith(p)));
-  if (team.length) {
-    reasons.push(`touches team-wide files (${team.join(", ")})`);
-    needsHuman = true;
-  }
-  for (const file of pr.files.filter((f) => pr.contractFiles.includes(f))) {
-    const changed = brokenExports(exportChanges(pr.contractPatches[file] ?? ""));
-    if (changed.length) {
-      reasons.push(
-        `changes the exports of contract file ${file}: ${changed.slice(0, 3).join(" | ")}`,
-      );
-      needsHuman = true;
-    }
-  }
-  return { merge: reasons.length === 0, reasons, needsHuman };
+  return { merge: reasons.length === 0, reasons, needsHuman, afterMerge };
 }
 
-/** Files a person must approve (docs/OWNERSHIP.md "team-wide"). */
-export const TEAM_WIDE = [
-  "package.json",
-  "pnpm-lock.yaml",
-  "pnpm-workspace.yaml",
-  "next.config.ts",
-  "tsconfig.json",
+/**
+ * Files that set what the agents themselves may do. A Claude cannot widen its own permissions,
+ * so a person merges these. Other team-wide files (package.json, lockfile, next.config.ts,
+ * tsconfig.json) merge with the peer's approval.
+ */
+export const AGENT_RULES = [
   "CLAUDE.md",
+  "AGENTS.md",
   ".claude/ownership.json",
   ".claude/settings.json",
   ".claude/hooks/",
+  ".claude/skills/autopilot/",
   ".mcp.json",
   ".github/workflows/",
 ];

@@ -406,6 +406,15 @@ function gateFor(number) {
     files,
     contractPatches: patches,
     contractFiles: config.contractFiles,
+    addedFiles: ghJson([
+      "api",
+      "--paginate",
+      "--slurp",
+      `repos/${config.repo}/pulls/${number}/files?per_page=100`,
+    ])
+      .flat()
+      .filter((f) => f.status === "added")
+      .map((f) => f.filename),
   });
   if (pr.state !== "OPEN") {
     decision.reasons.unshift(`PR is ${pr.state.toLowerCase()}`);

@@ -118,7 +118,12 @@ describe("mergeGate", () => {
   };
 
   it("merges a green, peer-approved PR", () => {
-    expect(mergeGate(base)).toEqual({ merge: true, reasons: [], needsHuman: false });
+    expect(mergeGate(base)).toEqual({
+      merge: true,
+      reasons: [],
+      needsHuman: false,
+      afterMerge: [],
+    });
   });
 
   it("waits for CI and for the peer's latest review", () => {
@@ -139,25 +144,48 @@ describe("mergeGate", () => {
     expect(gate.needsHuman).toBe(false);
   });
 
-  it("sends migrations, team-wide files and contract interface changes to a person", () => {
+  it("merges a new migration and dependencies with approval, then names the follow-up commands", () => {
     const gate = mergeGate({
       ...base,
-      files: [
-        "supabase/migrations/0003_x.sql",
-        "package.json",
-        "components/xray/XrayPanel.tsx",
-        "lib/schemas/verifier.ts",
-      ],
-      contractPatches: {
-        "components/xray/XrayPanel.tsx":
-          "-export function XrayPanel({ listingId }) {\n+export function XrayPanel({ listingId, compact }) {",
-        "lib/schemas/verifier.ts":
-          "-export const A = 1;\n+export const A = 1;\n+export const B = 2;\n+const internal = 3;",
-      },
+      files: ["supabase/migrations/0003_x.sql", "package.json", "pnpm-lock.yaml"],
+      addedFiles: ["supabase/migrations/0003_x.sql"],
+    });
+    expect(gate).toEqual({
+      merge: true,
+      reasons: [],
+      needsHuman: false,
+      afterMerge: ["pnpm db:push", "pnpm db:types", "pnpm install"],
+    });
+  });
+
+  it("sends edited migrations and the agents' own rules to a person", () => {
+    const gate = mergeGate({
+      ...base,
+      files: ["supabase/migrations/0001_core.sql", ".claude/settings.json", "CLAUDE.md"],
+      addedFiles: [],
     });
     expect(gate.needsHuman).toBe(true);
-    expect(gate.reasons).toHaveLength(3);
-    expect(gate.reasons[2]).toContain("components/xray/XrayPanel.tsx");
+    expect(gate.reasons).toHaveLength(2);
+  });
+
+  it("needs a CONTRACTS.md change-log row for a changed contract export", () => {
+    const patch = {
+      "components/xray/XrayPanel.tsx":
+        "-export function XrayPanel({ listingId }) {\n+export function XrayPanel({ listingId, compact }) {",
+    };
+    const without = mergeGate({
+      ...base,
+      files: ["components/xray/XrayPanel.tsx"],
+      contractPatches: patch,
+    });
+    expect(without.merge).toBe(false);
+    expect(without.needsHuman).toBe(false);
+    const withLog = mergeGate({
+      ...base,
+      files: ["components/xray/XrayPanel.tsx", "docs/CONTRACTS.md"],
+      contractPatches: patch,
+    });
+    expect(withLog.merge).toBe(true);
   });
 
   it("lets a slot become async and lets new exports through", () => {
@@ -169,7 +197,7 @@ describe("mergeGate", () => {
           "-export function XrayPanel({ listingId }) {\n+export async function XrayPanel({ listingId }) {\n+export const MIN = 1;",
       },
     });
-    expect(gate).toEqual({ merge: true, reasons: [], needsHuman: false });
+    expect(gate).toEqual({ merge: true, reasons: [], needsHuman: false, afterMerge: [] });
   });
 
   it("finds export lines in a diff", () => {
