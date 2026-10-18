@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  capturePath,
   cleanLabel,
   displayName,
   nextVersionNumber,
@@ -77,7 +78,12 @@ describe("spotPrompt", () => {
 
   it("sends one photo as an image and a short video as a video", () => {
     expect(spotPrompt({ label: "Hall", photos: photos(1) }).prompt.type).toBe("image");
-    const video = spotPrompt({ label: "Hall", photos: [], videoUrl: "https://x/p.mp4", durationS: 29 });
+    const video = spotPrompt({
+      label: "Hall",
+      photos: [],
+      videoUrl: "https://x/p.mp4",
+      durationS: 29,
+    });
     expect(video.inputKind).toBe("video");
     expect(video.prompt).toMatchObject({ video_prompt: { source: "uri", uri: "https://x/p.mp4" } });
   });
@@ -119,7 +125,11 @@ describe("resolveSpot", () => {
   });
 
   it("starts a new spot with no links", () => {
-    expect(resolveSpot("Balcony", base)).toEqual({ spot: "balcony", spotLabel: "Balcony", links: [] });
+    expect(resolveSpot("Balcony", base)).toEqual({
+      spot: "balcony",
+      spotLabel: "Balcony",
+      links: [],
+    });
   });
 });
 
@@ -132,5 +142,12 @@ describe("nextVersionNumber and displayName", () => {
   it("caps the World Labs display name at 64 characters", () => {
     expect(displayName("Tbilisi flat", "Kitchen", 3)).toBe("Tbilisi flat - Kitchen v3");
     expect(displayName("x".repeat(80), "Kitchen", 3)).toHaveLength(64);
+  });
+});
+
+describe("capturePath", () => {
+  it("strips the bucket from captures.raw_url (GH-22 layout)", () => {
+    expect(capturePath("captures/l1/c1/ring/")).toBe("l1/c1/ring");
+    expect(capturePath("captures/l1/c1/raw.mp4")).toBe("l1/c1/raw.mp4");
   });
 });

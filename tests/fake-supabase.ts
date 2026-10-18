@@ -2,7 +2,7 @@
  * A small in-memory stand-in for the supabase-js client, for route and pipeline tests.
  * It covers the query builder calls our server code uses (select with a column list,
  * insert, update, eq, neq, in, not is null, match, order, limit, single, maybeSingle),
- * unique keys (Postgres code 23505) and Storage upload, list and signed upload URLs.
+ * unique keys (Postgres code 23505) and Storage upload, list and signed (upload) URLs.
  */
 import { randomUUID } from "node:crypto";
 
@@ -116,7 +116,7 @@ class Query implements PromiseLike<{ data: unknown; error: unknown }> {
     let result: Row[];
     if (this.op === "insert") {
       const values = Array.isArray(this.payload) ? this.payload : [this.payload as Row];
-      const fresh = values.map((v) => ({
+      const fresh: Row[] = values.map((v) => ({
         id: randomUUID(),
         created_at: new Date().toISOString(),
         ...this.options.defaults?.[this.table],
@@ -176,11 +176,7 @@ export function createFakeSupabase(options: FakeSupabaseOptions = {}): FakeSupab
     from: (table: string) => new Query(fake, table, options),
     storage: {
       from: (bucket: string) => ({
-        upload: async (
-          path: string,
-          bytes: Uint8Array,
-          opts: { contentType?: string } = {},
-        ) => {
+        upload: async (path: string, bytes: Uint8Array, opts: { contentType?: string } = {}) => {
           fake.files.set(`${bucket}/${path}`, {
             bytes: bytes.length,
             contentType: opts.contentType,
@@ -194,6 +190,14 @@ export function createFakeSupabase(options: FakeSupabaseOptions = {}): FakeSupab
             .map(([k, f]) => ({ name: k.slice(prefix.length), metadata: { size: f.bytes } }));
           return { data, error: null };
         },
+        createSignedUrls: async (paths: string[], expiresIn: number) => ({
+          data: paths.map((path) => ({
+            path,
+            signedUrl: `https://fake.storage/sign/${bucket}/${path}?expires=${expiresIn}`,
+            error: null,
+          })),
+          error: null,
+        }),
         createSignedUploadUrl: async (path: string) => ({
           data: { path, signedUrl: `https://fake.storage/upload/${bucket}/${path}`, token: "t" },
           error: null,

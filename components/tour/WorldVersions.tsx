@@ -10,7 +10,6 @@ import {
   type VersionStatus,
   type VersionSummary,
 } from "@/lib/marble-versions";
-import { NewWorldVersion } from "./NewWorldVersion";
 
 /** GH-10: only polling moves a world forward; the host page polls every 15 s. */
 const POLL_MS = 15_000;
@@ -45,7 +44,7 @@ async function readError(res: Response): Promise<string> {
 /**
  * Host dashboard slot (GH-5 contract; keep the name and props). Lists the 3D versions of a
  * home with status, progress, thumbnail and created time, a Preview link into the tour and
- * a Publish button, and starts a new version from a re-shot room spot. Owner: Temuri, GH-10.
+ * a Publish button. New versions start from the capture page (CaptureFlow). Owner: Temuri, GH-10.
  */
 export function WorldVersions({ listingId }: { listingId: string }) {
   const [panel, setPanel] = useState<Panel | null>(null);
@@ -128,7 +127,10 @@ export function WorldVersions({ listingId }: { listingId: string }) {
               </p>
               <p className="mt-1 truncate text-xs text-neutral-500">
                 {v.spots
-                  .map((s) => `${s.spot_label ?? s.spot}: ${s.status}${s.error ? ` (${s.error})` : ""}`)
+                  .map(
+                    (s) =>
+                      `${s.spot_label ?? s.spot}: ${s.status}${s.error ? ` (${s.error})` : ""}`,
+                  )
                   .join(" · ")}
               </p>
               <div className="mt-2 flex gap-2">
@@ -149,7 +151,12 @@ export function WorldVersions({ listingId }: { listingId: string }) {
           </li>
         ))}
       </ul>
-      {panel && <NewWorldVersion listingId={listingId} spots={panel.spots} onStarted={load} />}
+      {panel && !panel.demo && (
+        <p className="mt-3 text-xs text-neutral-500">
+          New version: photograph a room with Capture, then press Generate. The other room spots are
+          copied from the live version.
+        </p>
+      )}
     </section>
   );
 }

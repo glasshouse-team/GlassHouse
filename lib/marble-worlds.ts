@@ -439,10 +439,15 @@ export async function publishVersion(
     .eq("listing_id", listingId)
     .eq("version", version);
   if (error) throw new Error(`worlds lookup failed: ${error.message}`);
-  if (!rows?.length) throw new WorldRequestError(404, "not_found", `No worlds for version ${version}`);
+  if (!rows?.length)
+    throw new WorldRequestError(404, "not_found", `No worlds for version ${version}`);
   const entry = rows.find((r) => r.spot === entrySpot);
   if (!entry) {
-    throw new WorldRequestError(409, "no_entry_spot", `Version ${version} has no "${entrySpot}" spot`);
+    throw new WorldRequestError(
+      409,
+      "no_entry_spot",
+      `Version ${version} has no "${entrySpot}" spot`,
+    );
   }
   const notReady = rows.filter(
     (r) => !r.spz_url || !["ready", "published", "archived"].includes(r.status),
@@ -642,7 +647,12 @@ export async function finalizeWorld(
     return { row: (await load()) ?? row, changed, progress: 1, pollError: null };
   } catch (error) {
     if (error instanceof MarbleError) {
-      return { row: (await load()) ?? row, changed: false, progress: null, pollError: error.message };
+      return {
+        row: (await load()) ?? row,
+        changed: false,
+        progress: null,
+        pollError: error.message,
+      };
     }
     throw error;
   }

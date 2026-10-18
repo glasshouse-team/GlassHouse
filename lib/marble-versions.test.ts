@@ -36,9 +36,26 @@ describe("versionStatus", () => {
 describe("summarizeVersions", () => {
   const rows = [
     row({ version: 2, spot: "kitchen", status: "published", cost_credits: 1600 }),
-    row({ version: 2, spot: "entrance", status: "published", thumbnail_url: "e.webp", cost_credits: 1600 }),
-    row({ version: 3, spot: "kitchen", status: "generating", created_at: "2026-10-18T09:00:00.000Z" }),
-    row({ version: 3, spot: "entrance", status: "ready", thumbnail_url: "e.webp", cost_credits: 0 }),
+    row({
+      version: 2,
+      spot: "entrance",
+      status: "published",
+      thumbnail_url: "e.webp",
+      cost_credits: 1600,
+    }),
+    row({
+      version: 3,
+      spot: "kitchen",
+      status: "generating",
+      created_at: "2026-10-18T09:00:00.000Z",
+    }),
+    row({
+      version: 3,
+      spot: "entrance",
+      status: "ready",
+      thumbnail_url: "e.webp",
+      cost_credits: 0,
+    }),
   ];
 
   it("groups spots by version, newest first, with progress and credits", () => {

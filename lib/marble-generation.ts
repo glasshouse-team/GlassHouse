@@ -11,7 +11,7 @@ import { generateWorld, MarbleError, type MarbleModel, type WorldPrompt } from "
 import { SPOT_WORLD_CREDITS, WorldRequestError, type EventActor } from "./marble-worlds";
 import { VERSION_ROW_COLUMNS, type WorldVersionRow } from "./marble-versions";
 import { SpotLinkSchema, type SpotLink } from "./schemas/world";
-import { BUCKETS, publicMediaUrl, supabaseAdmin } from "./supabase";
+import { BUCKETS, supabaseAdmin } from "./supabase";
 
 /** World Labs: up to 4 images, or up to 8 with reconstruct_images (D-009). */
 export const MAX_RING_PHOTOS = 8;
@@ -209,31 +209,60 @@ async function baseVersionRows(listingId: string): Promise<WorldRow[]> {
   return base === undefined ? [] : all.filter((r) => r.version === base);
 }
 
+/** Signed links World Labs can fetch (no cookies) for private capture files (D-037). */
+const SIGNED_URL_SECONDS = 6 * 60 * 60;
+
+/** Path inside the `captures` bucket from `captures.raw_url` ("captures/<path>"). */
+export function capturePath(rawUrl: string): string {
+  return rawUrl.replace(new RegExp(`^${BUCKETS.captures}/`), "").replace(/\/$/, "");
+}
+
+async function signCaptureFiles(paths: string[]): Promise<string[]> {
+  if (!paths.length) return [];
+  const { data, error } = await supabaseAdmin()
+    .storage.from(BUCKETS.captures)
+    .createSignedUrls(paths, SIGNED_URL_SECONDS);
+  if (error || !data) throw new Error(`Could not sign capture files: ${error?.message}`);
+  return paths.map((p) => {
+    const signed = data.find((d) => d.path === p)?.signedUrl;
+    if (!signed) throw new Error(`Could not sign ${p}`);
+    return signed;
+  });
+}
+
+/**
+ * What World Labs gets for one capture (GH-22 layout, D-037): a ring's first 8 photos from
+ * the private `captures` bucket (photos 9+ are doorway photos, D-009) with their compass
+ * headings, or the clip (the prepared mp4 in `media` when there is one).
+ */
 async function captureMedia(capture: CaptureRow): Promise<CaptureMedia> {
-  const folder = `captures/${capture.listing_id}/${capture.id}`;
-  const { data: files, error } = await supabaseAdmin()
-    .storage.from(BUCKETS.media)
-    .list(folder, { limit: 100 });
-  if (error) throw new Error(`storage list failed: ${error.message}`);
-  const names = (files ?? []).filter((f) => Number(f.metadata?.size ?? 1) > 0).map((f) => f.name);
-  const headings = Array.isArray(capture.heading_track)
-    ? (capture.heading_track as Array<{ heading?: unknown }>)
-        .map((h) => h?.heading)
-        .filter((h): h is number => typeof h === "number")
-    : [];
   const markers = Array.isArray(capture.room_markers)
     ? (capture.room_markers as Array<{ room?: unknown }>)
     : [];
   const room = typeof markers[0]?.room === "string" ? markers[0].room : null;
-  const video =
-    capture.prepared_url ?? (names.includes("prepared.mp4") ? publicMediaUrl(`${folder}/prepared.mp4`) : null);
-  return {
-    label: cleanLabel(room),
-    photos: sortRingPhotos(names).map((n) => publicMediaUrl(`${folder}/${n}`)),
-    headings,
-    videoUrl: video,
-    durationS: capture.duration_s,
-  };
+  const label = cleanLabel(room);
+  if (!capture.raw_url && !capture.prepared_url) return { label, photos: [] };
+
+  if (capture.kind === "ring" && capture.raw_url) {
+    const folder = capturePath(capture.raw_url);
+    const { data: files, error } = await supabaseAdmin()
+      .storage.from(BUCKETS.captures)
+      .list(folder, { limit: 100 });
+    if (error) throw new Error(`storage list failed: ${error.message}`);
+    const ring = sortRingPhotos((files ?? []).map((f) => f.name)).slice(0, MAX_RING_PHOTOS);
+    const track = Array.isArray(capture.heading_track)
+      ? (capture.heading_track as Array<{ heading?: unknown }>)
+      : [];
+    const headings = track
+      .slice(0, ring.length)
+      .map((h) => h?.heading)
+      .filter((h): h is number => typeof h === "number");
+    return { label, photos: await signCaptureFiles(ring.map((n) => `${folder}/${n}`)), headings };
+  }
+
+  const videoUrl =
+    capture.prepared_url ?? (await signCaptureFiles([capturePath(capture.raw_url!)]))[0];
+  return { label, photos: [], videoUrl, durationS: capture.duration_s };
 }
 
 async function gapSpot(gapId: string | null): Promise<string | null> {
@@ -241,7 +270,11 @@ async function gapSpot(gapId: string | null): Promise<string | null> {
   const db = supabaseAdmin();
   const { data: gap } = await db.from("gaps").select("world_id").eq("id", gapId).maybeSingle();
   if (!gap) return null;
-  const { data: world } = await db.from("worlds").select("spot").eq("id", gap.world_id).maybeSingle();
+  const { data: world } = await db
+    .from("worlds")
+    .select("spot")
+    .eq("id", gap.world_id)
+    .maybeSingle();
   return world?.spot ?? null;
 }
 
@@ -295,6 +328,9 @@ export async function startVersion(input: {
     const capture = found.get(id)!;
     if (capture.status === "failed") {
       throw new WorldRequestError(409, "capture_failed", "That capture failed; record it again.");
+    }
+    if (capture.status === "uploading") {
+      throw new WorldRequestError(409, "capture_uploading", "That capture is still uploading.");
     }
     const media = await captureMedia(capture);
     const spot = resolveSpot(media.label, baseSpots, await gapSpot(capture.gap_id));
@@ -384,7 +420,8 @@ export async function startVersion(input: {
         .eq("id", rowId);
       if (error) throw new Error(`worlds update failed: ${error.message}`);
     } catch (error) {
-      const message = error instanceof MarbleError ? error.message : "Could not start the generation";
+      const message =
+        error instanceof MarbleError ? error.message : "Could not start the generation";
       if (!(error instanceof MarbleError)) console.error(error);
       failed.push({ spot: p.spot, error: message });
       await db.from("worlds").update({ status: "failed", error: message }).eq("id", rowId);
@@ -455,7 +492,9 @@ export async function entrySpot(listingId: string): Promise<string | null> {
 }
 
 /** Spots of the base version, for the "re-shoot a spot" picker. */
-export async function baseSpots(listingId: string): Promise<Array<{ spot: string; label: string }>> {
+export async function baseSpots(
+  listingId: string,
+): Promise<Array<{ spot: string; label: string }>> {
   return (await baseVersionRows(listingId))
     .map((r) => ({ spot: r.spot, label: r.spot_label ?? r.spot }))
     .sort((a, b) => a.label.localeCompare(b.label));

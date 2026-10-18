@@ -98,16 +98,18 @@ function seed() {
       id: CAPTURE,
       listing_id: LISTING,
       kind: "ring",
+      raw_url: `captures/${LISTING}/${CAPTURE}/ring/`,
       prepared_url: null,
       duration_s: null,
       room_markers: [{ room: "Kitchen", t: 0 }],
-      heading_track: [],
+      heading_track: [0, 45, 90, 135, 180, 225, 270, 315, 20].map((heading, t) => ({ t, heading })),
       gap_id: null,
       status: "uploaded",
     },
   ];
-  for (let i = 1; i <= 8; i++) {
-    state.fake.files.set(`media/captures/${LISTING}/${CAPTURE}/ring-${String(i).padStart(2, "0")}.jpg`, {
+  // GH-22 layout (D-037): 8 ring photos, then a doorway photo, in the private bucket.
+  for (let i = 0; i <= 8; i++) {
+    state.fake.files.set(`captures/${LISTING}/${CAPTURE}/ring/${String(i).padStart(2, "0")}.jpg`, {
       bytes: 2_000_000,
     });
   }
@@ -124,7 +126,11 @@ const newWorld: MarbleWorld = {
     imagery: { pano_url: `${CDN}/pano.png` },
     mesh: { collider_mesh_url: `${CDN}/collider.glb`, hq_mesh_url: `${CDN}/hq.glb` },
     splats: {
-      spz_urls: { "100k": `${CDN}/s_100k.spz`, "500k": `${CDN}/s_500k.spz`, full_res: `${CDN}/s.spz` },
+      spz_urls: {
+        "100k": `${CDN}/s_100k.spz`,
+        "500k": `${CDN}/s_500k.spz`,
+        full_res: `${CDN}/s.spz`,
+      },
       semantics_metadata: { metric_scale_factor: 1.3, ground_plane_offset: 0.5 },
     },
   },
@@ -179,7 +185,7 @@ describe("GH-10 pipeline: generating -> ready -> published", () => {
     ]);
     expect(request.world_prompt.multi_image_prompt[0].content).toEqual({
       source: "uri",
-      uri: `${OUR}captures/${LISTING}/${CAPTURE}/ring-01.jpg`,
+      uri: `https://fake.storage/sign/captures/${LISTING}/${CAPTURE}/ring/00.jpg?expires=21600`,
     });
 
     const v3 = rows(3);
@@ -244,8 +250,9 @@ describe("GH-10 pipeline: generating -> ready -> published", () => {
       caption: "A kitchen with a gas cooktop",
       cost_credits: 1600,
     });
-    expect([...state.fake.files.keys()].filter((k) => k.startsWith(`media/worlds/${kitchen.id}/`)))
-      .toHaveLength(5);
+    expect(
+      [...state.fake.files.keys()].filter((k) => k.startsWith(`media/worlds/${kitchen.id}/`)),
+    ).toHaveLength(5);
     expect(actions()).toEqual(["world.generating", "world.ready"]);
     expect(vi.mocked(logEvent).mock.calls[1][0].summary).toBe(
       "World v3 ready for Tbilisi flat: preview it and publish",
@@ -260,7 +267,10 @@ describe("GH-10 pipeline: generating -> ready -> published", () => {
     expect(getWorld).not.toHaveBeenCalled();
 
     // 5. Publish: v3 live, v2 archived, the entry spot stays the entrance.
-    res = await publish(new Request("http://localhost", { method: "POST" }), ctx(kitchen.id as string));
+    res = await publish(
+      new Request("http://localhost", { method: "POST" }),
+      ctx(kitchen.id as string),
+    );
     expect(res.status).toBe(200);
     expect(rows(3).every((r) => r.status === "published")).toBe(true);
     expect(rows(2).every((r) => r.status === "archived")).toBe(true);
@@ -284,7 +294,10 @@ describe("GH-10 pipeline: generating -> ready -> published", () => {
   it("refuses to publish a version that is still generating", async () => {
     await start(json({ listingId: LISTING, captureIds: [CAPTURE] }));
     const kitchen = rows(3).find((r) => r.spot === "kitchen")!;
-    const res = await publish(new Request("http://localhost", { method: "POST" }), ctx(kitchen.id as string));
+    const res = await publish(
+      new Request("http://localhost", { method: "POST" }),
+      ctx(kitchen.id as string),
+    );
     expect(res.status).toBe(409);
     expect(((await res.json()) as { error: string }).error).toBe("not_ready");
     expect(rows(2).every((r) => r.status === "published")).toBe(true);
@@ -310,13 +323,20 @@ describe("GH-10 pipeline: generating -> ready -> published", () => {
   it("keeps generating when one poll fails (the generation goes on)", async () => {
     await start(json({ listingId: LISTING, captureIds: [CAPTURE] }));
     const kitchen = rows(3).find((r) => r.spot === "kitchen")!;
-    vi.mocked(getOperation).mockRejectedValueOnce(new MarbleError(503, "World Labs request failed."));
+    vi.mocked(getOperation).mockRejectedValueOnce(
+      new MarbleError(503, "World Labs request failed."),
+    );
     const res = await status(new Request("http://localhost"), ctx(kitchen.id as string));
-    expect(await res.json()).toMatchObject({ status: "generating", pollError: "World Labs request failed." });
+    expect(await res.json()).toMatchObject({
+      status: "generating",
+      pollError: "World Labs request failed.",
+    });
   });
 
   it("marks the row failed when World Labs refuses to start (no credits)", async () => {
-    vi.mocked(generateWorld).mockRejectedValue(new MarbleError(402, "Not enough World Labs API credits."));
+    vi.mocked(generateWorld).mockRejectedValue(
+      new MarbleError(402, "Not enough World Labs API credits."),
+    );
     const res = await start(json({ listingId: LISTING, captureIds: [CAPTURE] }));
     expect(((await res.json()) as { failed: unknown[] }).failed).toEqual([
       { spot: "kitchen", error: "Not enough World Labs API credits." },
@@ -342,7 +362,10 @@ describe("demo mode", () => {
   it("status never polls World Labs, even for a generating row", async () => {
     state.fake.tables.worlds[1].status = "generating";
     state.fake.tables.worlds[1].operation_id = "op-x";
-    const res = await status(new Request("http://localhost"), ctx(state.fake.tables.worlds[1].id as string));
+    const res = await status(
+      new Request("http://localhost"),
+      ctx(state.fake.tables.worlds[1].id as string),
+    );
     expect(await res.json()).toMatchObject({ status: "generating", changed: false });
     expect(getOperation).not.toHaveBeenCalled();
     expect(getWorld).not.toHaveBeenCalled();
@@ -367,11 +390,38 @@ describe("access and input", () => {
     expect(generateWorld).not.toHaveBeenCalled();
   });
 
-  it("refuses a ring of more than 8 photos", async () => {
-    state.fake.files.set(`media/captures/${LISTING}/${CAPTURE}/ring-09.jpg`, { bytes: 10 });
+  it("sends only the 8 ring photos, not the doorway photos", async () => {
+    await start(json({ listingId: LISTING, captureIds: [CAPTURE] }));
+    const prompt = vi.mocked(generateWorld).mock.calls[0][0].world_prompt;
+    if (prompt.type !== "multi-image") throw new Error("expected multi-image");
+    expect(prompt.multi_image_prompt.map((p) => p.content)).not.toContainEqual(
+      expect.objectContaining({ uri: expect.stringContaining("ring/08.jpg") }),
+    );
+    expect(prompt.multi_image_prompt).toHaveLength(8);
+  });
+
+  it("waits for an upload to be confirmed", async () => {
+    state.fake.tables.captures[0].status = "uploading";
     const res = await start(json({ listingId: LISTING, captureIds: [CAPTURE] }));
-    expect(res.status).toBe(400);
-    expect(((await res.json()) as { error: string }).error).toBe("too_many_photos");
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error: string }).error).toBe("capture_uploading");
     expect(rows(3)).toHaveLength(0);
+  });
+
+  it("sends a clip as a video prompt from a signed link", async () => {
+    Object.assign(state.fake.tables.captures[0], {
+      kind: "walkthrough",
+      raw_url: `captures/${LISTING}/${CAPTURE}/raw.mp4`,
+      duration_s: 24,
+    });
+    await start(json({ listingId: LISTING, captureIds: [CAPTURE] }));
+    expect(vi.mocked(generateWorld).mock.calls[0][0].world_prompt).toMatchObject({
+      type: "video",
+      video_prompt: {
+        source: "uri",
+        uri: `https://fake.storage/sign/captures/${LISTING}/${CAPTURE}/raw.mp4?expires=21600`,
+      },
+    });
+    expect(rows(3).find((r) => r.spot === "kitchen")).toMatchObject({ input_kind: "video" });
   });
 });
