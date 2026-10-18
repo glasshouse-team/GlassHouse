@@ -36,9 +36,62 @@
   --input: #e5e5e5;
   --ring: var(--brand-accent);
   --radius: 0.75rem;
+
+  /* Activity feed actors (GH-12): five colors told apart at a glance, none of them --honesty. */
+  --actor-guest: var(--brand-accent);
+  --actor-host: var(--brand);
+  --actor-verifier: #7c3aed;
+  --actor-human: #be185d;
+  --actor-system: #666666;
+}
+
+/*
+ * Dark tokens for a page that sets `.dark` on its wrapper (D-023): the /feed projector view.
+ * Brand tints are lighter so text stays readable on the dark background (docs/teardown.md).
+ */
+.dark {
+  color-scheme: dark;
+  --background: #0c1210;
+  --foreground: #f5f5f5;
+  --brand: #4fb393;
+  --brand-accent: #6b9cff;
+  --card: #151c19;
+  --card-foreground: var(--foreground);
+  --popover: #151c19;
+  --popover-foreground: var(--foreground);
+  --primary: #4fb393;
+  --primary-foreground: #0c1210;
+  --secondary: #1f2825;
+  --secondary-foreground: var(--foreground);
+  --muted: #1f2825;
+  --muted-foreground: #a3aba8;
+  --accent: #1f2825;
+  --accent-foreground: var(--foreground);
+  --border: #2b3632;
+  --input: #2b3632;
+  /* Restated: a var() resolves where it is declared, so :root's values would stay light. */
+  --ring: var(--brand-accent);
+  --actor-guest: var(--brand-accent);
+  --actor-host: var(--brand);
+  --actor-verifier: #a78bfa;
+  --actor-human: #f472b6;
+  --actor-system: #a3aba8;
 }
 
 @theme inline {
+  --color-actor-guest: var(--actor-guest);
+  --color-actor-host: var(--actor-host);
+  --color-actor-verifier: var(--actor-verifier);
+  --color-actor-human: var(--actor-human);
+  --color-actor-system: var(--actor-system);
+  /* New feed rows slide in at the top (GH-12). */
+  --animate-feed-in: feed-in 400ms ease-out;
+  @keyframes feed-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+  }
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-brand: var(--brand);

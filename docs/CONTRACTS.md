@@ -28,7 +28,7 @@ logEvent(e: {
 }): Promise<void>   // server only, never throws
 ```
 
-Plus `withEvent(options, fn)` in `tools/_withEvent.ts` for plain functions.
+Plus `withEvent(options, fn)` in `tools/_withEvent.ts` for plain functions (optional `payload(result, ...args)` since GH-12).
 
 ## 4. Money: `lib/pricing.ts`, `lib/validators.ts` (Beka)
 
@@ -86,7 +86,7 @@ Temuri implements `<TourProvider>` in GH-11. Beka's add-ons (Ask the space, hone
 
 ## 8. Activity feed component: `components/feed/ActivityFeed.tsx` (Beka)
 
-`<ActivityFeed filter="listing" | "deal" | "all" listingId? dealId? compact? />`, rendered in the listing page, deal room, host dashboard and `/feed`.
+`<ActivityFeed filter="listing" | "deal" | "all" listingId? dealId? compact? />`, rendered in the listing page, deal room, host dashboard and `/feed`. GH-12 added two optional props: `listingIds?` (with `filter="all"`, only those listings; the host dashboard passes the host's homes) and `projector?` (very large type for `/feed`). It is a client component that loads the last 50 events and subscribes to Realtime inserts.
 
 ## 9. Host Q&A: `tools/host-qa/askHome.ts` (Temuri, GH-16)
 
