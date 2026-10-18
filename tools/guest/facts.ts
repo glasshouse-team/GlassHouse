@@ -241,6 +241,76 @@ export function cleanShortlist(draft: ShortlistDraft, known: Map<string, Candida
   };
 }
 
+/** A shortlist shorter than this gets the closest other homes added (vague briefs, D-048). */
+export const MIN_SHORTLIST = 3;
+
+/**
+ * Tops a short shortlist up to MIN_SHORTLIST with the best-rated candidates the model didn't
+ * rank, so a vague brief never ends with one card. Their reasons are written here from listing
+ * fields (so they cite real sources) and they score below every ranked home; a Verifier
+ * contradiction becomes a concern. Homes the model set aside come last.
+ */
+export function fillShortlist(
+  shortlist: Shortlist,
+  candidates: Candidate[],
+): { shortlist: Shortlist; added: number } {
+  const missing = MIN_SHORTLIST - shortlist.ranked.length;
+  if (missing <= 0) return { shortlist, added: 0 };
+  const ranked = new Set(shortlist.ranked.map((r) => r.listingId));
+  const setAside = new Set(shortlist.others.map((o) => o.listingId));
+  const pool = candidates
+    .filter((c) => !ranked.has(c.listing.id))
+    .sort(
+      (a, b) =>
+        Number(setAside.has(a.listing.id)) - Number(setAside.has(b.listing.id)) ||
+        (b.listing.rating ?? 0) - (a.listing.rating ?? 0),
+    )
+    .slice(0, missing);
+  let score = Math.min(60, ...shortlist.ranked.map((r) => r.score)) - 5;
+  const extra: ShortlistItem[] = pool.map(({ listing, facts }) => {
+    const reasons: CitedText[] = [];
+    if (listing.rating !== null)
+      reasons.push({
+        text: `Rated ${listing.rating} by ${listing.review_count} guests`,
+        factKey: "field:rating",
+        source: "Listing details",
+      });
+    reasons.push({
+      text: `${listing.property_type[0].toUpperCase()}${listing.property_type.slice(1)} in ${listing.city}, sleeps ${listing.max_guests}`,
+      factKey: "field:max_guests",
+      source: "Listing details",
+    });
+    const contradictions = facts?.contradictions.length ?? 0;
+    const item: ShortlistItem = {
+      listingId: listing.id,
+      score: Math.max(0, score),
+      reasons,
+      concerns:
+        contradictions > 0
+          ? [
+              {
+                text: `Verifier found ${contradictions} ${contradictions === 1 ? "claim" : "claims"} the photos don't back`,
+                factKey: null,
+                source: null,
+              },
+            ]
+          : [],
+      negotiationHint: null,
+    };
+    score -= 5;
+    return item;
+  });
+  const added = new Set(extra.map((e) => e.listingId));
+  return {
+    added: extra.length,
+    shortlist: {
+      ...shortlist,
+      ranked: [...shortlist.ranked, ...extra],
+      others: shortlist.others.filter((o) => !added.has(o.listingId)),
+    },
+  };
+}
+
 /** `get_listing_facts`: the X-ray facts of one home already in the search. */
 export function listingFactsTool(known: Map<string, Candidate>) {
   return tool({

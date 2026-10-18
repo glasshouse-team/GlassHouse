@@ -2,6 +2,10 @@
  * Trip brief parsing for search (GH-14). Haiku fills the lenient draft schema (no bounds, so
  * structured output never fails on a range); code maps it to TripBriefSchema and works out
  * the budget in cents. Pure, so it is tested (brief.test.ts).
+ *
+ * Vague briefs are searched, not refused (D-048): a missing place becomes the cities that fit
+ * the brief's vibe (or all of them), a missing group size becomes a guess, and every guess is
+ * returned as an assumption the guest sees next to the results.
  */
 import { z } from "zod";
 import { SEARCH_CITIES } from "@/components/search/filters";
@@ -10,10 +14,14 @@ import { formatCents } from "@/lib/utils";
 
 export const BriefDraftSchema = z.object({
   destinations: z.array(z.string()),
+  /** Seeded cities that fit the places or the vibe (mountains, sea, wine, city); [] if no clue. */
+  fitting_cities: z.array(z.enum(SEARCH_CITIES)),
   check_in: z.string().nullable(),
   check_out: z.string().nullable(),
   nights: z.number().nullable(),
   guests: z.number().nullable(),
+  /** When the group size isn't stated: a fair guess from the brief (a couple 2, a family 4). */
+  guests_guess: z.number().nullable(),
   budget_amount_usd: z.number().nullable(),
   budget_per: z.enum(["night", "night_per_person", "total"]).nullable(),
   must_haves: z.array(z.string()),
@@ -32,13 +40,41 @@ function cleanList(values: string[]): string[] {
   return [...new Set(values.map((v) => v.trim()).filter(Boolean))].slice(0, 12);
 }
 
-/** The draft as a TripBrief, or a friendly question when the brief can't be searched. */
-export function toTripBrief(draft: BriefDraft): { brief: TripBrief } | { problem: string } {
-  const destinations = cleanList(draft.destinations);
-  if (destinations.length === 0)
-    return { problem: "Where would you like to go? For example Tbilisi, Kazbegi or Batumi." };
-  const guests = Math.round(draft.guests ?? 0);
-  if (guests < 1 || guests > 16) return { problem: "How many people are coming?" };
+/** Shown when the guest names no place: the search covers every city. */
+export const ANYWHERE = "anywhere in Georgia";
+/** Group size searched when the brief gives none and no fair guess. */
+export const DEFAULT_GUESTS = 2;
+
+const validGuests = (n: number | null) =>
+  n !== null && Number.isFinite(n) && Math.round(n) >= 1 && Math.round(n) <= 16
+    ? Math.round(n)
+    : null;
+
+/**
+ * The draft as a TripBrief, plus what had to be assumed for a vague brief (shown to the guest).
+ * Never refuses: no place means anywhere, no group size means a guess.
+ */
+export function toTripBrief(draft: BriefDraft): {
+  brief: TripBrief;
+  assumptions: string[];
+  /** False when the group size is a guess: then it ranks but doesn't filter. */
+  guestsStated: boolean;
+} {
+  const assumptions: string[] = [];
+  const named = cleanList(draft.destinations);
+  const destinations =
+    named.length > 0
+      ? named
+      : draft.fitting_cities.length > 0
+        ? [...draft.fitting_cities]
+        : [ANYWHERE];
+  const stated = validGuests(draft.guests);
+  const guessed = validGuests(draft.guests_guess);
+  const guests = stated ?? guessed ?? DEFAULT_GUESTS;
+  if (stated === null)
+    assumptions.push(
+      `Searched for ${guests} ${guests === 1 ? "guest" : "guests"}; say how many of you are coming for a closer match.`,
+    );
 
   const datesOk =
     !!draft.check_in &&
@@ -56,6 +92,8 @@ export function toTripBrief(draft: BriefDraft): { brief: TripBrief } | { problem
 
   const amount = draft.budget_amount_usd;
   return {
+    assumptions,
+    guestsStated: stated !== null,
     brief: {
       destinations,
       check_in,
@@ -111,6 +149,42 @@ const CITY_ALIASES: Record<string, (typeof SEARCH_CITIES)[number]> = {
   kakheti: "Sighnaghi",
   adjara: "Batumi",
 };
+
+/** Words that point at one of the seeded places when the guest names none of them. */
+const VIBES: [RegExp, (typeof SEARCH_CITIES)[number]][] = [
+  [/mountain|hik(e|ing)|trek|ski|snow|kazbek|gergeti|alps|peak|nature|fresh air/i, "Kazbegi"],
+  [/\bsea\b|beach|coast|seaside|swim|black sea|waterfront|\bocean/i, "Batumi"],
+  [/wine|vineyard|winery|countryside|village|kakheti|vine/i, "Sighnaghi"],
+  [
+    /\bcity\b|old town|nightlife|museum|restaurant|bars?\b|caf(e|é)s|culture|downtown|capital/i,
+    "Tbilisi",
+  ],
+];
+
+/** The seeded cities a brief's words point at ("mountains" -> Kazbegi); [] for no clue. */
+export function vibeCities(text: string): string[] {
+  return VIBES.filter(([pattern]) => pattern.test(text)).map(([, city]) => city);
+}
+
+/**
+ * Where to search: the cities the guest named; otherwise the ones that fit the brief's vibe
+ * (the parser's pick plus keyword hints); otherwise everywhere ([]). `named` says whether
+ * the guest chose them, so widening can say so.
+ */
+export function searchCities(
+  destinations: string[],
+  fitting: readonly string[],
+  text: string,
+): { cities: string[]; named: boolean } {
+  const named = matchCities(destinations);
+  if (named.length > 0) return { cities: named, named: true };
+  if (destinations.some((d) => /georgia|anywhere/i.test(d))) return { cities: [], named: false };
+  const fits = new Set([
+    ...fitting.filter((c) => (SEARCH_CITIES as readonly string[]).includes(c)),
+    ...vibeCities(text),
+  ]);
+  return { cities: [...fits], named: false };
+}
 
 /** The seeded cities a brief names; empty when it names none of them. */
 export function matchCities(destinations: string[]): string[] {
